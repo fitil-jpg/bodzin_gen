@@ -65,5 +65,15 @@ if (typeof Tone !== 'undefined' &&
     limFx.threshold.rampTo(   limOn.fx    ? limThresh : 0, 0.02);
   }
   let limThresh = -1;
+
+  if (typeof HANDLERS !== 'undefined') {
+    Object.assign(HANDLERS, {
+      lim_thresh: v => { limThresh = +v; updateLimiterGraph(); },
+      lim_drums_on: val => { limOn.drums = (val === 'On'); updateLimiterGraph(); },
+      lim_bass_on:  val => { limOn.bass  = (val === 'On'); updateLimiterGraph(); },
+      lim_lead_on:  val => { limOn.lead  = (val === 'On'); updateLimiterGraph(); },
+      lim_fx_on:    val => { limOn.fx    = (val === 'On'); updateLimiterGraph(); },
+    });
+  }
 }
 
