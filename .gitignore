@@ -151,8 +151,11 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
-# mkdocs documentation
-/site
+# mkdocs documentation output is normally stored in a top-level
+# "site" directory. The application code now uses a directory with the
+# same name, so we remove this ignore rule to ensure the application's
+# source files are tracked.
+#/site
 
 # mypy
 .mypy_cache/
