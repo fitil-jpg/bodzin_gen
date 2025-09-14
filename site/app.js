@@ -81,7 +81,35 @@ async function importProject(files){
   }
 }
 
-module.exports = { keyToScale, exportProjectZip, importProject };
+let limOn = {drums:false, bass:false, lead:false, fx:false};
+let limThresh = -1;
+function updateLimiterGraph(){}
+
+function getCurrentPreset(){
+  return {
+    lim: { on: limOn, thresh: limThresh },
+  };
+}
+
+function applyPresetData(p){
+  if(p.lim){
+    limOn = p.lim.on || limOn;
+    limThresh = (p.lim.thresh ?? limThresh);
+    updateLimiterGraph();
+    const limEl = $('#lim_thresh');
+    if (limEl) limEl.value = String(limThresh);
+    const sync = (id,on)=> {
+      const el = $('#'+id);
+      if (el) el.value = on ? 'On' : 'Off';
+    };
+    sync('lim_drums_on', limOn.drums);
+    sync('lim_bass_on', limOn.bass);
+    sync('lim_lead_on', limOn.lead);
+    sync('lim_fx_on',   limOn.fx);
+  }
+}
+
+module.exports = { keyToScale, exportProjectZip, importProject, getCurrentPreset, applyPresetData };
 
 // --- Transport & header -----------------------------------------------------
 $('#projSaveBtn').addEventListener('click', ()=> exportProjectZip());
@@ -145,14 +173,12 @@ if (typeof Tone !== 'undefined' &&
   duckGainLead.disconnect(); duckGainLead.connect(limLead); limLead.connect(mixBus);
   duckGainFx.disconnect();   duckGainFx.connect(limFx);     limFx.connect(mixBus);
 
-  let limOn = {drums:false, bass:false, lead:false, fx:false};
-  function updateLimiterGraph(){
+  updateLimiterGraph = function(){
     limDrums.threshold.rampTo(limOn.drums ? limThresh : 0, 0.02);
     limBass.threshold.rampTo( limOn.bass  ? limThresh : 0, 0.02);
     limLead.threshold.rampTo( limOn.lead  ? limThresh : 0, 0.02);
     limFx.threshold.rampTo(   limOn.fx    ? limThresh : 0, 0.02);
-  }
-  let limThresh = -1;
+  };
 
   if (typeof HANDLERS !== 'undefined') {
     Object.assign(HANDLERS, {
