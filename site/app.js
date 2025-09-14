@@ -96,6 +96,34 @@ $('#projFile').addEventListener('change', async e => {
   } catch(err){ console.error(err); status('Bad project .zip'); }
 });
 
+// --- Preset A/B testing -----------------------------------------------------
+let snapA = null, snapB = null, abState = 'A';
+
+function takeSnapshot(){
+  return getCurrentPreset();
+}
+
+function applySnapshot(s){
+  if(s) applyPresetData(s);
+}
+
+$('#abSaveA').addEventListener('click', () => {
+  snapA = takeSnapshot();
+  abState = 'A';
+  applySnapshot(snapA);
+});
+
+$('#abSaveB').addEventListener('click', () => {
+  snapB = takeSnapshot();
+  abState = 'B';
+  applySnapshot(snapB);
+});
+
+$('#abToggle').addEventListener('click', () => {
+  abState = (abState === 'A') ? 'B' : 'A';
+  applySnapshot(abState === 'A' ? snapA : snapB);
+});
+
 // --- Limiter routing setup -------------------------------------------------
 // This section configures limiters on each instrument bus and ensures it runs
 // before the final connection to the mix bus.  These buses are expected to be
