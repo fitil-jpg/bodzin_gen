@@ -35,3 +35,35 @@ function keyToScale(keyStr) {
 }
 
 module.exports = { keyToScale };
+
+// --- Limiter routing setup -------------------------------------------------
+// This section configures limiters on each instrument bus and ensures it runs
+// before the final connection to the mix bus.  These buses are expected to be
+// created elsewhere in the application prior to this code executing.
+if (typeof Tone !== 'undefined' &&
+    typeof mixBus !== 'undefined' &&
+    typeof drumsBus !== 'undefined' &&
+    typeof duckGainBass !== 'undefined' &&
+    typeof duckGainLead !== 'undefined' &&
+    typeof duckGainFx !== 'undefined') {
+
+  const limDrums = new Tone.Limiter(-1);
+  const limBass  = new Tone.Limiter(-1);
+  const limLead  = new Tone.Limiter(-1);
+  const limFx    = new Tone.Limiter(-1);
+
+  drumsBus.disconnect(); drumsBus.connect(limDrums); limDrums.connect(mixBus);
+  duckGainBass.disconnect(); duckGainBass.connect(limBass); limBass.connect(mixBus);
+  duckGainLead.disconnect(); duckGainLead.connect(limLead); limLead.connect(mixBus);
+  duckGainFx.disconnect();   duckGainFx.connect(limFx);     limFx.connect(mixBus);
+
+  let limOn = {drums:false, bass:false, lead:false, fx:false};
+  function updateLimiterGraph(){
+    limDrums.threshold.rampTo(limOn.drums ? limThresh : 0, 0.02);
+    limBass.threshold.rampTo( limOn.bass  ? limThresh : 0, 0.02);
+    limLead.threshold.rampTo( limOn.lead  ? limThresh : 0, 0.02);
+    limFx.threshold.rampTo(   limOn.fx    ? limThresh : 0, 0.02);
+  }
+  let limThresh = -1;
+}
+
