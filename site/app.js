@@ -34,7 +34,67 @@ function keyToScale(keyStr) {
   return defaultScale;
 }
 
-module.exports = { keyToScale };
+// --- Project import/export -------------------------------------------------
+/**
+ * Package current project state into a .zip file and trigger a download.
+ * The zip contains the preset, profiles, and MIDI map JSON files.  Files are
+ * stored without compression via `makeZipStoreOnly`.
+ */
+function exportProjectZip(){
+  const enc = new TextEncoder();
+  const files = {
+    'preset.json':   enc.encode(JSON.stringify(preset   ?? {})),
+    'profiles.json': enc.encode(JSON.stringify(profiles ?? {})),
+    'midi-map.json': enc.encode(JSON.stringify(midiMap  ?? {})),
+  };
+
+  const zip = makeZipStoreOnly(files);
+  const blob = new Blob([zip], {type:'application/zip'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'project.zip';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Import project data from an object of Uint8Arrays keyed by filename.
+ * The object is typically produced by `unzipStoreOnly`.
+ * @param {Object.<string, Uint8Array>} files
+ */
+async function importProject(files){
+  const dec = new TextDecoder();
+  if(files['preset.json']){
+    try { Object.assign(preset, JSON.parse(dec.decode(files['preset.json']))); }
+    catch(err){ console.error(err); }
+  }
+  if(files['profiles.json']){
+    try { Object.assign(profiles, JSON.parse(dec.decode(files['profiles.json']))); }
+    catch(err){ console.error(err); }
+  }
+  if(files['midi-map.json']){
+    try { Object.assign(midiMap, JSON.parse(dec.decode(files['midi-map.json']))); }
+    catch(err){ console.error(err); }
+  }
+}
+
+module.exports = { keyToScale, exportProjectZip, importProject };
+
+// --- Transport & header -----------------------------------------------------
+$('#projSaveBtn').addEventListener('click', ()=> exportProjectZip());
+$('#projLoadBtn').addEventListener('click', ()=> $('#projFile').click());
+$('#projFile').addEventListener('change', async e => {
+  const f = e.target.files?.[0]; if(!f) return;
+  const buf = await f.arrayBuffer();
+  try {
+    const files = unzipStoreOnly(new Uint8Array(buf));
+    await importProject(files);
+    status('Project loaded.');
+  } catch(err){ console.error(err); status('Bad project .zip'); }
+});
 
 // --- Limiter routing setup -------------------------------------------------
 // This section configures limiters on each instrument bus and ensures it runs
