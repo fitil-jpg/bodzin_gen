@@ -16,6 +16,13 @@ const SECTION_LAYOUT = [
   { name: 'Break', start: 12, end: 15, color: 'rgba(255, 180, 73, 0.05)' }
 ];
 
+const SECTION_SEQUENCE_ACTIVITY = {
+  Intro: { drums: true, bass: false, lead: false, fx: false },
+  Lift: { drums: true, bass: true, lead: false, fx: true },
+  Peak: { drums: true, bass: true, lead: true, fx: true },
+  Break: { drums: true, bass: false, lead: false, fx: true }
+};
+
 const DEFAULT_AUTOMATION = {
   tracks: [
     {
@@ -352,6 +359,7 @@ function createApp() {
     automation: cloneAutomation(DEFAULT_AUTOMATION),
     automationEvent: null,
     automationStep: 0,
+    activeSection: null,
     midi: {
       access: null,
       mappings: loadMidiMappings(),
@@ -408,8 +416,8 @@ function initializeApp(app) {
   setupAutomationScheduling(app);
   setupMidi(app);
   applyAutomationForStep(app, 0);
+  syncSectionState(app, 0);
   drawTimeline(app);
-  updateSectionLabel(app, 0);
   setStatus(app, 'Idle');
 }
 
@@ -586,7 +594,27 @@ function buildSequences(instruments) {
     }
   }, fxPattern, '16n');
 
-  return [kickSeq, snareSeq, hatSeq, bassSeq, leadSeq, fxSeq];
+  const groups = {
+    drums: [kickSeq, snareSeq, hatSeq],
+    bass: [bassSeq],
+    lead: [leadSeq],
+    fx: [fxSeq]
+  };
+
+  const sequencesByInstrument = {
+    kick: kickSeq,
+    snare: snareSeq,
+    hats: hatSeq,
+    bass: bassSeq,
+    lead: leadSeq,
+    fx: fxSeq
+  };
+
+  return {
+    all: [].concat(...Object.values(groups)),
+    groups,
+    byInstrument: sequencesByInstrument
+  };
 }
 
 function buildDefaultControlState() {
@@ -806,7 +834,10 @@ async function ensureTransportRunning(app) {
   }
   await Tone.start();
   if (!app.audio.sequencesStarted) {
-    app.audio.sequences.forEach(seq => seq.start(0));
+    const sequenceList = app.audio.sequences && Array.isArray(app.audio.sequences.all)
+      ? app.audio.sequences.all
+      : [];
+    sequenceList.forEach(seq => seq.start(0));
     app.audio.sequencesStarted = true;
   }
   Tone.Transport.start();
@@ -819,8 +850,8 @@ function stopPlayback(app) {
   app.timeline.currentStep = 0;
   app.automationStep = 0;
   applyAutomationForStep(app, 0);
+  syncSectionState(app, 0);
   drawTimeline(app);
-  updateSectionLabel(app, 0);
   setStatus(app, 'Stopped');
 }
 
@@ -885,6 +916,7 @@ function applyPreset(app, presetData) {
   }
   savePresetState(buildPresetPayload(app, app.presetName));
   applyAutomationForStep(app, app.timeline.currentStep);
+  syncSectionState(app, app.timeline.currentStep);
 }
 
 function applyAutomationPreset(app, automationData) {
@@ -981,14 +1013,56 @@ function setupAutomationScheduling(app) {
   if (app.automationEvent) {
     Tone.Transport.clear(app.automationEvent);
   }
+  app.activeSection = null;
   app.automationEvent = Tone.Transport.scheduleRepeat(time => {
     const step = app.automationStep % STEP_COUNT;
     app.timeline.currentStep = step;
     applyAutomationForStep(app, step, time);
-    updateSectionLabel(app, step);
+    syncSectionState(app, step);
     requestAnimationFrame(() => drawTimeline(app));
     app.automationStep = (step + 1) % STEP_COUNT;
   }, STEP_DURATION);
+}
+
+function getSectionForStep(app, step) {
+  const sections = app.automation.sections && app.automation.sections.length
+    ? app.automation.sections
+    : SECTION_LAYOUT;
+  return sections.find(section => step >= section.start && step <= section.end) || null;
+}
+
+function updateSectionPlayback(app, section) {
+  if (!app.audio || !app.audio.sequences || !app.audio.sequences.groups) {
+    return;
+  }
+  const sectionName = section ? section.name : null;
+  if (app.activeSection === sectionName) {
+    return;
+  }
+
+  const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
+  const groups = app.audio.sequences.groups;
+  const defaultState = { drums: true, bass: true, lead: true, fx: true };
+
+  Object.entries(groups).forEach(([groupName, seqs]) => {
+    const hasExplicitSetting = arrangement && Object.prototype.hasOwnProperty.call(arrangement, groupName);
+    const shouldEnable = hasExplicitSetting
+      ? Boolean(arrangement[groupName])
+      : defaultState[groupName] !== undefined
+        ? defaultState[groupName]
+        : true;
+    seqs.forEach(seq => {
+      seq.mute = !shouldEnable;
+    });
+  });
+
+  app.activeSection = sectionName;
+}
+
+function syncSectionState(app, step) {
+  const section = getSectionForStep(app, step);
+  updateSectionPlayback(app, section);
+  updateSectionLabel(app, step, section);
 }
 
 function applyAutomationForStep(app, step, time) {
@@ -1027,8 +1101,8 @@ function getAutomationTrack(app, id) {
   return app.automation.tracks.find(track => track.id === id) || { values: new Array(STEP_COUNT).fill(0) };
 }
 
-function updateSectionLabel(app, step) {
-  const section = app.automation.sections.find(item => step >= item.start && step <= item.end);
+function updateSectionLabel(app, step, sectionOverride) {
+  const section = sectionOverride || getSectionForStep(app, step);
   if (section && app.sectionLabelEl) {
     app.sectionLabelEl.textContent = `Section: ${section.name}`;
   } else if (app.sectionLabelEl) {
@@ -1073,8 +1147,8 @@ async function captureBuses(app, buses) {
     Tone.Transport.position = 0;
     app.timeline.currentStep = 0;
     applyAutomationForStep(app, 0);
+    syncSectionState(app, 0);
     drawTimeline(app);
-    updateSectionLabel(app, 0);
   }
 }
 
