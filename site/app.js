@@ -1075,9 +1075,13 @@ function applyAutomationForStep(app, step, time) {
   const bassBase = getControlValue(app, 'bassFilterBase');
   const bassMod = getControlValue(app, 'bassFilterMod');
 
-  const leadFreq = leadBase + leadMod * clamp(leadTrack.values[step], 0, 1);
-  const fxAmount = clamp(fxTrack.values[step], 0, 1) * fxBase;
-  const bassFreq = bassBase + bassMod * clamp(bassTrack.values[step], 0, 1);
+  const leadValue = clamp(getAutomationValue(leadTrack, step), 0, 1);
+  const fxValue = clamp(getAutomationValue(fxTrack, step), 0, 1);
+  const bassValue = clamp(getAutomationValue(bassTrack, step), 0, 1);
+
+  const leadFreq = leadBase + leadMod * leadValue;
+  const fxAmount = fxValue * fxBase;
+  const bassFreq = bassBase + bassMod * bassValue;
 
   const leadFrequency = app.audio.nodes.leadFilter.frequency;
   const leadFxGain = app.audio.nodes.leadFxSend.gain;
@@ -1098,7 +1102,37 @@ function applyAutomationForStep(app, step, time) {
 }
 
 function getAutomationTrack(app, id) {
-  return app.automation.tracks.find(track => track.id === id) || { values: new Array(STEP_COUNT).fill(0) };
+  const track = app.automation.tracks.find(track => track.id === id);
+  if (track) {
+    track.values = normalizeAutomationValues(track.values);
+    return track;
+  }
+  return { id, values: new Array(STEP_COUNT).fill(0) };
+}
+
+function getAutomationValue(track, step) {
+  if (!track || !Array.isArray(track.values)) {
+    return 0;
+  }
+  const rawValue = track.values[step];
+  if (rawValue === null || rawValue === undefined) {
+    return 0;
+  }
+  const numericValue = typeof rawValue === 'number' ? rawValue : Number(rawValue);
+  return Number.isFinite(numericValue) ? numericValue : 0;
+}
+
+function normalizeAutomationValues(values) {
+  if (!Array.isArray(values)) {
+    return new Array(STEP_COUNT).fill(0);
+  }
+  if (values.length === STEP_COUNT) {
+    return values;
+  }
+  if (values.length > STEP_COUNT) {
+    return values.slice(0, STEP_COUNT);
+  }
+  return values.concat(new Array(STEP_COUNT - values.length).fill(0));
 }
 
 function updateSectionLabel(app, step, sectionOverride) {
