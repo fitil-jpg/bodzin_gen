@@ -1,709 +1,1283 @@
 'use strict';
 
 const STEP_COUNT = 16;
-const LEVELS = 4;
-const STEP_SYMBOLS = ['\u00b7', '\u25d4', '\u25d1', '\u25cf'];
-const LEVEL_LABELS = ['Rest', 'Pulse', 'Accent', 'Lead'];
-
-const TRACK_META = {
-  lead: {
-    label: 'Lead Synth',
-    description:
-      'A melodic lane with four velocity layers. Tap steps to cycle through intensities.'
-  },
-  hats: {
-    label: 'Hi-Hats',
-    description:
-      'Tight 16-step hat editor. Use it to sculpt movement and energy in the groove.'
-  }
+const LOOP_DURATION = '1m';
+const STORAGE_KEYS = {
+  controlState: 'bodzin.controlState',
+  preset: 'bodzin.preset',
+  midi: 'bodzin.midiMappings'
 };
 
-const DEFAULT_SIDECHAIN = {
-  duck_amount: 0.5,
-  duck_attack_ms: 30,
-  duck_release_ms: 250
+const SECTION_LAYOUT = [
+  { name: 'Intro', start: 0, end: 3, color: 'rgba(73, 169, 255, 0.05)' },
+  { name: 'Lift', start: 4, end: 7, color: 'rgba(255, 73, 175, 0.04)' },
+  { name: 'Peak', start: 8, end: 11, color: 'rgba(148, 255, 73, 0.04)' },
+  { name: 'Break', start: 12, end: 15, color: 'rgba(255, 180, 73, 0.05)' }
+];
+
+const DEFAULT_AUTOMATION = {
+  tracks: [
+    {
+      id: 'leadFilter',
+      label: 'Lead Filter',
+      color: '#49a9ff',
+      values: [
+        0.1, 0.12, 0.18, 0.24, 0.32, 0.38, 0.46, 0.52,
+        0.6, 0.68, 0.76, 0.84, 0.88, 0.92, 0.96, 1
+      ]
+    },
+    {
+      id: 'fxSend',
+      label: 'FX Send',
+      color: '#ff49af',
+      values: [
+        0.05, 0.08, 0.1, 0.14, 0.18, 0.22, 0.28, 0.32,
+        0.35, 0.4, 0.46, 0.52, 0.58, 0.62, 0.68, 0.74
+      ]
+    },
+    {
+      id: 'bassFilter',
+      label: 'Bass Filter',
+      color: '#94ff49',
+      values: [
+        0.24, 0.25, 0.26, 0.28, 0.34, 0.4, 0.48, 0.54,
+        0.52, 0.46, 0.4, 0.34, 0.3, 0.28, 0.26, 0.24
+      ]
+    }
+  ],
+  sections: SECTION_LAYOUT
 };
 
-const SIDECHAIN_PARAMS = [
+const CONTROL_SCHEMA = [
   {
-    id: 'duck_amount',
-    label: 'Duck Amount',
-    min: 0,
-    max: 1,
-    step: 0.01,
-    format: value => `${Math.round(value * 100)}%`
+    group: 'Transport',
+    description: 'Tempo and groove foundation.',
+    controls: [
+      {
+        id: 'tempo',
+        label: 'Tempo',
+        type: 'range',
+        min: 110,
+        max: 136,
+        step: 1,
+        default: 124,
+        format: value => `${Math.round(value)} BPM`,
+        apply: (value) => Tone.Transport.bpm.rampTo(value, 0.1)
+      },
+      {
+        id: 'swing',
+        label: 'Swing Amount',
+        type: 'range',
+        min: 0,
+        max: 0.45,
+        step: 0.01,
+        default: 0.08,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value) => {
+          Tone.Transport.swing = value;
+          Tone.Transport.swingSubdivision = '8n';
+        }
+      }
+    ]
   },
   {
-    id: 'duck_attack_ms',
-    label: 'Attack (ms)',
-    min: 5,
-    max: 150,
-    step: 1,
-    format: value => `${Math.round(value)} ms`
+    group: 'Bus Levels',
+    description: 'Mix bus trims for the core stems.',
+    controls: [
+      {
+        id: 'drumLevel',
+        label: 'Drums Level',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -4,
+        format: formatDb,
+        apply: (value, app) => setBusLevel(app.audio.buses.drums, value)
+      },
+      {
+        id: 'bassLevel',
+        label: 'Bass Level',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -6,
+        format: formatDb,
+        apply: (value, app) => setBusLevel(app.audio.buses.bass, value)
+      },
+      {
+        id: 'leadLevel',
+        label: 'Lead Level',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -3,
+        format: formatDb,
+        apply: (value, app) => setBusLevel(app.audio.buses.lead, value)
+      },
+      {
+        id: 'fxLevel',
+        label: 'FX Return',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -8,
+        format: formatDb,
+        apply: (value, app) => setBusLevel(app.audio.buses.fx, value)
+      }
+    ]
   },
   {
-    id: 'duck_release_ms',
-    label: 'Release (ms)',
-    min: 50,
-    max: 600,
-    step: 1,
-    format: value => `${Math.round(value)} ms`
+    group: 'Bass Synth',
+    description: 'Low-end sculpting.',
+    controls: [
+      {
+        id: 'bassFilterBase',
+        label: 'Filter Base',
+        type: 'range',
+        min: 80,
+        max: 420,
+        step: 1,
+        default: 140,
+        format: formatHz,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.bassFilter.frequency.value = value;
+        }
+      },
+      {
+        id: 'bassFilterMod',
+        label: 'Filter Movement',
+        type: 'range',
+        min: 0,
+        max: 520,
+        step: 1,
+        default: 260,
+        format: value => `${Math.round(value)} Hz`,
+        affectsAutomation: true,
+        apply: () => {}
+      },
+      {
+        id: 'bassResonance',
+        label: 'Resonance',
+        type: 'range',
+        min: 0.3,
+        max: 1.5,
+        step: 0.01,
+        default: 0.7,
+        format: value => value.toFixed(2),
+        apply: (value, app) => {
+          app.audio.nodes.bassFilter.Q.value = value * 6;
+        }
+      },
+      {
+        id: 'bassDrive',
+        label: 'Drive',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.35,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.nodes.bassDrive.wet.value = value;
+        }
+      }
+    ]
+  },
+  {
+    group: 'Lead Synth',
+    description: 'Top line motion and tone.',
+    controls: [
+      {
+        id: 'leadWave',
+        label: 'Waveform',
+        type: 'select',
+        options: [
+          { value: 'sawtooth', label: 'Saw' },
+          { value: 'square', label: 'Square' },
+          { value: 'triangle', label: 'Triangle' }
+        ],
+        default: 'sawtooth',
+        apply: (value, app) => {
+          app.audio.instruments.lead.set({ oscillator: { type: value } });
+        }
+      },
+      {
+        id: 'leadFilterBase',
+        label: 'Filter Base',
+        type: 'range',
+        min: 240,
+        max: 2200,
+        step: 1,
+        default: 520,
+        format: formatHz,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.leadFilter.frequency.value = value;
+        }
+      },
+      {
+        id: 'leadFilterMod',
+        label: 'Filter Movement',
+        type: 'range',
+        min: 0,
+        max: 5200,
+        step: 1,
+        default: 2600,
+        format: value => `${Math.round(value)} Hz`,
+        affectsAutomation: true,
+        apply: () => {}
+      },
+      {
+        id: 'leadDetune',
+        label: 'Detune',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 0.1,
+        default: 3,
+        format: value => `${value.toFixed(1)} cents`,
+        apply: (value, app) => {
+          app.audio.instruments.lead.set({ detune: value });
+        }
+      },
+      {
+        id: 'leadFxSend',
+        label: 'FX Send',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.45,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.leadFxSend.gain.value = value;
+        }
+      }
+    ]
+  },
+  {
+    group: 'Ambience',
+    description: 'Delay and space design.',
+    controls: [
+      {
+        id: 'delayTime',
+        label: 'Delay Time',
+        type: 'select',
+        options: [
+          { value: '8n', label: '1/8' },
+          { value: '8t', label: '1/8T' },
+          { value: '4n', label: '1/4' }
+        ],
+        default: '8n',
+        apply: (value, app) => {
+          app.audio.nodes.delay.delayTime.value = value;
+        }
+      },
+      {
+        id: 'delayFeedback',
+        label: 'Delay Feedback',
+        type: 'range',
+        min: 0,
+        max: 0.8,
+        step: 0.01,
+        default: 0.38,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.nodes.delay.feedback.value = value;
+        }
+      },
+      {
+        id: 'delayMix',
+        label: 'Delay Mix',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.3,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.nodes.delay.wet.value = value;
+        }
+      },
+      {
+        id: 'reverbDecay',
+        label: 'Reverb Decay',
+        type: 'range',
+        min: 0.5,
+        max: 12,
+        step: 0.1,
+        default: 6,
+        format: value => `${value.toFixed(1)} s`,
+        apply: (value, app) => {
+          app.audio.nodes.reverb.decay = value;
+        }
+      },
+      {
+        id: 'reverbMix',
+        label: 'Reverb Mix',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.28,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.nodes.reverb.wet.value = value;
+        }
+      }
+    ]
   }
 ];
 
-const SONG_TEMPLATES = {
-  Intro: {
-    description: 'Slow build with gentle sidechain and sparse hats for tension.',
-    lead: [0, 0, 1, 0, 0, 2, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0],
-    hats: [0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
-    sidechain: { duck_amount: 0.35, duck_attack_ms: 42, duck_release_ms: 320 }
-  },
-  Build: {
-    description: 'Add energy with rising lead accents and syncopated hats.',
-    lead: [0, 3, 0, 1, 0, 2, 0, 1, 0, 3, 0, 2, 0, 2, 0, 3],
-    hats: [1, 0, 2, 0, 1, 0, 2, 0, 1, 0, 2, 0, 1, 0, 2, 0],
-    sidechain: { duck_amount: 0.55, duck_attack_ms: 35, duck_release_ms: 260 }
-  },
-  Drop: {
-    description: 'Maximum impact: heavy ducking, active lead, relentless hats.',
-    lead: [3, 0, 2, 0, 3, 0, 2, 0, 3, 0, 1, 0, 3, 0, 2, 0],
-    hats: [2, 2, 3, 2, 2, 2, 3, 2, 2, 2, 3, 2, 2, 2, 3, 2],
-    sidechain: { duck_amount: 0.72, duck_attack_ms: 20, duck_release_ms: 220 }
-  },
-  Outro: {
-    description: 'Wind-down with relaxed pump and decaying melodic phrases.',
-    lead: [0, 2, 0, 1, 0, 1, 0, 0, 0, 2, 0, 1, 0, 0, 0, 1],
-    hats: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-    sidechain: { duck_amount: 0.45, duck_attack_ms: 40, duck_release_ms: 360 }
-  }
-};
+let appInstance = null;
 
-const state = {
-  sidechain: { ...DEFAULT_SIDECHAIN },
-  sequences: {
-    lead: new Array(STEP_COUNT).fill(0),
-    hats: new Array(STEP_COUNT).fill(0)
-  },
-  template: 'Intro'
-};
+document.addEventListener('DOMContentLoaded', () => {
+  appInstance = createApp();
+  initializeApp(appInstance);
+  window.bodzinApp = appInstance;
+});
 
-initializeStateFromTemplate(state.template);
-
-const sidechainRefs = new Map();
-const sequenceButtons = { lead: [], hats: [] };
-let statePreviewEl = null;
-let templateDescriptionEl = null;
-let templateSelectEl = null;
-let statusEl = null;
-let statusTimer = null;
-
-document.addEventListener('DOMContentLoaded', initApp);
-
-function initApp() {
-  injectStyles();
-  document.body.classList.add('bodzin-shell');
-  const root = document.createElement('div');
-  root.id = 'app';
-  document.body.appendChild(root);
-
-  root.appendChild(createHeader());
-  createStatusBar(root);
-  createSidechainSection(root);
-  createSequencerSection(root, 'lead');
-  createSequencerSection(root, 'hats');
-  createTemplateSection(root);
-  createStatePreview(root);
-
-  updateSidechainUI();
-  renderSequence('lead');
-  renderSequence('hats');
-  updateTemplateDescription();
-  updateStatePreview();
-  showStatus(`${state.template} template loaded`);
-
-  window.bodzinApp = {
-    state,
-    randomizeSequence,
-    mutateSequence,
-    applySongTemplate,
-    setSidechainValue
+function createApp() {
+  return {
+    audio: null,
+    controls: new Map(),
+    controlState: {},
+    automation: cloneAutomation(DEFAULT_AUTOMATION),
+    automationEvent: null,
+    automationStep: 0,
+    midi: {
+      access: null,
+      mappings: loadMidiMappings(),
+      learning: false,
+      pendingControl: null
+    },
+    presetName: 'Deep Default',
+    timeline: {
+      canvas: document.getElementById('timeline'),
+      ctx: null,
+      currentStep: 0,
+      deviceRatio: window.devicePixelRatio || 1
+    },
+    statusEl: document.getElementById('status'),
+    sectionLabelEl: document.getElementById('sectionLabel'),
+    statusTimer: null,
+    presetFileInput: null
   };
 }
 
-function injectStyles() {
-  if (document.getElementById('bodzin-app-styles')) return;
-  const style = document.createElement('style');
-  style.id = 'bodzin-app-styles';
-  style.textContent = `
-    :root { color-scheme: dark; }
-    body.bodzin-shell {
-      margin: 0;
-      min-height: 100vh;
-      font-family: 'Inter', 'Segoe UI', sans-serif;
-      background: radial-gradient(circle at top, #1c2140 0%, #050510 60%);
-      color: #f5f6ff;
-    }
-    #app {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 2rem 1.5rem 4rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-    header.hero {
-      text-align: center;
-      padding: 1rem 1.5rem 0.5rem;
-    }
-    header.hero h1 {
-      margin: 0;
-      font-size: 2.2rem;
-      letter-spacing: 0.06em;
-    }
-    header.hero p {
-      margin: 0.5rem 0 0;
-      color: rgba(214, 219, 255, 0.75);
-    }
-    section.card {
-      background: rgba(18, 20, 40, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 18px;
-      padding: 1.5rem;
-      box-shadow: 0 22px 45px rgba(5, 6, 20, 0.45);
-    }
-    section.card h2 {
-      margin-top: 0;
-      font-size: 1.35rem;
-      letter-spacing: 0.04em;
-    }
-    section.card p {
-      color: rgba(216, 220, 255, 0.8);
-      line-height: 1.55;
-    }
-    .status {
-      min-height: 1.25rem;
-      font-size: 0.85rem;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: #a6b4ff;
-      opacity: 0.85;
-      padding: 0 0.5rem;
-    }
-    .sidechain-controls {
-      display: grid;
-      gap: 1rem;
-    }
-    .control-row {
-      display: grid;
-      grid-template-columns: minmax(160px, 1fr) minmax(160px, 2fr) 80px;
-      gap: 1rem;
-      align-items: center;
-    }
-    .control-row span.label {
-      font-weight: 600;
-      letter-spacing: 0.04em;
-    }
-    .control-row input[type="range"] {
-      width: 100%;
-      accent-color: #7685ff;
-    }
-    .control-row .control-value {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-      color: rgba(219, 224, 255, 0.9);
-    }
-    .sequence-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(2.5rem, 1fr));
-      gap: 0.4rem;
-      margin: 1.1rem 0 1.5rem;
-    }
-    .step-button {
-      height: 2.6rem;
-      border-radius: 0.85rem;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      background: rgba(118, 133, 255, 0.08);
-      color: #f5f6ff;
-      font-size: 1.05rem;
-      transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-    .step-button[data-level="0"] {
-      background: rgba(118, 133, 255, 0.05);
-      border-color: rgba(255, 255, 255, 0.04);
-      color: rgba(255, 255, 255, 0.35);
-      box-shadow: none;
-    }
-    .step-button[data-level="1"] {
-      background: rgba(118, 133, 255, 0.18);
-    }
-    .step-button[data-level="2"] {
-      background: rgba(118, 133, 255, 0.32);
-      box-shadow: 0 6px 16px rgba(118, 133, 255, 0.24);
-    }
-    .step-button[data-level="3"] {
-      background: rgba(118, 133, 255, 0.48);
-      border-color: rgba(163, 172, 255, 0.75);
-      box-shadow: 0 8px 22px rgba(118, 133, 255, 0.35);
-    }
-    .step-button:hover {
-      transform: translateY(-2px);
-    }
-    .step-button:focus-visible {
-      outline: 2px solid #9ea9ff;
-      outline-offset: 2px;
-    }
-    .sequence-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-    }
-    .sequence-actions button {
-      flex: 1 1 160px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(158, 169, 255, 0.12);
-      padding: 0.55rem 1.2rem;
-      color: #dbe0ff;
-      letter-spacing: 0.05em;
-      font-size: 0.78rem;
-      text-transform: uppercase;
-    }
-    .sequence-actions button.primary {
-      background: linear-gradient(120deg, rgba(118, 133, 255, 0.65), rgba(171, 104, 255, 0.65));
-      color: white;
-      border-color: transparent;
-    }
-    .sequence-actions button:focus-visible {
-      outline: 2px solid rgba(158, 169, 255, 0.9);
-      outline-offset: 2px;
-    }
-    .template-select {
-      margin-top: 1rem;
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .template-select label {
-      font-weight: 600;
-      letter-spacing: 0.04em;
-    }
-    .template-select select {
-      flex: 1 1 200px;
-      background: rgba(10, 12, 32, 0.8);
-      color: #f0f2ff;
-      border-radius: 0.75rem;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 0.6rem 0.9rem;
-      font-size: 0.95rem;
-    }
-    .template-description {
-      margin-top: 0.75rem;
-      font-size: 0.95rem;
-      color: rgba(222, 224, 255, 0.88);
-    }
-    details.state-debug {
-      background: rgba(14, 18, 35, 0.55);
-      border-radius: 1rem;
-      padding: 1rem 1.25rem;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    details.state-debug summary {
-      cursor: pointer;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-    }
-    details.state-debug pre {
-      margin: 0.75rem 0 0;
-      max-height: 240px;
-      overflow: auto;
-      background: rgba(0, 0, 0, 0.35);
-      padding: 0.75rem;
-      border-radius: 0.75rem;
-      font-size: 0.85rem;
-    }
-    @media (max-width: 720px) {
-      header.hero h1 {
-        font-size: 1.8rem;
-      }
-      .control-row {
-        grid-template-columns: 1fr;
-      }
-      .sequence-actions button {
-        flex-basis: 130px;
-      }
-      .sequence-grid {
-        grid-template-columns: repeat(auto-fit, minmax(2.1rem, 1fr));
-      }
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-function createHeader() {
-  const header = document.createElement('header');
-  header.className = 'hero';
-
-  const title = document.createElement('h1');
-  title.textContent = 'Bodzin Generator Toolkit';
-
-  const subtitle = document.createElement('p');
-  subtitle.textContent = 'Shape the pump, sketch melodic ideas, and jump between song blueprints instantly.';
-
-  header.append(title, subtitle);
-  return header;
-}
-
-function createStatusBar(root) {
-  statusEl = document.createElement('div');
-  statusEl.className = 'status';
-  statusEl.setAttribute('aria-live', 'polite');
-  root.appendChild(statusEl);
-}
-
-function createSidechainSection(root) {
-  const section = document.createElement('section');
-  section.className = 'card';
-
-  const heading = document.createElement('h2');
-  heading.textContent = 'Sidechain Ducking';
-  const description = document.createElement('p');
-  description.textContent = 'Fine-tune the sidechain compressor that glues the mix. Amount controls reduction depth, attack shapes onset, and release defines how quickly the groove breathes back in.';
-
-  const controlWrap = document.createElement('div');
-  controlWrap.className = 'sidechain-controls';
-
-  SIDECHAIN_PARAMS.forEach(param => {
-    const row = document.createElement('label');
-    row.className = 'control-row';
-    row.setAttribute('for', param.id);
-
-    const labelSpan = document.createElement('span');
-    labelSpan.className = 'label';
-    labelSpan.textContent = param.label;
-
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.id = param.id;
-    slider.min = String(param.min);
-    slider.max = String(param.max);
-    slider.step = String(param.step);
-    slider.value = String(state.sidechain[param.id]);
-
-    const valueEl = document.createElement('span');
-    valueEl.className = 'control-value';
-    valueEl.textContent = formatValue(param, state.sidechain[param.id]);
-
-    slider.addEventListener('input', event => {
-      setSidechainValue(param.id, event.target.value, { silent: true });
-    });
-
-    slider.addEventListener('change', event => {
-      setSidechainValue(param.id, event.target.value);
-    });
-
-    row.append(labelSpan, slider, valueEl);
-    controlWrap.appendChild(row);
-    sidechainRefs.set(param.id, { input: slider, valueEl, param });
-  });
-
-  section.append(heading, description, controlWrap);
-  root.appendChild(section);
-}
-
-function createSequencerSection(root, track) {
-  const meta = TRACK_META[track] || { label: track, description: '' };
-  const section = document.createElement('section');
-  section.className = 'card';
-
-  const heading = document.createElement('h2');
-  heading.textContent = `${meta.label} Pattern`;
-  const description = document.createElement('p');
-  description.textContent = meta.description;
-
-  const grid = document.createElement('div');
-  grid.className = 'sequence-grid';
-
-  const buttons = [];
-  for (let i = 0; i < STEP_COUNT; i += 1) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'step-button';
-    btn.dataset.track = track;
-    btn.dataset.index = String(i);
-    btn.addEventListener('click', () => {
-      const current = state.sequences[track][i] || 0;
-      const next = (current + 1) % LEVELS;
-      setStepValue(track, i, next);
-    });
-    buttons.push(btn);
-    grid.appendChild(btn);
-  }
-  sequenceButtons[track] = buttons;
-
-  const actions = document.createElement('div');
-  actions.className = 'sequence-actions';
-
-  const randomBtn = document.createElement('button');
-  randomBtn.type = 'button';
-  randomBtn.textContent = 'Randomize';
-  randomBtn.classList.add('primary');
-  randomBtn.addEventListener('click', () => randomizeSequence(track));
-
-  const mutateBtn = document.createElement('button');
-  mutateBtn.type = 'button';
-  mutateBtn.textContent = 'Mutate';
-  mutateBtn.addEventListener('click', () => mutateSequence(track));
-
-  actions.append(randomBtn, mutateBtn);
-
-  section.append(heading, description, grid, actions);
-  root.appendChild(section);
-}
-
-function createTemplateSection(root) {
-  const section = document.createElement('section');
-  section.className = 'card';
-
-  const heading = document.createElement('h2');
-  heading.textContent = 'Song Templates';
-  const description = document.createElement('p');
-  description.textContent = 'Jump-start your arrangement with curated templates. Each snapshot wires lead and hat sequences while dialing in sidechain contour.';
-
-  const selectWrap = document.createElement('div');
-  selectWrap.className = 'template-select';
-
-  const label = document.createElement('label');
-  label.setAttribute('for', 'template-select');
-  label.textContent = 'Template';
-
-  templateSelectEl = document.createElement('select');
-  templateSelectEl.id = 'template-select';
-
-  Object.keys(SONG_TEMPLATES).forEach(name => {
-    const option = document.createElement('option');
-    option.value = name;
-    option.textContent = name;
-    templateSelectEl.appendChild(option);
-  });
-
-  templateSelectEl.value = state.template;
-  templateSelectEl.addEventListener('change', event => {
-    applySongTemplate(event.target.value);
-  });
-
-  selectWrap.append(label, templateSelectEl);
-
-  templateDescriptionEl = document.createElement('p');
-  templateDescriptionEl.className = 'template-description';
-
-  section.append(heading, description, selectWrap, templateDescriptionEl);
-  root.appendChild(section);
-}
-
-function createStatePreview(root) {
-  const details = document.createElement('details');
-  details.className = 'state-debug';
-
-  const summary = document.createElement('summary');
-  summary.textContent = 'State Inspector';
-
-  statePreviewEl = document.createElement('pre');
-  statePreviewEl.textContent = '';
-
-  details.append(summary, statePreviewEl);
-  root.appendChild(details);
-}
-
-function updateSidechainUI(targetId) {
-  if (targetId) {
-    const entry = sidechainRefs.get(targetId);
-    if (!entry) return;
-    const value = state.sidechain[targetId];
-    entry.input.value = String(value);
-    entry.valueEl.textContent = formatValue(entry.param, value);
+function initializeApp(app) {
+  if (!app.timeline.canvas) {
+    console.warn('Timeline canvas missing.');
     return;
   }
-  sidechainRefs.forEach((entry, id) => {
-    const value = state.sidechain[id];
-    entry.input.value = String(value);
-    entry.valueEl.textContent = formatValue(entry.param, value);
-  });
-}
 
-function setSidechainValue(id, value, options = {}) {
-  const { silent = false } = options;
-  const param = SIDECHAIN_PARAMS.find(p => p.id === id);
-  if (!param) return;
-  const numeric = typeof value === 'number' ? value : parseFloat(value);
-  if (!Number.isFinite(numeric)) return;
-  const clamped = clamp(numeric, param.min, param.max);
-  const normalized = param.step >= 1 ? Math.round(clamped) : parseFloat(clamped.toFixed(3));
-  state.sidechain[id] = normalized;
-  updateSidechainUI(id);
-  updateStatePreview();
-  if (!silent) {
-    showStatus(`${param.label} → ${formatValue(param, normalized)}`);
+  app.timeline.ctx = app.timeline.canvas.getContext('2d');
+  app.audio = initializeAudioGraph();
+  configureTransport();
+
+  const storedControls = loadControlState();
+  const storedPreset = loadPresetState();
+  const externalPreset = typeof preset !== 'undefined' ? preset : null;
+  const defaultState = buildDefaultControlState();
+
+  app.controlState = Object.assign({}, defaultState, storedControls);
+
+  if (externalPreset && externalPreset.controls) {
+    Object.assign(app.controlState, externalPreset.controls);
   }
-}
-
-function renderSequence(track) {
-  const seq = state.sequences[track];
-  const buttons = sequenceButtons[track] || [];
-  buttons.forEach((btn, index) => {
-    const level = seq[index] || 0;
-    btn.dataset.level = String(level);
-    btn.textContent = STEP_SYMBOLS[level] || STEP_SYMBOLS[0];
-    btn.setAttribute('aria-pressed', level > 0 ? 'true' : 'false');
-    btn.title = `${TRACK_META[track]?.label || track} step ${index + 1}: ${LEVEL_LABELS[level]}`;
-  });
-}
-
-function setStepValue(track, index, value, options = {}) {
-  const { silent = false } = options;
-  const seq = state.sequences[track];
-  if (!seq) return;
-  const next = clamp(Math.round(value), 0, LEVELS - 1);
-  seq[index] = next;
-  renderSequence(track);
-  updateStatePreview();
-  if (!silent) {
-    const label = TRACK_META[track]?.label || track;
-    showStatus(`${label} step ${index + 1} → ${LEVEL_LABELS[next]}`);
+  if (storedPreset && storedPreset.controls) {
+    Object.assign(app.controlState, storedPreset.controls);
   }
+  if (externalPreset && externalPreset.automation) {
+    applyAutomationPreset(app, externalPreset.automation);
+  }
+  if (storedPreset && storedPreset.automation) {
+    applyAutomationPreset(app, storedPreset.automation);
+  }
+
+  renderControlInterface(app);
+  setupButtons(app);
+  setupTimeline(app);
+  setupAutomationScheduling(app);
+  setupMidi(app);
+  applyAutomationForStep(app, 0);
+  drawTimeline(app);
+  updateSectionLabel(app, 0);
+  setStatus(app, 'Idle');
 }
 
-function randomizeSequence(track) {
-  const seq = state.sequences[track];
-  if (!seq) return;
-  for (let i = 0; i < STEP_COUNT; i += 1) {
-    seq[i] = Math.floor(Math.random() * LEVELS);
-  }
-  renderSequence(track);
-  updateStatePreview();
-  const label = TRACK_META[track]?.label || track;
-  showStatus(`${label} randomized`);
+function configureTransport() {
+  Tone.Transport.bpm.value = 124;
+  Tone.Transport.loop = true;
+  Tone.Transport.loopStart = 0;
+  Tone.Transport.loopEnd = LOOP_DURATION;
+  Tone.Transport.swing = 0.08;
+  Tone.Transport.swingSubdivision = '8n';
 }
 
-function mutateSequence(track) {
-  const seq = state.sequences[track];
-  if (!seq) return;
-  const pivot = Math.floor(Math.random() * STEP_COUNT);
-  const delta = Math.random() < 0.5 ? -1 : 1;
-  seq[pivot] = clamp((seq[pivot] || 0) + delta, 0, LEVELS - 1);
-  if (Math.random() < 0.4) {
-    const neighbor = (pivot + (Math.random() < 0.5 ? -1 : 1) + STEP_COUNT) % STEP_COUNT;
-    const neighborDelta = Math.random() < 0.5 ? -1 : 1;
-    seq[neighbor] = clamp((seq[neighbor] || 0) + neighborDelta, 0, LEVELS - 1);
-  }
-  renderSequence(track);
-  updateStatePreview();
-  const label = TRACK_META[track]?.label || track;
-  showStatus(`${label} mutated`);
-}
+function initializeAudioGraph() {
+  const masterGain = new Tone.Gain(0.9);
+  const limiter = new Tone.Limiter(-1);
+  masterGain.connect(limiter);
+  limiter.toDestination();
 
-function applySongTemplate(name, options = {}) {
-  const template = SONG_TEMPLATES[name];
-  if (!template) return;
-  const { silent = false } = options;
-  state.template = name;
-  state.sequences.lead = toStepArray(template.lead);
-  state.sequences.hats = toStepArray(template.hats);
-  Object.assign(state.sidechain, DEFAULT_SIDECHAIN, template.sidechain || {});
-  if (templateSelectEl && templateSelectEl.value !== name) {
-    templateSelectEl.value = name;
-  }
-  updateSidechainUI();
-  renderSequence('lead');
-  renderSequence('hats');
-  updateTemplateDescription();
-  updateStatePreview();
-  if (!silent) {
-    showStatus(`${name} template loaded`);
-  }
-}
-
-function updateTemplateDescription() {
-  if (!templateDescriptionEl) return;
-  const template = SONG_TEMPLATES[state.template];
-  if (!template) {
-    templateDescriptionEl.textContent = '';
-    return;
-  }
-  const sidechain = template.sidechain || {};
-  templateDescriptionEl.textContent = `${state.template}: ${template.description} (Duck ${formatValue(SIDECHAIN_PARAMS[0], sidechain.duck_amount ?? state.sidechain.duck_amount)}, Attack ${formatValue(SIDECHAIN_PARAMS[1], sidechain.duck_attack_ms ?? state.sidechain.duck_attack_ms)}, Release ${formatValue(SIDECHAIN_PARAMS[2], sidechain.duck_release_ms ?? state.sidechain.duck_release_ms)})`;
-}
-
-function updateStatePreview() {
-  if (!statePreviewEl) return;
-  const snapshot = {
-    template: state.template,
-    sidechain: { ...state.sidechain },
-    sequences: {
-      lead: [...state.sequences.lead],
-      hats: [...state.sequences.hats]
-    }
+  const buses = {
+    drums: new Tone.Gain(0.8),
+    bass: new Tone.Gain(0.8),
+    lead: new Tone.Gain(0.8),
+    fx: new Tone.Gain(0.5)
   };
-  statePreviewEl.textContent = JSON.stringify(snapshot, null, 2);
+  Object.values(buses).forEach(bus => bus.connect(masterGain));
+
+  const delay = new Tone.FeedbackDelay('8n', 0.38);
+  const reverb = new Tone.Reverb({ decay: 6, wet: 0.28, preDelay: 0.02 });
+  const leadFilter = new Tone.Filter(520, 'lowpass', -12);
+  const leadFxSend = new Tone.Gain(0.45);
+  const bassFilter = new Tone.Filter(140, 'lowpass', -12);
+  const bassDrive = new Tone.Distortion(0.35);
+
+  buses.fx.connect(delay);
+  buses.fx.connect(reverb);
+  delay.connect(masterGain);
+  reverb.connect(masterGain);
+
+  const kick = new Tone.MembraneSynth({
+    pitchDecay: 0.05,
+    octaves: 4,
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.001, decay: 0.28, sustain: 0.0001, release: 0.2 }
+  }).connect(buses.drums);
+
+  const snare = new Tone.NoiseSynth({
+    noise: { type: 'white' },
+    envelope: { attack: 0.001, decay: 0.2, sustain: 0 }
+  }).connect(buses.drums);
+
+  const hats = new Tone.MetalSynth({
+    frequency: 320,
+    envelope: { attack: 0.001, decay: 0.09, release: 0.12 },
+    harmonicity: 5.1,
+    modulationIndex: 32,
+    resonance: 3000,
+    octaves: 1.3
+  }).connect(buses.drums);
+
+  const bass = new Tone.MonoSynth({
+    oscillator: { type: 'square' },
+    filter: { type: 'lowpass', rolloff: -12 },
+    filterEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.4, release: 0.6 },
+    envelope: { attack: 0.005, decay: 0.25, sustain: 0.6, release: 0.4 }
+  });
+  bass.chain(bassDrive, bassFilter, buses.bass);
+
+  const lead = new Tone.PolySynth(Tone.Synth, {
+    maxPolyphony: 4,
+    oscillator: { type: 'sawtooth' },
+    envelope: { attack: 0.02, decay: 0.35, sustain: 0.4, release: 0.7 }
+  });
+  lead.connect(leadFilter);
+  leadFilter.connect(buses.lead);
+  leadFilter.connect(leadFxSend);
+  leadFxSend.connect(buses.fx);
+
+  const noiseFx = new Tone.NoiseSynth({
+    noise: { type: 'pink' },
+    envelope: { attack: 0.5, decay: 2.4, sustain: 0 },
+    volume: -20
+  }).connect(buses.fx);
+
+  const sequences = buildSequences({ kick, snare, hats, bass, lead, noiseFx });
+
+  return {
+    master: masterGain,
+    buses,
+    nodes: {
+      delay,
+      reverb,
+      leadFilter,
+      leadFxSend,
+      bassFilter,
+      bassDrive
+    },
+    instruments: { kick, snare, hats, bass, lead, noiseFx },
+    sequences,
+    sequencesStarted: false
+  };
 }
 
-function initializeStateFromTemplate(name) {
-  const template = SONG_TEMPLATES[name];
-  if (!template) {
-    state.sequences.lead.fill(0);
-    state.sequences.hats.fill(0);
-    Object.assign(state.sidechain, DEFAULT_SIDECHAIN);
+function buildSequences(instruments) {
+  const kickPattern = [
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+    1, 0, 0, 0
+  ];
+  const snarePattern = [
+    0, 0, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 0,
+    0, 0, 1, 0
+  ];
+  const hatPattern = [
+    0.6, 0, 0.45, 0,
+    0.7, 0.25, 0.5, 0.25,
+    0.65, 0, 0.45, 0,
+    0.75, 0.3, 0.55, 0.35
+  ];
+  const bassPattern = [
+    'C2', null, 'G1', null,
+    'C2', 'D2', null, 'G1',
+    'C2', null, 'A1', null,
+    'C2', 'D2', null, 'G1'
+  ];
+  const leadPattern = [
+    ['E4', 'B4'], null, ['G4'], null,
+    ['A4'], null, ['B4', 'D5'], null,
+    ['E5'], null, ['G4'], null,
+    ['A4', 'C5'], null, ['B4'], null
+  ];
+  const fxPattern = [
+    0, 0, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 0,
+    0, 0, 1, 0
+  ];
+
+  const kickSeq = new Tone.Sequence((time, velocity) => {
+    if (velocity) {
+      instruments.kick.triggerAttackRelease('C1', '8n', time, velocity);
+    }
+  }, kickPattern, '16n');
+
+  const snareSeq = new Tone.Sequence((time, hit) => {
+    if (hit) {
+      instruments.snare.triggerAttackRelease('16n', time, 0.8);
+    }
+  }, snarePattern, '16n');
+
+  const hatSeq = new Tone.Sequence((time, velocity) => {
+    if (velocity) {
+      instruments.hats.triggerAttackRelease('32n', time, velocity);
+    }
+  }, hatPattern, '16n');
+
+  const bassSeq = new Tone.Sequence((time, note) => {
+    if (note) {
+      instruments.bass.triggerAttackRelease(note, '8n', time, 0.9);
+    }
+  }, bassPattern, '16n');
+
+  const leadSeq = new Tone.Sequence((time, notes) => {
+    if (notes && notes.length) {
+      notes.forEach(note => instruments.lead.triggerAttackRelease(note, '16n', time, 0.8));
+    }
+  }, leadPattern, '16n');
+
+  const fxSeq = new Tone.Sequence((time, trigger) => {
+    if (trigger) {
+      instruments.noiseFx.triggerAttackRelease('2n', time, 0.35);
+    }
+  }, fxPattern, '16n');
+
+  return [kickSeq, snareSeq, hatSeq, bassSeq, leadSeq, fxSeq];
+}
+
+function buildDefaultControlState() {
+  const state = {};
+  CONTROL_SCHEMA.forEach(section => {
+    section.controls.forEach(control => {
+      state[control.id] = control.default;
+    });
+  });
+  return state;
+}
+
+function renderControlInterface(app) {
+  const container = document.getElementById('controls');
+  container.innerHTML = '';
+  CONTROL_SCHEMA.forEach(section => {
+    const sectionEl = document.createElement('section');
+    sectionEl.className = 'control-section';
+
+    const heading = document.createElement('h3');
+    heading.textContent = section.group;
+    sectionEl.appendChild(heading);
+
+    if (section.description) {
+      const description = document.createElement('p');
+      description.className = 'control-description';
+      description.textContent = section.description;
+      sectionEl.appendChild(description);
+    }
+
+    container.appendChild(sectionEl);
+
+    section.controls.forEach(control => {
+      const row = document.createElement('label');
+      row.className = 'control-row';
+      row.dataset.controlId = control.id;
+
+      const label = document.createElement('span');
+      label.className = 'label';
+      label.textContent = control.label;
+      row.appendChild(label);
+
+      const valueEl = document.createElement('span');
+      valueEl.className = 'control-value';
+
+      let input;
+      if (control.type === 'select') {
+        input = document.createElement('select');
+        control.options.forEach(option => {
+          const opt = document.createElement('option');
+          opt.value = option.value;
+          opt.textContent = option.label;
+          input.appendChild(opt);
+        });
+      } else {
+        input = document.createElement('input');
+        input.type = 'range';
+        input.min = String(control.min);
+        input.max = String(control.max);
+        input.step = String(control.step);
+      }
+      input.id = control.id;
+      input.dataset.controlId = control.id;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'control-input';
+      wrap.appendChild(input);
+      row.appendChild(wrap);
+      row.appendChild(valueEl);
+
+      sectionEl.appendChild(row);
+
+      const entry = { control, input, valueEl, row };
+      app.controls.set(control.id, entry);
+
+      const storedValue = app.controlState[control.id];
+      setControlValue(app, control, storedValue, { silent: true, skipSave: true });
+
+      input.addEventListener('input', event => {
+        const val = getInputValue(control, event.target);
+        setControlValue(app, control, val, { silent: true, skipSave: true });
+      });
+      input.addEventListener('change', event => {
+        const val = getInputValue(control, event.target);
+        setControlValue(app, control, val);
+      });
+
+      if (control.type === 'range') {
+        const midiHandler = () => {
+          if (app.midi.learning) {
+            setMidiPendingControl(app, control.id);
+          }
+        };
+        input.addEventListener('pointerdown', midiHandler);
+        input.addEventListener('mousedown', midiHandler);
+        input.addEventListener('touchstart', midiHandler, { passive: true });
+      }
+    });
+  });
+}
+
+function getInputValue(control, input) {
+  if (control.type === 'select') {
+    return input.value;
+  }
+  const numeric = parseFloat(input.value);
+  if (!Number.isFinite(numeric)) {
+    return control.default;
+  }
+  return numeric;
+}
+
+function setControlValue(app, control, value, options = {}) {
+  const { silent = false, skipSave = false } = options;
+  const entry = app.controls.get(control.id);
+  let normalizedValue = value;
+  if (control.type !== 'select') {
+    const min = Number(control.min);
+    const max = Number(control.max);
+    normalizedValue = clamp(typeof value === 'number' ? value : parseFloat(value), min, max);
+  }
+  app.controlState[control.id] = normalizedValue;
+
+  if (entry) {
+    if (control.type === 'select') {
+      entry.input.value = String(normalizedValue);
+    } else {
+      entry.input.value = String(normalizedValue);
+    }
+    entry.valueEl.textContent = formatControlValue(control, normalizedValue);
+  }
+
+  if (control.apply) {
+    control.apply(normalizedValue, app);
+  }
+
+  if (control.affectsAutomation) {
+    applyAutomationForStep(app, app.timeline.currentStep);
+    drawTimeline(app);
+  }
+
+  if (!skipSave) {
+    saveControlState(app.controlState);
+  }
+  if (!silent) {
+    setStatus(app, `${control.label} → ${formatControlValue(control, normalizedValue)}`);
+  }
+}
+
+function formatControlValue(control, value) {
+  if (control.format) {
+    return control.format(value);
+  }
+  if (control.type === 'select') {
+    const option = control.options.find(opt => opt.value === value);
+    return option ? option.label : String(value);
+  }
+  return typeof value === 'number' ? value.toFixed(2) : String(value);
+}
+
+function setupButtons(app) {
+  const startBtn = document.getElementById('startButton');
+  const stopBtn = document.getElementById('stopButton');
+  const savePresetBtn = document.getElementById('savePresetButton');
+  const loadPresetBtn = document.getElementById('loadPresetButton');
+  const exportMixBtn = document.getElementById('exportMixButton');
+  const exportStemsBtn = document.getElementById('exportStemsButton');
+  const midiToggle = document.getElementById('midiLearnToggle');
+
+  startBtn?.addEventListener('click', () => startPlayback(app));
+  stopBtn?.addEventListener('click', () => stopPlayback(app));
+  savePresetBtn?.addEventListener('click', () => savePreset(app));
+  loadPresetBtn?.addEventListener('click', () => triggerPresetLoad(app));
+  exportMixBtn?.addEventListener('click', () => exportMix(app));
+  exportStemsBtn?.addEventListener('click', () => exportStems(app));
+  midiToggle?.addEventListener('change', event => {
+    const enabled = Boolean(event.target.checked);
+    setMidiLearn(app, enabled);
+  });
+
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'application/json';
+  fileInput.style.display = 'none';
+  fileInput.addEventListener('change', event => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        applyPreset(app, parsed);
+        setStatus(app, `Preset “${parsed.name || 'Imported'}” loaded`);
+      } catch (err) {
+        console.error('Preset parse failed', err);
+        setStatus(app, 'Preset load failed');
+      } finally {
+        fileInput.value = '';
+      }
+    };
+    reader.readAsText(file);
+  });
+  document.body.appendChild(fileInput);
+  app.presetFileInput = fileInput;
+}
+
+async function startPlayback(app, options = {}) {
+  await ensureTransportRunning(app);
+  if (!options.silent) {
+    setStatus(app, 'Playing');
+  }
+}
+
+async function ensureTransportRunning(app) {
+  if (Tone.Transport.state === 'started') {
+    return false;
+  }
+  await Tone.start();
+  if (!app.audio.sequencesStarted) {
+    app.audio.sequences.forEach(seq => seq.start(0));
+    app.audio.sequencesStarted = true;
+  }
+  Tone.Transport.start();
+  return true;
+}
+
+function stopPlayback(app) {
+  Tone.Transport.stop();
+  Tone.Transport.position = 0;
+  app.timeline.currentStep = 0;
+  app.automationStep = 0;
+  applyAutomationForStep(app, 0);
+  drawTimeline(app);
+  updateSectionLabel(app, 0);
+  setStatus(app, 'Stopped');
+}
+
+function triggerPresetLoad(app) {
+  if (app.presetFileInput) {
+    app.presetFileInput.click();
+  }
+}
+
+function savePreset(app) {
+  const name = prompt('Preset name', app.presetName || 'Deep Preset');
+  if (!name) return;
+  const payload = buildPresetPayload(app, name);
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = slugify(name) + '.json';
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+  app.presetName = name;
+  savePresetState(payload);
+  setStatus(app, `Preset “${name}” saved`);
+}
+
+function buildPresetPayload(app, name) {
+  return {
+    name,
+    createdAt: new Date().toISOString(),
+    controls: { ...app.controlState },
+    automation: {
+      tracks: app.automation.tracks.map(track => ({ id: track.id, values: [...track.values] })),
+      sections: app.automation.sections.map(section => ({ ...section }))
+    },
+    midiMappings: { ...app.midi.mappings }
+  };
+}
+
+function applyPreset(app, presetData) {
+  if (!presetData || typeof presetData !== 'object') return;
+  if (presetData.controls) {
+    Object.entries(presetData.controls).forEach(([id, value]) => {
+      const control = getControlDefinition(id);
+      if (control) {
+        setControlValue(app, control, value, { silent: true });
+      }
+    });
+    saveControlState(app.controlState);
+  }
+  if (presetData.automation) {
+    applyAutomationPreset(app, presetData.automation);
+    drawTimeline(app);
+  }
+  if (presetData.midiMappings) {
+    app.midi.mappings = { ...presetData.midiMappings };
+    saveMidiMappings(app.midi.mappings);
+  }
+  if (presetData.name) {
+    app.presetName = presetData.name;
+  }
+  savePresetState(buildPresetPayload(app, app.presetName));
+  applyAutomationForStep(app, app.timeline.currentStep);
+}
+
+function applyAutomationPreset(app, automationData) {
+  if (!automationData) return;
+  const byId = new Map(app.automation.tracks.map(track => [track.id, track]));
+  if (Array.isArray(automationData.tracks)) {
+    automationData.tracks.forEach(trackData => {
+      const track = byId.get(trackData.id);
+      if (track && Array.isArray(trackData.values) && trackData.values.length === STEP_COUNT) {
+        track.values = trackData.values.map(value => clamp(value, 0, 1));
+      }
+    });
+  }
+  if (Array.isArray(automationData.sections)) {
+    app.automation.sections = automationData.sections.map(section => ({ ...section }));
+  }
+}
+
+function setupTimeline(app) {
+  const resizeObserver = new ResizeObserver(() => {
+    syncTimelineCanvas(app);
+    drawTimeline(app);
+  });
+  syncTimelineCanvas(app);
+  resizeObserver.observe(app.timeline.canvas);
+}
+
+function syncTimelineCanvas(app) {
+  const canvas = app.timeline.canvas;
+  const ratio = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth * ratio;
+  const height = canvas.clientHeight * ratio;
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  app.timeline.deviceRatio = ratio;
+}
+
+function drawTimeline(app) {
+  const { canvas, ctx } = app.timeline;
+  if (!ctx) return;
+  const ratio = app.timeline.deviceRatio;
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+
+  const padding = 20 * ratio;
+  const areaHeight = height - padding * 2;
+  const stepWidth = width / STEP_COUNT;
+
+  const sections = app.automation.sections && app.automation.sections.length
+    ? app.automation.sections
+    : SECTION_LAYOUT;
+  sections.forEach(section => {
+    const startX = section.start * stepWidth;
+    const sectionWidth = (section.end - section.start + 1) * stepWidth;
+    ctx.fillStyle = section.color || 'rgba(255, 255, 255, 0.04)';
+    ctx.fillRect(startX, padding, sectionWidth, areaHeight);
+  });
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.lineWidth = 1 * ratio;
+  for (let i = 0; i <= STEP_COUNT; i += 1) {
+    const x = i * stepWidth;
+    ctx.beginPath();
+    ctx.moveTo(x, padding);
+    ctx.lineTo(x, padding + areaHeight);
+    ctx.stroke();
+  }
+
+  app.automation.tracks.forEach(track => {
+    ctx.beginPath();
+    track.values.forEach((value, index) => {
+      const x = index * stepWidth + stepWidth / 2;
+      const y = padding + (1 - value) * areaHeight;
+      if (index === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    ctx.strokeStyle = track.color;
+    ctx.lineWidth = 2 * ratio;
+    ctx.stroke();
+  });
+
+  const activeX = app.timeline.currentStep * stepWidth;
+  ctx.fillStyle = 'rgba(73, 169, 255, 0.18)';
+  ctx.fillRect(activeX, padding, stepWidth, areaHeight);
+}
+
+function setupAutomationScheduling(app) {
+  if (app.automationEvent) {
+    Tone.Transport.clear(app.automationEvent);
+  }
+  app.automationEvent = Tone.Transport.scheduleRepeat(time => {
+    const step = app.automationStep % STEP_COUNT;
+    app.timeline.currentStep = step;
+    applyAutomationForStep(app, step, time);
+    updateSectionLabel(app, step);
+    requestAnimationFrame(() => drawTimeline(app));
+    app.automationStep = (step + 1) % STEP_COUNT;
+  }, '16n');
+}
+
+function applyAutomationForStep(app, step, time) {
+  const leadTrack = getAutomationTrack(app, 'leadFilter');
+  const fxTrack = getAutomationTrack(app, 'fxSend');
+  const bassTrack = getAutomationTrack(app, 'bassFilter');
+  const leadBase = getControlValue(app, 'leadFilterBase');
+  const leadMod = getControlValue(app, 'leadFilterMod');
+  const fxBase = getControlValue(app, 'leadFxSend');
+  const bassBase = getControlValue(app, 'bassFilterBase');
+  const bassMod = getControlValue(app, 'bassFilterMod');
+
+  const leadFreq = leadBase + leadMod * clamp(leadTrack.values[step], 0, 1);
+  const fxAmount = clamp(fxTrack.values[step], 0, 1) * fxBase;
+  const bassFreq = bassBase + bassMod * clamp(bassTrack.values[step], 0, 1);
+
+  const leadFrequency = app.audio.nodes.leadFilter.frequency;
+  const leadFxGain = app.audio.nodes.leadFxSend.gain;
+  const bassFrequency = app.audio.nodes.bassFilter.frequency;
+
+  if (typeof time === 'number') {
+    leadFrequency.setValueAtTime(leadFrequency.value, time);
+    leadFrequency.linearRampToValueAtTime(leadFreq, time + 0.1);
+    leadFxGain.setValueAtTime(leadFxGain.value, time);
+    leadFxGain.linearRampToValueAtTime(fxAmount, time + 0.1);
+    bassFrequency.setValueAtTime(bassFrequency.value, time);
+    bassFrequency.linearRampToValueAtTime(bassFreq, time + 0.1);
+  } else {
+    leadFrequency.value = leadFreq;
+    leadFxGain.value = fxAmount;
+    bassFrequency.value = bassFreq;
+  }
+}
+
+function getAutomationTrack(app, id) {
+  return app.automation.tracks.find(track => track.id === id) || { values: new Array(STEP_COUNT).fill(0) };
+}
+
+function updateSectionLabel(app, step) {
+  const section = app.automation.sections.find(item => step >= item.start && step <= item.end);
+  if (section && app.sectionLabelEl) {
+    app.sectionLabelEl.textContent = `Section: ${section.name}`;
+  } else if (app.sectionLabelEl) {
+    app.sectionLabelEl.textContent = 'Section: Loop';
+  }
+}
+
+async function exportMix(app) {
+  await captureBuses(app, [
+    { node: app.audio.master, label: 'mix' }
+  ]);
+  setStatus(app, 'Mix export complete');
+}
+
+async function exportStems(app) {
+  await captureBuses(app, [
+    { node: app.audio.buses.drums, label: 'drums' },
+    { node: app.audio.buses.bass, label: 'bass' },
+    { node: app.audio.buses.lead, label: 'lead' },
+    { node: app.audio.buses.fx, label: 'fx' }
+  ]);
+  setStatus(app, 'Stem export complete');
+}
+
+async function captureBuses(app, buses) {
+  const startedByExport = await ensureTransportRunning(app);
+  const duration = Tone.Time(LOOP_DURATION).toSeconds();
+  const recorders = buses.map(info => {
+    const recorder = new Tone.Recorder();
+    info.node.connect(recorder);
+    recorder.start();
+    return { info, recorder };
+  });
+  await wait(duration);
+  await Promise.all(recorders.map(async ({ info, recorder }) => {
+    const blob = await recorder.stop();
+    info.node.disconnect(recorder);
+    downloadBlob(blob, `bodzin-${info.label}.wav`);
+  }));
+  if (startedByExport) {
+    Tone.Transport.stop();
+    Tone.Transport.position = 0;
+    app.timeline.currentStep = 0;
+    applyAutomationForStep(app, 0);
+    drawTimeline(app);
+    updateSectionLabel(app, 0);
+  }
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+}
+
+function setupMidi(app) {
+  if (!navigator.requestMIDIAccess) {
+    console.info('WebMIDI not supported in this browser.');
     return;
   }
-  state.sequences.lead = toStepArray(template.lead);
-  state.sequences.hats = toStepArray(template.hats);
-  Object.assign(state.sidechain, DEFAULT_SIDECHAIN, template.sidechain || {});
+  navigator.requestMIDIAccess().then(access => {
+    app.midi.access = access;
+    access.inputs.forEach(input => {
+      input.onmidimessage = message => handleMidiMessage(app, message);
+    });
+    access.addEventListener('statechange', () => {
+      access.inputs.forEach(input => {
+        input.onmidimessage = message => handleMidiMessage(app, message);
+      });
+    });
+    setStatus(app, 'MIDI ready');
+  }).catch(error => {
+    console.warn('MIDI access denied', error);
+    setStatus(app, 'MIDI unavailable');
+  });
 }
 
-function toStepArray(source) {
-  const arr = new Array(STEP_COUNT).fill(0);
-  if (!Array.isArray(source)) {
-    return arr;
+function setMidiLearn(app, enabled) {
+  app.midi.learning = enabled;
+  if (!enabled) {
+    setMidiPendingControl(app, null);
   }
-  const limit = Math.min(source.length, STEP_COUNT);
-  for (let i = 0; i < limit; i += 1) {
-    const value = Number(source[i]);
-    arr[i] = Number.isFinite(value) ? clamp(Math.round(value), 0, LEVELS - 1) : 0;
-  }
-  return arr;
+  setStatus(app, enabled ? 'MIDI Learn enabled' : 'MIDI Learn disabled');
 }
 
-function formatValue(param, value) {
-  if (typeof param?.format === 'function') {
-    return param.format(Number(value));
+function setMidiPendingControl(app, controlId) {
+  app.midi.pendingControl = controlId;
+  app.controls.forEach(entry => {
+    if (controlId && entry.control.id === controlId) {
+      entry.row.classList.add('midi-learning');
+    } else {
+      entry.row.classList.remove('midi-learning');
+    }
+  });
+}
+
+function handleMidiMessage(app, message) {
+  const [status, data1, data2] = message.data;
+  const command = status & 0xf0;
+  const channel = (status & 0x0f) + 1;
+  if (command !== 0xb0) return; // CC only
+  const cc = data1;
+  const value = data2;
+
+  if (app.midi.learning && app.midi.pendingControl) {
+    const targetId = app.midi.pendingControl;
+    app.midi.mappings[targetId] = { channel, cc };
+    saveMidiMappings(app.midi.mappings);
+    setMidiPendingControl(app, null);
+    setStatus(app, `Assigned CC ${cc} (Ch ${channel})`);
+    return;
   }
-  const decimals = param?.step && param.step < 1 ? Math.min(4, `${param.step}`.split('.')[1]?.length || 0) : 0;
-  return Number(value).toFixed(decimals);
+
+  Object.entries(app.midi.mappings).forEach(([controlId, mapping]) => {
+    if (!mapping) return;
+    if (mapping.channel && mapping.channel !== channel) return;
+    if (mapping.cc !== cc) return;
+    const control = getControlDefinition(controlId);
+    if (!control || control.type !== 'range') return;
+    const min = Number(control.min);
+    const max = Number(control.max);
+    const scaled = min + (max - min) * (value / 127);
+    setControlValue(app, control, scaled, { silent: true });
+  });
+}
+
+function getControlDefinition(id) {
+  for (const section of CONTROL_SCHEMA) {
+    const control = section.controls.find(item => item.id === id);
+    if (control) return control;
+  }
+  return null;
+}
+
+function getControlValue(app, id) {
+  if (id in app.controlState) {
+    return app.controlState[id];
+  }
+  const control = getControlDefinition(id);
+  return control ? control.default : 0;
+}
+
+function setStatus(app, message) {
+  if (!app.statusEl) return;
+  app.statusEl.textContent = `Status: ${message}`;
+  clearTimeout(app.statusTimer);
+  app.statusTimer = setTimeout(() => {
+    app.statusEl.textContent = 'Status: Idle';
+  }, 3500);
+}
+
+function wait(seconds) {
+  return new Promise(resolve => setTimeout(resolve, seconds * 1000));
+}
+
+function formatDb(value) {
+  return `${value.toFixed(1)} dB`;
+}
+
+function formatHz(value) {
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(2)} kHz`;
+  }
+  return `${Math.round(value)} Hz`;
+}
+
+function setBusLevel(bus, db) {
+  if (!bus) return;
+  bus.gain.value = Tone.dbToGain(db);
 }
 
 function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
+  return Math.min(Math.max(value, min), max);
 }
 
-function showStatus(message) {
-  if (!statusEl) return;
-  statusEl.textContent = message;
-  if (statusTimer) {
-    clearTimeout(statusTimer);
-  }
-  statusTimer = setTimeout(() => {
-    statusEl.textContent = '';
-  }, 2200);
+function slugify(name) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'preset';
 }
 
-if (typeof module !== 'undefined') {
-  module.exports = {
-    state,
-    randomizeSequence,
-    mutateSequence,
-    applySongTemplate,
-    setSidechainValue,
-    toStepArray,
-    formatValue
+function cloneAutomation(source) {
+  return {
+    tracks: source.tracks.map(track => ({
+      id: track.id,
+      label: track.label,
+      color: track.color,
+      values: [...track.values]
+    })),
+    sections: source.sections.map(section => ({ ...section }))
   };
 }
+
+function saveControlState(state) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.controlState, JSON.stringify(state));
+  } catch (err) {
+    console.warn('Unable to persist control state', err);
+  }
+}
+
+function loadControlState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.controlState);
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    console.warn('Unable to read stored control state', err);
+    return {};
+  }
+}
+
+function savePresetState(preset) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.preset, JSON.stringify(preset));
+  } catch (err) {
+    console.warn('Unable to store preset', err);
+  }
+}
+
+function loadPresetState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.preset);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.warn('Unable to load preset', err);
+    return null;
+  }
+}
+
+function saveMidiMappings(mappings) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.midi, JSON.stringify(mappings));
+  } catch (err) {
+    console.warn('Unable to persist MIDI mappings', err);
+  }
+}
+
+function loadMidiMappings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.midi);
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    console.warn('Unable to load MIDI mappings', err);
+    return {};
+  }
+}
+
