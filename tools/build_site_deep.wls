@@ -16,7 +16,7 @@ presets = <|
 |>;
 
 presetJSON = ExportString[presets, "JSON"];
-presetBase64 = ExportString[presetJSON, "Base64"];
+presetBase64 = StringReplace[ExportString[presetJSON, "Base64"], {"\n" -> "", "\r" -> ""}];
 presetJS = "JSON.parse(atob('" <> presetBase64 <> "'))";
 
 html = StringRiffle[{
