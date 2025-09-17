@@ -1,7 +1,8 @@
 'use strict';
 
 const STEP_COUNT = 16;
-const LOOP_DURATION = '1m';
+const STEP_DURATION = '1m';
+const LOOP_DURATION = Tone.Ticks(Tone.Time(STEP_DURATION).toTicks() * STEP_COUNT);
 const STORAGE_KEYS = {
   controlState: 'bodzin.controlState',
   preset: 'bodzin.preset',
@@ -987,7 +988,7 @@ function setupAutomationScheduling(app) {
     updateSectionLabel(app, step);
     requestAnimationFrame(() => drawTimeline(app));
     app.automationStep = (step + 1) % STEP_COUNT;
-  }, '16n');
+  }, STEP_DURATION);
 }
 
 function applyAutomationForStep(app, step, time) {
