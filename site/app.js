@@ -979,7 +979,136 @@ function applyPreset(app, presetData) {
 
 function applyAutomationPreset(app, automationData) {
   if (!automationData) return;
-  app.automation = normalizeAutomationState(automationData, STEP_COUNT);
+  const sections = sanitizePresetSections(automationData.sections, STEP_COUNT);
+  const sanitizedAutomation = { ...automationData, sections };
+  app.automation = normalizeAutomationState(sanitizedAutomation, STEP_COUNT);
+}
+
+function sanitizePresetSections(sections, stepCount = STEP_COUNT) {
+  const totalSteps = Math.max(Math.floor(stepCount), 0);
+  const maxIndex = totalSteps - 1;
+  if (totalSteps <= 0) {
+    return [];
+  }
+
+  const fallbackLayout = createSectionLayout(totalSteps);
+  if (!fallbackLayout.length) {
+    return [];
+  }
+
+  const fallbackDefault = fallbackLayout[0];
+  const fallbackColor = fallbackDefault?.color || 'rgba(255, 255, 255, 0.04)';
+  const fallbackName = fallbackDefault?.name || 'Section';
+
+  const parsedSections = Array.isArray(sections)
+    ? sections
+        .map(section => {
+          if (!section) {
+            return null;
+          }
+          const startValue = Number(section.start);
+          const endValue = Number(section.end);
+          if (!Number.isFinite(startValue) || !Number.isFinite(endValue)) {
+            return null;
+          }
+          const startBound = Math.min(startValue, endValue);
+          const endBound = Math.max(startValue, endValue);
+          const start = clamp(Math.round(startBound), 0, maxIndex);
+          const end = clamp(Math.round(endBound), 0, maxIndex);
+          if (end < start) {
+            return null;
+          }
+          const trimmedName = typeof section.name === 'string' ? section.name.trim() : '';
+          return {
+            name: trimmedName || undefined,
+            color: section.color,
+            start,
+            end
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.start - b.start || a.end - b.end)
+    : [];
+
+  const result = [];
+
+  const pushSection = (section) => {
+    if (!result.length) {
+      result.push({ ...section });
+      return;
+    }
+    const previous = result[result.length - 1];
+    if (previous.name === section.name && previous.color === section.color && previous.end + 1 >= section.start) {
+      previous.end = Math.max(previous.end, section.end);
+      return;
+    }
+    const normalizedStart = Math.max(section.start, previous.end + 1);
+    const normalizedEnd = Math.max(section.end, normalizedStart);
+    result.push({
+      name: section.name,
+      color: section.color,
+      start: normalizedStart,
+      end: normalizedEnd
+    });
+  };
+
+  const appendFallbackRange = (from, to) => {
+    if (from > to) {
+      return;
+    }
+    fallbackLayout.forEach(fallback => {
+      const overlapStart = Math.max(fallback.start, from);
+      const overlapEnd = Math.min(fallback.end, to);
+      if (overlapStart <= overlapEnd) {
+        pushSection({
+          name: fallback.name,
+          color: fallback.color,
+          start: overlapStart,
+          end: overlapEnd
+        });
+      }
+    });
+  };
+
+  const findFallbackForStep = (step) => {
+    return fallbackLayout.find(section => step >= section.start && step <= section.end) || fallbackDefault;
+  };
+
+  let cursor = 0;
+  parsedSections.forEach(section => {
+    if (cursor > maxIndex) {
+      return;
+    }
+    if (section.end < cursor) {
+      return;
+    }
+    const safeStart = clamp(section.start, 0, maxIndex);
+    const safeEnd = clamp(section.end, 0, maxIndex);
+    if (safeStart > cursor) {
+      appendFallbackRange(cursor, safeStart - 1);
+      cursor = safeStart;
+    }
+    const sectionStart = Math.max(safeStart, cursor);
+    const sectionEnd = Math.max(Math.min(safeEnd, maxIndex), sectionStart);
+    const fallback = findFallbackForStep(sectionStart);
+    const name = section.name || fallback?.name || fallbackName;
+    const color = section.color || fallback?.color || fallbackColor;
+    pushSection({ name, color, start: sectionStart, end: sectionEnd });
+    cursor = sectionEnd + 1;
+  });
+
+  if (cursor <= maxIndex) {
+    appendFallbackRange(cursor, maxIndex);
+  }
+
+  if (!result.length) {
+    return fallbackLayout.map(section => ({ ...section }));
+  }
+
+  result[0].start = 0;
+  result[result.length - 1].end = maxIndex;
+
+  return result;
 }
 
 function setupTimeline(app) {
