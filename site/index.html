@@ -158,6 +158,122 @@
       border-color: var(--border);
     }
 
+    .search-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      position: relative;
+    }
+
+    .search-input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      min-height: 40px;
+      min-width: 200px;
+      transition: all 0.3s ease;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .search-input::placeholder {
+      color: var(--muted);
+    }
+
+    .filter-select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      min-height: 40px;
+      min-width: 120px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .filter-select:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--accent);
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+    }
+
+    #clearSearchButton {
+      padding: 0.4rem 0.8rem;
+      min-width: 40px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .control-row.hidden {
+      display: none;
+    }
+
+    .control-section.hidden {
+      display: none;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: rgba(24, 24, 29, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      z-index: 100;
+      margin-top: 0.25rem;
+      backdrop-filter: blur(8px);
+    }
+
+    .search-results.hidden {
+      display: none;
+    }
+
+    .search-results .result-count {
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .search-results .shortcuts {
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    mark {
+      background: rgba(73, 169, 255, 0.3);
+      color: var(--accent);
+      padding: 0.1em 0.2em;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
     .toggle {
       display: inline-flex;
       align-items: center;
@@ -482,6 +598,20 @@
         gap: 0.75rem;
       }
 
+      .search-container {
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+      }
+
+      .search-input {
+        min-width: 100%;
+      }
+
+      .filter-select {
+        min-width: 100%;
+      }
+
       .app-layout {
         grid-template-columns: 1fr;
         gap: 1rem;
@@ -500,6 +630,31 @@
     }
 
     @media (max-width: 768px) {
+      .app-header {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .header-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+      }
+
+      .search-container {
+        flex-direction: row;
+        gap: 0.5rem;
+      }
+
+      .search-input {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .filter-select {
+        min-width: 120px;
+      }
+
     .control-section {
       margin-bottom: 1.5rem;
       padding: 1rem;
@@ -808,6 +963,19 @@
         gap: 0.5rem;
       }
 
+      .search-input {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+        min-height: 36px;
+      }
+
+      .filter-select {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+        min-height: 36px;
+        min-width: 100px;
+      }
+
       .header-group {
         justify-content: center;
         flex-wrap: wrap;
@@ -1034,6 +1202,28 @@
       <div class="header-group" aria-label="Presets">
         <button id="savePresetButton" class="btn">Save Preset</button>
         <button id="loadPresetButton" class="btn">Load Preset</button>
+      </div>
+      <div class="header-group" aria-label="Search and Filter">
+        <div class="search-container">
+          <input type="text" id="searchInput" placeholder="Search controls..." class="search-input">
+          <button id="clearSearchButton" class="btn btn-outline" title="Clear search">×</button>
+          <div id="searchResults" class="search-results"></div>
+        </div>
+        <select id="groupFilter" class="filter-select">
+          <option value="">All Groups</option>
+          <option value="Transport">Transport</option>
+          <option value="Bus Levels">Bus Levels</option>
+          <option value="Bass Synth">Bass Synth</option>
+          <option value="Lead Synth">Lead Synth</option>
+          <option value="Drums">Drums</option>
+          <option value="FX">FX</option>
+          <option value="LFO">LFO</option>
+        </select>
+        <select id="typeFilter" class="filter-select">
+          <option value="">All Types</option>
+          <option value="range">Sliders</option>
+          <option value="select">Dropdowns</option>
+        </select>
       </div>
       <div class="header-group" aria-label="Integrations">
         <label class="toggle" for="midiLearnToggle">

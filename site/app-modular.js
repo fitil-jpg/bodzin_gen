@@ -7,6 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { SearchFilter } from './modules/search-filter.js';
 
 import { 
   STEP_COUNT, 
@@ -38,6 +39,7 @@ function createApp() {
     midi: null,
     storage: null,
     status: null,
+    searchFilter: null,
     
     // State
     controlState: {},
@@ -70,6 +72,7 @@ async function initializeApp(app) {
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
+  app.searchFilter = new SearchFilter(app);
 
   // Initialize timeline
   app.timeline.initialize();
