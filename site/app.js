@@ -406,7 +406,83 @@ document.addEventListener('DOMContentLoaded', () => {
   appInstance = createApp();
   initializeApp(appInstance);
   window.bodzinApp = appInstance;
+  
+  // Add mobile-specific optimizations
+  setupMobileOptimizations(appInstance);
 });
+
+function setupMobileOptimizations(app) {
+  // Prevent zoom on double tap
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (event) => {
+    const now = (new Date()).getTime();
+    if (now - lastTouchEnd <= 300) {
+      event.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, false);
+
+  // Optimize for mobile performance
+  if (window.innerWidth <= 768) {
+    // Reduce animation frequency on mobile
+    const originalDrawTimeline = drawTimeline;
+    let drawTimeout = null;
+    drawTimeline = (app) => {
+      if (drawTimeout) {
+        clearTimeout(drawTimeout);
+      }
+      drawTimeout = setTimeout(() => originalDrawTimeline(app), 16); // ~60fps
+    };
+
+    // Optimize canvas rendering
+    const canvas = app.timeline.canvas;
+    if (canvas) {
+      canvas.style.willChange = 'transform';
+      canvas.style.transform = 'translateZ(0)'; // Force hardware acceleration
+    }
+  }
+
+  // Add mobile-specific keyboard shortcuts
+  document.addEventListener('keydown', (event) => {
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') {
+      return; // Don't interfere with form inputs
+    }
+
+    switch (event.key) {
+      case ' ':
+        event.preventDefault();
+        if (Tone.Transport.state === 'started') {
+          stopPlayback(app);
+        } else {
+          startPlayback(app);
+        }
+        break;
+      case 'Escape':
+        if (app.midi.learning) {
+          setMidiLearn(app, false);
+        }
+        break;
+    }
+  });
+
+  // Handle orientation changes
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      syncTimelineCanvas(app);
+      drawTimeline(app);
+    }, 100);
+  });
+
+  // Handle resize events with debouncing
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      syncTimelineCanvas(app);
+      drawTimeline(app);
+    }, 150);
+  });
+}
 
 function createApp() {
   return {
@@ -443,6 +519,12 @@ function initializeApp(app) {
     return;
   }
 
+  // Show mobile loading indicator
+  const mobileLoading = document.getElementById('mobile-loading');
+  if (mobileLoading && window.innerWidth <= 768) {
+    mobileLoading.style.display = 'flex';
+  }
+
   app.timeline.ctx = app.timeline.canvas.getContext('2d');
   app.audio = initializeAudioGraph();
   configureTransport();
@@ -477,6 +559,14 @@ function initializeApp(app) {
   syncSectionState(app, 0);
   drawTimeline(app);
   setStatus(app, 'Idle');
+
+  // Hide mobile loading indicator
+  const mobileLoading = document.getElementById('mobile-loading');
+  if (mobileLoading) {
+    setTimeout(() => {
+      mobileLoading.style.display = 'none';
+    }, 500);
+  }
 }
 
 function configureTransport() {
@@ -688,6 +778,10 @@ function buildDefaultControlState() {
 function renderControlInterface(app) {
   const container = document.getElementById('controls');
   container.innerHTML = '';
+  
+  // Add mobile-specific container classes
+  container.classList.add('mobile-optimized');
+  
   CONTROL_SCHEMA.forEach(section => {
     const sectionEl = document.createElement('section');
     sectionEl.className = 'control-section';
@@ -733,6 +827,12 @@ function renderControlInterface(app) {
         input.min = String(control.min);
         input.max = String(control.max);
         input.step = String(control.step);
+        
+        // Add mobile-specific attributes
+        input.setAttribute('aria-label', control.label);
+        input.setAttribute('role', 'slider');
+        input.setAttribute('aria-valuemin', control.min);
+        input.setAttribute('aria-valuemax', control.max);
       }
       input.id = control.id;
       input.dataset.controlId = control.id;
@@ -760,15 +860,73 @@ function renderControlInterface(app) {
         setControlValue(app, control, val);
       });
 
+      // Touch-specific event handlers for better mobile experience
+      if (control.type === 'range') {
+        let isDragging = false;
+        let startValue = 0;
+        let startY = 0;
+
+        const handleTouchStart = (event) => {
+          if (event.touches.length !== 1) return;
+          isDragging = true;
+          startValue = parseFloat(input.value);
+          startY = event.touches[0].clientY;
+          input.style.touchAction = 'none';
+          event.preventDefault();
+        };
+
+        const handleTouchMove = (event) => {
+          if (!isDragging || event.touches.length !== 1) return;
+          const deltaY = startY - event.touches[0].clientY;
+          const sensitivity = 0.5;
+          const range = control.max - control.min;
+          const step = control.step || 1;
+          const deltaValue = (deltaY / 100) * range * sensitivity;
+          const newValue = startValue + deltaValue;
+          const clampedValue = Math.max(control.min, Math.min(control.max, newValue));
+          const steppedValue = Math.round(clampedValue / step) * step;
+          
+          input.value = steppedValue;
+          const val = getInputValue(control, input);
+          setControlValue(app, control, val, { silent: true, skipSave: true });
+          event.preventDefault();
+        };
+
+        const handleTouchEnd = (event) => {
+          if (!isDragging) return;
+          isDragging = false;
+          input.style.touchAction = '';
+          const val = getInputValue(control, input);
+          setControlValue(app, control, val);
+          event.preventDefault();
+        };
+
+        input.addEventListener('touchstart', handleTouchStart, { passive: false });
+        input.addEventListener('touchmove', handleTouchMove, { passive: false });
+        input.addEventListener('touchend', handleTouchEnd, { passive: false });
+      }
+
       if (control.type === 'range') {
         const midiHandler = () => {
           if (app.midi.learning) {
             setMidiPendingControl(app, control.id);
           }
         };
+        
+        // Use pointer events for better cross-platform support
         input.addEventListener('pointerdown', midiHandler);
         input.addEventListener('mousedown', midiHandler);
         input.addEventListener('touchstart', midiHandler, { passive: true });
+        
+        // Add haptic feedback for mobile devices
+        const addHapticFeedback = () => {
+          if ('vibrate' in navigator) {
+            navigator.vibrate(10); // Short vibration
+          }
+        };
+        
+        input.addEventListener('input', addHapticFeedback);
+        input.addEventListener('change', addHapticFeedback);
       }
     });
   });
@@ -1118,16 +1276,102 @@ function setupTimeline(app) {
   });
   syncTimelineCanvas(app);
   resizeObserver.observe(app.timeline.canvas);
+
+  // Add mobile touch support for timeline
+  setupTimelineTouch(app);
+}
+
+function setupTimelineTouch(app) {
+  const canvas = app.timeline.canvas;
+  let isDragging = false;
+  let lastTouchTime = 0;
+
+  const getStepFromPosition = (clientX) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const stepWidth = rect.width / STEP_COUNT;
+    return Math.floor(x / stepWidth);
+  };
+
+  const handleTimelineInteraction = (clientX) => {
+    const step = Math.max(0, Math.min(STEP_COUNT - 1, getStepFromPosition(clientX)));
+    if (step !== app.timeline.currentStep) {
+      app.timeline.currentStep = step;
+      app.automationStep = step;
+      applyAutomationForStep(app, step);
+      syncSectionState(app, step);
+      drawTimeline(app);
+      setStatus(app, `Step ${step + 1}/${STEP_COUNT}`);
+    }
+  };
+
+  // Mouse events
+  canvas.addEventListener('mousedown', (event) => {
+    if (event.button === 0) { // Left mouse button
+      isDragging = true;
+      handleTimelineInteraction(event.clientX);
+    }
+  });
+
+  canvas.addEventListener('mousemove', (event) => {
+    if (isDragging) {
+      handleTimelineInteraction(event.clientX);
+    }
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    isDragging = false;
+  });
+
+  // Touch events
+  canvas.addEventListener('touchstart', (event) => {
+    if (event.touches.length === 1) {
+      isDragging = true;
+      lastTouchTime = Date.now();
+      handleTimelineInteraction(event.touches[0].clientX);
+      event.preventDefault();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (event) => {
+    if (isDragging && event.touches.length === 1) {
+      handleTimelineInteraction(event.touches[0].clientX);
+      event.preventDefault();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', (event) => {
+    if (isDragging) {
+      isDragging = false;
+      const touchDuration = Date.now() - lastTouchTime;
+      if (touchDuration < 200) { // Quick tap
+        handleTimelineInteraction(event.changedTouches[0].clientX);
+      }
+      event.preventDefault();
+    }
+  }, { passive: false });
+
+  // Prevent context menu on long press
+  canvas.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+  });
 }
 
 function syncTimelineCanvas(app) {
   const canvas = app.timeline.canvas;
-  const ratio = window.devicePixelRatio || 1;
+  const ratio = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2x for performance
   const width = canvas.clientWidth * ratio;
   const height = canvas.clientHeight * ratio;
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width;
     canvas.height = height;
+    // Set CSS size to maintain crisp rendering
+    canvas.style.width = canvas.clientWidth + 'px';
+    canvas.style.height = canvas.clientHeight + 'px';
   }
   app.timeline.deviceRatio = ratio;
 }
@@ -1138,51 +1382,80 @@ function drawTimeline(app) {
   const ratio = app.timeline.deviceRatio;
   const width = canvas.width;
   const height = canvas.height;
-  ctx.clearRect(0, 0, width, height);
+  
+  // Use requestAnimationFrame for smooth rendering
+  requestAnimationFrame(() => {
+    ctx.clearRect(0, 0, width, height);
 
-  const padding = 20 * ratio;
-  const areaHeight = height - padding * 2;
-  const stepWidth = width / STEP_COUNT;
+    const padding = 20 * ratio;
+    const areaHeight = height - padding * 2;
+    const stepWidth = width / STEP_COUNT;
 
-  const sections = app.automation.sections && app.automation.sections.length
-    ? app.automation.sections
-    : DEFAULT_SECTION_LAYOUT;
-  sections.forEach(section => {
-    const startX = section.start * stepWidth;
-    const sectionWidth = (section.end - section.start + 1) * stepWidth;
-    ctx.fillStyle = section.color || 'rgba(255, 255, 255, 0.04)';
-    ctx.fillRect(startX, padding, sectionWidth, areaHeight);
-  });
+    // Enable anti-aliasing for smoother lines
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-  ctx.lineWidth = 1 * ratio;
-  for (let i = 0; i <= STEP_COUNT; i += 1) {
-    const x = i * stepWidth;
-    ctx.beginPath();
-    ctx.moveTo(x, padding);
-    ctx.lineTo(x, padding + areaHeight);
-    ctx.stroke();
-  }
-
-  app.automation.tracks.forEach(track => {
-    ctx.beginPath();
-    track.values.forEach((value, index) => {
-      const x = index * stepWidth + stepWidth / 2;
-      const y = padding + (1 - value) * areaHeight;
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+    const sections = app.automation.sections && app.automation.sections.length
+      ? app.automation.sections
+      : DEFAULT_SECTION_LAYOUT;
+    
+    // Draw sections
+    sections.forEach(section => {
+      const startX = section.start * stepWidth;
+      const sectionWidth = (section.end - section.start + 1) * stepWidth;
+      ctx.fillStyle = section.color || 'rgba(255, 255, 255, 0.04)';
+      ctx.fillRect(startX, padding, sectionWidth, areaHeight);
     });
-    ctx.strokeStyle = track.color;
-    ctx.lineWidth = 2 * ratio;
-    ctx.stroke();
-  });
 
-  const activeX = app.timeline.currentStep * stepWidth;
-  ctx.fillStyle = 'rgba(73, 169, 255, 0.18)';
-  ctx.fillRect(activeX, padding, stepWidth, areaHeight);
+    // Draw grid lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1 * ratio;
+    ctx.setLineDash([]);
+    for (let i = 0; i <= STEP_COUNT; i += 1) {
+      const x = i * stepWidth;
+      ctx.beginPath();
+      ctx.moveTo(x, padding);
+      ctx.lineTo(x, padding + areaHeight);
+      ctx.stroke();
+    }
+
+    // Draw automation tracks
+    app.automation.tracks.forEach(track => {
+      ctx.beginPath();
+      ctx.setLineDash([]);
+      track.values.forEach((value, index) => {
+        const x = index * stepWidth + stepWidth / 2;
+        const y = padding + (1 - value) * areaHeight;
+        if (index === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      ctx.strokeStyle = track.color;
+      ctx.lineWidth = 2 * ratio;
+      ctx.stroke();
+    });
+
+    // Draw active step indicator
+    const activeX = app.timeline.currentStep * stepWidth;
+    ctx.fillStyle = 'rgba(73, 169, 255, 0.18)';
+    ctx.fillRect(activeX, padding, stepWidth, areaHeight);
+
+    // Draw step numbers on mobile for better usability
+    if (window.innerWidth <= 768) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.font = `${10 * ratio}px Inter, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      
+      for (let i = 0; i < STEP_COUNT; i += 2) { // Show every other step to avoid clutter
+        const x = i * stepWidth + stepWidth / 2;
+        const y = padding + areaHeight + 5 * ratio;
+        ctx.fillText((i + 1).toString(), x, y);
+      }
+    }
+  });
 }
 
 function setupAutomationScheduling(app) {
@@ -1624,6 +1897,18 @@ function setStatus(app, message) {
   app.statusTimer = setTimeout(() => {
     app.statusEl.textContent = 'Status: Idle';
   }, 3500);
+  
+  // Add mobile-specific status feedback
+  if (window.innerWidth <= 768 && 'vibrate' in navigator) {
+    // Different vibration patterns for different status types
+    if (message.includes('Playing') || message.includes('Started')) {
+      navigator.vibrate([100, 50, 100]); // Success pattern
+    } else if (message.includes('Error') || message.includes('Failed')) {
+      navigator.vibrate([200, 100, 200, 100, 200]); // Error pattern
+    } else if (message.includes('MIDI')) {
+      navigator.vibrate(50); // Short feedback for MIDI
+    }
+  }
 }
 
 function wait(seconds) {
