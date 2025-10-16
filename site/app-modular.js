@@ -124,6 +124,13 @@ function setupButtons(app) {
   const exportStemsBtn = document.getElementById('exportStemsButton');
   const midiToggle = document.getElementById('midiLearnToggle');
 
+  // Randomize buttons
+  const randomizeDrumsBtn = document.getElementById('randomizeDrums');
+  const randomizeBassBtn = document.getElementById('randomizeBass');
+  const randomizeLeadBtn = document.getElementById('randomizeLead');
+  const randomizeFxBtn = document.getElementById('randomizeFx');
+  const randomizeAllBtn = document.getElementById('randomizeAll');
+
   startBtn?.addEventListener('click', () => startPlayback(app));
   stopBtn?.addEventListener('click', () => stopPlayback(app));
   savePresetBtn?.addEventListener('click', () => savePreset(app));
@@ -133,6 +140,37 @@ function setupButtons(app) {
   midiToggle?.addEventListener('change', event => {
     const enabled = Boolean(event.target.checked);
     app.midi.setLearning(enabled);
+  });
+
+  // Randomize button event listeners
+  randomizeDrumsBtn?.addEventListener('click', () => {
+    app.audio.randomizeDrums();
+    app.status.set('Drums randomized');
+    addRandomizeAnimation(randomizeDrumsBtn);
+  });
+  
+  randomizeBassBtn?.addEventListener('click', () => {
+    app.audio.randomizeBass();
+    app.status.set('Bass randomized');
+    addRandomizeAnimation(randomizeBassBtn);
+  });
+  
+  randomizeLeadBtn?.addEventListener('click', () => {
+    app.audio.randomizeLead();
+    app.status.set('Lead randomized');
+    addRandomizeAnimation(randomizeLeadBtn);
+  });
+  
+  randomizeFxBtn?.addEventListener('click', () => {
+    app.audio.randomizeFx();
+    app.status.set('FX randomized');
+    addRandomizeAnimation(randomizeFxBtn);
+  });
+  
+  randomizeAllBtn?.addEventListener('click', () => {
+    app.audio.randomizeAll();
+    app.status.set('All patterns randomized');
+    addRandomizeAnimation(randomizeAllBtn);
   });
 
   const fileInput = document.createElement('input');
@@ -618,4 +656,19 @@ function slugify(name) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function addRandomizeAnimation(button) {
+  if (!button) return;
+  
+  // Add visual feedback animation
+  button.style.transform = 'scale(0.95)';
+  button.style.background = 'rgba(73, 169, 255, 0.2)';
+  button.style.borderColor = '#49a9ff';
+  
+  setTimeout(() => {
+    button.style.transform = '';
+    button.style.background = '';
+    button.style.borderColor = '';
+  }, 200);
 }

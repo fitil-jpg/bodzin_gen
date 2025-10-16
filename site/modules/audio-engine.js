@@ -258,4 +258,169 @@ export class AudioEngine {
       setBusLevel(bus, db);
     }
   }
+
+  // Pattern randomization methods
+  randomizeDrums() {
+    if (!this.sequences || !this.sequences.groups.drums) return;
+
+    const drums = this.sequences.groups.drums;
+    
+    // Randomize kick pattern (more sparse, emphasis on 1 and 9)
+    const kickPattern = this.generateKickPattern();
+    drums[0].events = kickPattern.map((hit, i) => ({ time: i * 0.25, value: hit }));
+    
+    // Randomize snare pattern (typically on 2 and 4, but add variation)
+    const snarePattern = this.generateSnarePattern();
+    drums[1].events = snarePattern.map((hit, i) => ({ time: i * 0.25, value: hit }));
+    
+    // Randomize hi-hat pattern (more complex, varying velocities)
+    const hatPattern = this.generateHatPattern();
+    drums[2].events = hatPattern.map((vel, i) => ({ time: i * 0.25, value: vel }));
+  }
+
+  randomizeBass() {
+    if (!this.sequences || !this.sequences.groups.bass) return;
+
+    const bass = this.sequences.groups.bass[0];
+    const bassPattern = this.generateBassPattern();
+    bass.events = bassPattern.map((note, i) => ({ time: i * 0.25, value: note }));
+  }
+
+  randomizeLead() {
+    if (!this.sequences || !this.sequences.groups.lead) return;
+
+    const lead = this.sequences.groups.lead[0];
+    const leadPattern = this.generateLeadPattern();
+    lead.events = leadPattern.map((notes, i) => ({ time: i * 0.25, value: notes }));
+  }
+
+  randomizeFx() {
+    if (!this.sequences || !this.sequences.groups.fx) return;
+
+    const fx = this.sequences.groups.fx[0];
+    const fxPattern = this.generateFxPattern();
+    fx.events = fxPattern.map((trigger, i) => ({ time: i * 0.25, value: trigger }));
+  }
+
+  randomizeAll() {
+    this.randomizeDrums();
+    this.randomizeBass();
+    this.randomizeLead();
+    this.randomizeFx();
+  }
+
+  // Pattern generation methods
+  generateKickPattern() {
+    const pattern = new Array(16).fill(0);
+    
+    // Always have kick on beat 1
+    pattern[0] = 1;
+    
+    // 80% chance for kick on beat 9
+    if (Math.random() < 0.8) pattern[8] = 1;
+    
+    // 30% chance for additional kicks
+    for (let i = 1; i < 16; i++) {
+      if (i !== 8 && Math.random() < 0.3) {
+        pattern[i] = Math.random() * 0.8 + 0.2; // Varying velocity
+      }
+    }
+    
+    return pattern;
+  }
+
+  generateSnarePattern() {
+    const pattern = new Array(16).fill(0);
+    
+    // Snare typically on beats 4 and 12 (2 and 4 in 4/4)
+    pattern[3] = Math.random() < 0.9 ? 1 : 0;
+    pattern[11] = Math.random() < 0.9 ? 1 : 0;
+    
+    // 20% chance for ghost notes
+    for (let i = 0; i < 16; i++) {
+      if (i !== 3 && i !== 11 && Math.random() < 0.2) {
+        pattern[i] = Math.random() * 0.4 + 0.1; // Soft ghost notes
+      }
+    }
+    
+    return pattern;
+  }
+
+  generateHatPattern() {
+    const pattern = new Array(16).fill(0);
+    
+    // Hi-hats are more frequent, with varying velocities
+    for (let i = 0; i < 16; i++) {
+      if (Math.random() < 0.7) {
+        pattern[i] = Math.random() * 0.8 + 0.2;
+      }
+    }
+    
+    return pattern;
+  }
+
+  generateBassPattern() {
+    const notes = ['C2', 'D2', 'E2', 'F2', 'G2', 'A2', 'B2', 'C3'];
+    const pattern = new Array(16).fill(null);
+    
+    // Bass typically plays on strong beats
+    const strongBeats = [0, 4, 8, 12];
+    strongBeats.forEach(beat => {
+      if (Math.random() < 0.8) {
+        pattern[beat] = notes[Math.floor(Math.random() * notes.length)];
+      }
+    });
+    
+    // Add some off-beat notes
+    for (let i = 1; i < 16; i += 2) {
+      if (Math.random() < 0.3) {
+        pattern[i] = notes[Math.floor(Math.random() * notes.length)];
+      }
+    }
+    
+    return pattern;
+  }
+
+  generateLeadPattern() {
+    const chordProgressions = [
+      [['E4', 'G4', 'B4'], ['A4', 'C5'], ['B4', 'D5'], ['E5', 'G5']],
+      [['C4', 'E4', 'G4'], ['D4', 'F4', 'A4'], ['E4', 'G4', 'B4'], ['F4', 'A4', 'C5']],
+      [['G4', 'B4', 'D5'], ['A4', 'C5', 'E5'], ['B4', 'D5', 'F5'], ['C5', 'E5', 'G5']]
+    ];
+    
+    const progression = chordProgressions[Math.floor(Math.random() * chordProgressions.length)];
+    const pattern = new Array(16).fill(null);
+    
+    // Lead typically plays on every 4th beat
+    for (let i = 0; i < 16; i += 4) {
+      if (Math.random() < 0.8) {
+        const chordIndex = Math.floor(i / 4) % progression.length;
+        pattern[i] = progression[chordIndex];
+      }
+    }
+    
+    // Add some melodic fills
+    for (let i = 2; i < 16; i += 4) {
+      if (Math.random() < 0.4) {
+        const singleNote = progression[Math.floor(i / 4) % progression.length][0];
+        pattern[i] = [singleNote];
+      }
+    }
+    
+    return pattern;
+  }
+
+  generateFxPattern() {
+    const pattern = new Array(16).fill(0);
+    
+    // FX typically sparse, on specific beats
+    const fxBeats = [3, 7, 11, 15];
+    fxBeats.forEach(beat => {
+      if (Math.random() < 0.6) {
+        pattern[beat] = 1;
+      }
+    });
+    
+    return pattern;
+  }
 }
