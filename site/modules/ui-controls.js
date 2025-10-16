@@ -14,9 +14,26 @@ export class UIControls {
     CONTROL_SCHEMA.forEach(section => {
       const sectionEl = document.createElement('section');
       sectionEl.className = 'control-section';
+      sectionEl.setAttribute('data-group', section.group);
 
       const heading = document.createElement('h3');
       heading.textContent = section.group;
+      
+      // Add compressor status indicator
+      if (section.group === 'Compressor/Limiter') {
+        const statusIndicator = document.createElement('div');
+        statusIndicator.className = 'compressor-status';
+        statusIndicator.id = 'compressorStatus';
+        heading.appendChild(statusIndicator);
+        
+        // Add gain reduction display
+        const gainReductionDisplay = document.createElement('div');
+        gainReductionDisplay.className = 'compressor-ratio-display';
+        gainReductionDisplay.id = 'gainReductionDisplay';
+        gainReductionDisplay.textContent = '0.0 dB';
+        sectionEl.appendChild(gainReductionDisplay);
+      }
+      
       sectionEl.appendChild(heading);
 
       if (section.description) {
@@ -71,6 +88,23 @@ export class UIControls {
     wrap.appendChild(input);
     row.appendChild(wrap);
     row.appendChild(valueEl);
+
+    // Add gain reduction meter for compressor controls
+    if (control.id.includes('compressor') && control.id !== 'compressorBypass' && control.id !== 'compressorSidechain') {
+      const meterContainer = document.createElement('div');
+      meterContainer.className = 'gain-reduction-meter';
+      const meterBar = document.createElement('div');
+      meterBar.className = 'gain-reduction-bar';
+      meterContainer.appendChild(meterBar);
+      row.appendChild(meterContainer);
+    }
+
+    // Add threshold indicator for compressor threshold control
+    if (control.id === 'compressorThreshold') {
+      const thresholdIndicator = document.createElement('div');
+      thresholdIndicator.className = 'threshold-indicator';
+      row.appendChild(thresholdIndicator);
+    }
 
     sectionEl.appendChild(row);
 
@@ -210,5 +244,50 @@ export class UIControls {
         entry.row.classList.remove('midi-learning');
       }
     });
+  }
+
+  // Update gain reduction meters for compressor visualization
+  updateGainReductionMeters() {
+    if (!this.app.audio || !this.app.audio.compressor) return;
+    
+    const gainReduction = this.app.audio.getGainReduction();
+    const reductionPercent = Math.min(Math.abs(gainReduction) / 20, 1) * 100; // Scale to 0-100%
+    
+    this.controls.forEach(entry => {
+      if (entry.control.id.includes('compressor') && entry.control.id !== 'compressorBypass' && entry.control.id !== 'compressorSidechain') {
+        const meterBar = entry.row.querySelector('.gain-reduction-bar');
+        if (meterBar) {
+          meterBar.style.width = `${reductionPercent}%`;
+        }
+      }
+    });
+  }
+
+  // Start gain reduction meter animation
+  startGainReductionAnimation() {
+    const updateMeters = () => {
+      this.updateGainReductionMeters();
+      this.updateCompressorStatus();
+      requestAnimationFrame(updateMeters);
+    };
+    updateMeters();
+  }
+
+  // Update compressor status indicator
+  updateCompressorStatus() {
+    const statusIndicator = document.getElementById('compressorStatus');
+    if (!statusIndicator || !this.app.audio || !this.app.audio.compressor) return;
+    
+    const gainReduction = this.app.audio.getGainReduction();
+    const isCompressing = Math.abs(gainReduction) > 0.1;
+    
+    statusIndicator.classList.toggle('active', isCompressing);
+    statusIndicator.classList.toggle('compressing', isCompressing && Math.abs(gainReduction) > 3);
+    
+    // Update gain reduction display
+    const gainReductionDisplay = document.getElementById('gainReductionDisplay');
+    if (gainReductionDisplay) {
+      gainReductionDisplay.textContent = `${gainReduction.toFixed(1)} dB`;
+    }
   }
 }

@@ -20,9 +20,28 @@ export class AudioEngine {
 
   initialize() {
     this.master = new Tone.Gain(0.9);
-    const limiter = new Tone.Limiter(-1);
-    this.master.connect(limiter);
-    limiter.toDestination();
+    
+    // Create compressor/limiter chain with enhanced settings
+    this.compressor = new Tone.Compressor({
+      threshold: -12,
+      ratio: 4,
+      attack: 0.003,
+      release: 0.25,
+      knee: 30
+    });
+    
+    // Add lookahead for better transient handling
+    this.lookahead = new Tone.Gain(1);
+    
+    this.compressorMakeup = new Tone.Gain(1);
+    this.limiter = new Tone.Limiter(-1);
+    
+    // Connect master chain: master -> lookahead -> compressor -> makeup -> limiter -> destination
+    this.master.connect(this.lookahead);
+    this.lookahead.connect(this.compressor);
+    this.compressor.connect(this.compressorMakeup);
+    this.compressorMakeup.connect(this.limiter);
+    this.limiter.toDestination();
 
     this.buses = {
       drums: new Tone.Gain(0.8),
@@ -256,6 +275,174 @@ export class AudioEngine {
     const bus = this.buses[busName];
     if (bus) {
       setBusLevel(bus, db);
+    }
+  }
+
+  // Compressor/Limiter control methods
+  setCompressorThreshold(db) {
+    if (this.compressor) {
+      this.compressor.threshold.value = db;
+    }
+  }
+
+  setCompressorRatio(ratio) {
+    if (this.compressor) {
+      this.compressor.ratio.value = ratio;
+    }
+  }
+
+  setCompressorAttack(seconds) {
+    if (this.compressor) {
+      this.compressor.attack.value = seconds;
+    }
+  }
+
+  setCompressorRelease(seconds) {
+    if (this.compressor) {
+      this.compressor.release.value = seconds;
+    }
+  }
+
+  setCompressorKnee(db) {
+    if (this.compressor) {
+      this.compressor.knee.value = db;
+    }
+  }
+
+  setLimiterThreshold(db) {
+    if (this.limiter) {
+      this.limiter.threshold.value = db;
+    }
+  }
+
+  setCompressorMakeupGain(db) {
+    if (this.compressorMakeup) {
+      this.compressorMakeup.gain.value = Tone.dbToGain(db);
+    }
+  }
+
+  // Get current compressor/limiter values for UI display
+  getCompressorValues() {
+    if (!this.compressor) return null;
+    return {
+      threshold: this.compressor.threshold.value,
+      ratio: this.compressor.ratio.value,
+      attack: this.compressor.attack.value,
+      release: this.compressor.release.value,
+      knee: this.compressor.knee.value,
+      makeup: Tone.gainToDb(this.compressorMakeup.gain.value),
+      limiterThreshold: this.limiter.threshold.value
+    };
+  }
+
+  // Advanced compressor methods
+  setSidechainSource(source) {
+    // Disconnect existing sidechain
+    if (this.sidechainGain) {
+      this.sidechainGain.disconnect();
+    }
+    
+    if (source !== 'none' && this.buses[source]) {
+      // Create sidechain gain control
+      this.sidechainGain = new Tone.Gain(0.3);
+      this.buses[source].connect(this.sidechainGain);
+      this.sidechainGain.connect(this.compressor);
+    }
+  }
+
+  // Auto-makeup gain calculation
+  calculateAutoMakeup() {
+    if (!this.compressor) return 0;
+    
+    const threshold = this.compressor.threshold.value;
+    const ratio = this.compressor.ratio.value;
+    
+    // Calculate expected gain reduction at threshold
+    const expectedReduction = threshold / ratio;
+    const makeupGain = Math.abs(expectedReduction) * 0.5; // Conservative makeup
+    
+    return Math.min(makeupGain, 12); // Cap at 12dB
+  }
+
+  // Apply auto-makeup gain
+  applyAutoMakeup() {
+    const makeupGain = this.calculateAutoMakeup();
+    if (this.compressorMakeup) {
+      this.compressorMakeup.gain.value = Tone.dbToGain(makeupGain);
+    }
+    return makeupGain;
+  }
+
+  // Get compressor gain reduction for visualization
+  getGainReduction() {
+    if (!this.compressor) return 0;
+    return this.compressor.reduction;
+  }
+
+  // Reset compressor to default values
+  resetCompressor() {
+    if (this.compressor) {
+      this.compressor.threshold.value = -12;
+      this.compressor.ratio.value = 4;
+      this.compressor.attack.value = 0.003;
+      this.compressor.release.value = 0.25;
+      this.compressor.knee.value = 30;
+    }
+    if (this.compressorMakeup) {
+      this.compressorMakeup.gain.value = 1;
+    }
+    if (this.limiter) {
+      this.limiter.threshold.value = -1;
+    }
+  }
+
+  // Apply compressor presets
+  applyCompressorPreset(preset) {
+    if (!this.compressor) return;
+    
+    const presets = {
+      'gentle': {
+        threshold: -8,
+        ratio: 2,
+        attack: 0.01,
+        release: 0.1,
+        knee: 20,
+        makeup: 2
+      },
+      'aggressive': {
+        threshold: -18,
+        ratio: 8,
+        attack: 0.001,
+        release: 0.5,
+        knee: 40,
+        makeup: 6
+      },
+      'mastering': {
+        threshold: -3,
+        ratio: 1.5,
+        attack: 0.003,
+        release: 0.1,
+        knee: 10,
+        makeup: 1
+      },
+      'sidechain': {
+        threshold: -15,
+        ratio: 6,
+        attack: 0.001,
+        release: 0.2,
+        knee: 30,
+        makeup: 4
+      }
+    };
+    
+    const settings = presets[preset];
+    if (settings) {
+      this.compressor.threshold.value = settings.threshold;
+      this.compressor.ratio.value = settings.ratio;
+      this.compressor.attack.value = settings.attack;
+      this.compressor.release.value = settings.release;
+      this.compressor.knee.value = settings.knee;
+      this.compressorMakeup.gain.value = Tone.dbToGain(settings.makeup);
     }
   }
 }
