@@ -85,7 +85,7 @@
       letter-spacing: 0.02em;
       background: rgba(255, 255, 255, 0.04);
       color: var(--text);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       min-height: 44px;
       min-width: 44px;
@@ -95,6 +95,7 @@
       touch-action: manipulation;
       position: relative;
       overflow: hidden;
+      transform: translateZ(0); /* Force hardware acceleration */
     }
 
     .btn::before {
@@ -109,7 +110,7 @@
     }
 
     .btn:hover {
-      transform: translateY(-2px);
+      transform: translateY(-2px) scale(1.02);
       background: rgba(255, 255, 255, 0.08);
       box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     }
@@ -119,7 +120,7 @@
     }
 
     .btn:active {
-      transform: translateY(0px);
+      transform: translateY(0px) scale(0.98);
       transition: transform 0.1s ease;
     }
 
@@ -237,6 +238,9 @@
       gap: 0.75rem;
       padding: 0.75rem 0;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
     }
 
     .control-row:last-child {
@@ -259,6 +263,8 @@
       font-weight: 500;
       min-width: 60px;
       text-align: right;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
     }
 
     input[type="range"] {
@@ -270,6 +276,8 @@
       -webkit-appearance: none;
       appearance: none;
       cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
     }
 
     input[type="range"]::-webkit-slider-thumb {
@@ -282,12 +290,18 @@
       cursor: pointer;
       border: 2px solid var(--bg);
       box-shadow: 0 2px 8px rgba(73, 169, 255, 0.3);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
     }
 
     input[type="range"]::-webkit-slider-thumb:hover {
       transform: scale(1.1);
       box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
+    }
+    
+    input[type="range"]::-webkit-slider-thumb:active {
+      transform: scale(1.2);
+      box-shadow: 0 6px 16px rgba(73, 169, 255, 0.5);
     }
 
     input[type="range"]::-webkit-slider-thumb:active {
@@ -302,12 +316,17 @@
       cursor: pointer;
       border: 2px solid var(--bg);
       box-shadow: 0 2px 8px rgba(73, 169, 255, 0.3);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     input[type="range"]::-moz-range-thumb:hover {
       transform: scale(1.1);
       box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
+    }
+    
+    input[type="range"]::-moz-range-thumb:active {
+      transform: scale(1.2);
+      box-shadow: 0 6px 16px rgba(73, 169, 255, 0.5);
     }
 
     input[type="range"]::-moz-range-thumb:active {
@@ -626,6 +645,72 @@
         transform: translateY(0);
       }
     }
+    
+    @keyframes parameterChange {
+      0% {
+        transform: scale(1);
+        background-color: rgba(73, 169, 255, 0.1);
+      }
+      50% {
+        transform: scale(1.02);
+        background-color: rgba(73, 169, 255, 0.2);
+      }
+      100% {
+        transform: scale(1);
+        background-color: transparent;
+      }
+    }
+    
+    @keyframes valuePulse {
+      0% {
+        color: var(--muted);
+        transform: scale(1);
+      }
+      50% {
+        color: var(--accent);
+        transform: scale(1.1);
+      }
+      100% {
+        color: var(--muted);
+        transform: scale(1);
+      }
+    }
+    
+    @keyframes sliderGlow {
+      0% {
+        box-shadow: 0 2px 8px rgba(73, 169, 255, 0.3);
+      }
+      50% {
+        box-shadow: 0 4px 16px rgba(73, 169, 255, 0.6);
+      }
+      100% {
+        box-shadow: 0 2px 8px rgba(73, 169, 255, 0.3);
+      }
+    }
+    
+    @keyframes trackPulse {
+      0% {
+        background-color: rgba(73, 169, 255, 0.1);
+      }
+      50% {
+        background-color: rgba(73, 169, 255, 0.2);
+      }
+      100% {
+        background-color: rgba(73, 169, 255, 0.1);
+      }
+    }
+    
+    @keyframes smoothScale {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
 
     @keyframes slideInRight {
       from {
@@ -640,6 +725,46 @@
 
     .control-section {
       animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .control-row.parameter-changing {
+      animation: parameterChange 0.6s ease-out;
+    }
+    
+    .control-value.value-changing {
+      animation: valuePulse 0.4s ease-out;
+    }
+    
+    .slider-changing::-webkit-slider-thumb {
+      animation: sliderGlow 0.6s ease-out;
+    }
+    
+    .slider-changing::-moz-range-thumb {
+      animation: sliderGlow 0.6s ease-out;
+    }
+    
+    .control-row:hover {
+      background: rgba(255, 255, 255, 0.02);
+      transform: translateX(2px);
+    }
+    
+    .control-row:hover .control-value {
+      color: var(--accent);
+      transform: scale(1.05);
+    }
+    
+    .control-row:hover input[type="range"] {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    
+    .control-row:hover input[type="range"]::-webkit-slider-thumb {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
+    }
+    
+    .control-row:hover input[type="range"]::-moz-range-thumb {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
     }
 
     .control-section:nth-child(2) { animation-delay: 0.1s; }
