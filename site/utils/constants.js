@@ -96,6 +96,24 @@ export const AUTOMATION_TRACK_DEFINITIONS = [
       0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95,
       1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65
     ]
+  },
+  {
+    id: 'sidechainAmount',
+    label: 'Sidechain Amount',
+    color: '#ff4757',
+    curve: [
+      0.8, 0.6, 0.4, 0.2, 0.1, 0.3, 0.5, 0.7,
+      0.9, 0.7, 0.5, 0.3, 0.1, 0.2, 0.4, 0.6
+    ]
+  },
+  {
+    id: 'sidechainThreshold',
+    label: 'Sidechain Threshold',
+    color: '#ff6b35',
+    curve: [
+      -24, -22, -20, -18, -16, -18, -20, -22,
+      -24, -26, -28, -26, -24, -22, -20, -18
+    ]
   }
 ];
 
