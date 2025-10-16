@@ -529,10 +529,20 @@ function createApp() {
       currentStep: 0,
       deviceRatio: window.devicePixelRatio || 1
     },
+    waveform: {
+      canvas: document.getElementById('waveform'),
+      ctx: null,
+      analyser: null,
+      dataArray: null,
+      animationId: null,
+      deviceRatio: window.devicePixelRatio || 1
+    },
     statusEl: document.getElementById('status'),
     sectionLabelEl: document.getElementById('sectionLabel'),
     statusTimer: null,
-    presetFileInput: null
+    presetFileInput: null,
+    particles: [],
+    lastParticleTime: 0
   };
 }
 
@@ -543,6 +553,7 @@ function initializeApp(app) {
   }
 
   app.timeline.ctx = app.timeline.canvas.getContext('2d');
+  app.waveform.ctx = app.waveform.canvas.getContext('2d');
   app.audio = initializeAudioGraph();
   configureTransport();
 
@@ -570,6 +581,7 @@ function initializeApp(app) {
   renderControlInterface(app);
   setupButtons(app);
   setupTimeline(app);
+  setupWaveform(app);
   setupAutomationScheduling(app);
   setupMidi(app);
   applyAutomationForStep(app, 0);
@@ -902,6 +914,14 @@ function setControlValue(app, control, value, options = {}) {
       entry.input.value = String(normalizedValue);
     }
     entry.valueEl.textContent = formatControlValue(control, normalizedValue);
+    
+    // Add visual feedback animation
+    entry.row.style.transform = 'scale(1.02)';
+    entry.valueEl.style.color = '#49a9ff';
+    setTimeout(() => {
+      entry.row.style.transform = '';
+      entry.valueEl.style.color = '';
+    }, 200);
   }
 
   if (control.apply) {
@@ -979,7 +999,27 @@ function setupButtons(app) {
 }
 
 async function startPlayback(app, options = {}) {
+  const startBtn = document.getElementById('startButton');
+  const stopBtn = document.getElementById('stopButton');
+  
+  // Visual feedback
+  if (startBtn) {
+    startBtn.classList.add('loading');
+    startBtn.disabled = true;
+  }
+  
   await ensureTransportRunning(app);
+  
+  if (startBtn) {
+    startBtn.classList.remove('loading');
+    startBtn.disabled = false;
+  }
+  
+  if (stopBtn) {
+    stopBtn.style.background = 'rgba(255, 73, 175, 0.1)';
+    stopBtn.style.borderColor = '#ff49af';
+  }
+  
   if (!options.silent) {
     setStatus(app, 'Playing');
   }
@@ -1002,6 +1042,20 @@ async function ensureTransportRunning(app) {
 }
 
 function stopPlayback(app) {
+  const startBtn = document.getElementById('startButton');
+  const stopBtn = document.getElementById('stopButton');
+  
+  // Visual feedback
+  if (stopBtn) {
+    stopBtn.style.background = 'rgba(255, 255, 255, 0.04)';
+    stopBtn.style.borderColor = 'var(--border)';
+  }
+  
+  if (startBtn) {
+    startBtn.style.background = 'linear-gradient(135deg, var(--accent), #3d8bff)';
+    startBtn.style.borderColor = 'rgba(73, 169, 255, 0.45)';
+  }
+  
   Tone.Transport.stop();
   Tone.Transport.position = 0;
   app.timeline.currentStep = 0;
@@ -1213,10 +1267,150 @@ function sanitizePresetSections(sections, stepCount = STEP_COUNT) {
 function setupTimeline(app) {
   const resizeObserver = new ResizeObserver(() => {
     syncTimelineCanvas(app);
+    syncWaveformCanvas(app);
     drawTimeline(app);
   });
   syncTimelineCanvas(app);
   resizeObserver.observe(app.timeline.canvas);
+}
+
+function setupWaveform(app) {
+  if (!app.waveform.canvas) return;
+  
+  const resizeObserver = new ResizeObserver(() => {
+    syncWaveformCanvas(app);
+  });
+  syncWaveformCanvas(app);
+  resizeObserver.observe(app.waveform.canvas);
+  
+  // Create analyser for waveform visualization
+  app.waveform.analyser = new Tone.Analyser('waveform', 1024);
+  app.audio.master.connect(app.waveform.analyser);
+  app.waveform.dataArray = new Uint8Array(app.waveform.analyser.size);
+  
+  startWaveformAnimation(app);
+}
+
+function syncWaveformCanvas(app) {
+  const canvas = app.waveform.canvas;
+  const ratio = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth * ratio;
+  const height = canvas.clientHeight * ratio;
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  app.waveform.deviceRatio = ratio;
+}
+
+function startWaveformAnimation(app) {
+  if (app.waveform.animationId) {
+    cancelAnimationFrame(app.waveform.animationId);
+  }
+  
+  function animate() {
+    if (app.waveform.analyser && app.waveform.ctx) {
+      drawWaveform(app);
+    }
+    app.waveform.animationId = requestAnimationFrame(animate);
+  }
+  
+  animate();
+}
+
+function drawWaveform(app) {
+  const { canvas, ctx, analyser, dataArray } = app.waveform;
+  if (!ctx || !analyser) return;
+  
+  const ratio = app.waveform.deviceRatio;
+  const width = canvas.width;
+  const height = canvas.height;
+  
+  ctx.clearRect(0, 0, width, height);
+  
+  analyser.getValue(dataArray);
+  
+  const barWidth = (width / dataArray.length) * 2.5;
+  let x = 0;
+  
+  // Create gradient for waveform bars
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, 'rgba(73, 169, 255, 0.8)');
+  gradient.addColorStop(0.5, 'rgba(255, 73, 175, 0.6)');
+  gradient.addColorStop(1, 'rgba(148, 255, 73, 0.4)');
+  
+  ctx.fillStyle = gradient;
+  
+  for (let i = 0; i < dataArray.length; i++) {
+    const barHeight = (dataArray[i] / 255) * height;
+    const y = (height - barHeight) / 2;
+    
+    // Add some visual flair with rounded rectangles
+    ctx.beginPath();
+    ctx.roundRect(x, y, barWidth, barHeight, 2);
+    ctx.fill();
+    
+    x += barWidth + 1;
+  }
+  
+  // Add a subtle glow effect
+  ctx.shadowColor = 'rgba(73, 169, 255, 0.3)';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = 'rgba(73, 169, 255, 0.1)';
+  ctx.fillRect(0, 0, width, height);
+  ctx.shadowBlur = 0;
+}
+
+function createParticle(x, y, color) {
+  return {
+    x: x + (Math.random() - 0.5) * 20,
+    y: y + (Math.random() - 0.5) * 20,
+    vx: (Math.random() - 0.5) * 2,
+    vy: (Math.random() - 0.5) * 2,
+    life: 1.0,
+    decay: 0.02 + Math.random() * 0.01,
+    size: 2 + Math.random() * 3,
+    color: color || `hsl(${200 + Math.random() * 60}, 70%, 60%)`
+  };
+}
+
+function updateParticles(app) {
+  const now = Date.now();
+  if (now - app.lastParticleTime > 100) { // Add particles every 100ms
+    const colors = ['#49a9ff', '#ff49af', '#94ff49', '#ffb449'];
+    app.particles.push(createParticle(
+      Math.random() * window.innerWidth,
+      Math.random() * 200,
+      colors[Math.floor(Math.random() * colors.length)]
+    ));
+    app.lastParticleTime = now;
+  }
+  
+  app.particles = app.particles.filter(particle => {
+    particle.x += particle.vx;
+    particle.y += particle.vy;
+    particle.life -= particle.decay;
+    particle.vy += 0.1; // Gravity
+    return particle.life > 0;
+  });
+}
+
+function drawParticles(app, ctx, x, y, ratio) {
+  updateParticles(app);
+  
+  app.particles.forEach(particle => {
+    ctx.save();
+    ctx.globalAlpha = particle.life;
+    ctx.fillStyle = particle.color;
+    ctx.shadowColor = particle.color;
+    ctx.shadowBlur = 10 * ratio;
+    
+    ctx.beginPath();
+    ctx.arc(particle.x * ratio, particle.y * ratio, particle.size * ratio, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
+  });
 }
 
 function syncTimelineCanvas(app) {
@@ -1317,9 +1511,33 @@ function drawTimeline(app) {
     }
   });
 
+  // Draw animated playback cursor
   const activeX = app.timeline.currentStep * stepWidth;
-  ctx.fillStyle = 'rgba(73, 169, 255, 0.18)';
+  const time = Date.now() * 0.003; // Slow animation
+  const pulseIntensity = 0.3 + 0.2 * Math.sin(time);
+  
+  // Main cursor
+  ctx.fillStyle = `rgba(73, 169, 255, ${0.18 + pulseIntensity * 0.1})`;
   ctx.fillRect(activeX, padding, stepWidth, areaHeight);
+  
+  // Animated border
+  ctx.strokeStyle = `rgba(73, 169, 255, ${0.6 + pulseIntensity * 0.4})`;
+  ctx.lineWidth = 2 * ratio;
+  ctx.setLineDash([5 * ratio, 3 * ratio]);
+  ctx.strokeRect(activeX, padding, stepWidth, areaHeight);
+  ctx.setLineDash([]);
+  
+  // Glow effect
+  const glowGradient = ctx.createLinearGradient(activeX, 0, activeX + stepWidth, 0);
+  glowGradient.addColorStop(0, `rgba(73, 169, 255, ${0.1 + pulseIntensity * 0.05})`);
+  glowGradient.addColorStop(0.5, `rgba(73, 169, 255, ${0.2 + pulseIntensity * 0.1})`);
+  glowGradient.addColorStop(1, `rgba(73, 169, 255, ${0.1 + pulseIntensity * 0.05})`);
+  
+  ctx.fillStyle = glowGradient;
+  ctx.fillRect(activeX - 10 * ratio, padding, stepWidth + 20 * ratio, areaHeight);
+  
+  // Draw particles for visual flair
+  drawParticles(app, ctx, activeX + stepWidth / 2, padding + areaHeight / 2, ratio);
 }
 
 function setupAutomationScheduling(app) {
@@ -1883,10 +2101,21 @@ function getControlValue(app, id) {
 
 function setStatus(app, message) {
   if (!app.statusEl) return;
+  
+  // Add visual feedback animation
+  app.statusEl.style.transform = 'scale(1.05)';
+  app.statusEl.style.color = '#49a9ff';
+  
+  setTimeout(() => {
+    app.statusEl.style.transform = '';
+    app.statusEl.style.color = '';
+  }, 150);
+  
   app.statusEl.textContent = `Status: ${message}`;
   clearTimeout(app.statusTimer);
   app.statusTimer = setTimeout(() => {
     app.statusEl.textContent = 'Status: Idle';
+    app.statusEl.style.color = 'var(--muted)';
   }, 3500);
 }
 
