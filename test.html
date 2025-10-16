@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pattern Variations Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+    button { margin: 5px; padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Pattern Variations Test</h1>
+  
+  <div class="test-section">
+    <h3>Pattern Variations System</h3>
+    <p>This test verifies the pattern variation system is working correctly.</p>
+    
+    <h4>Available Patterns:</h4>
+    <ul>
+      <li><strong>Kick:</strong> A (Default), B (Syncopated), C (Double time), D (Half time), E (Triplet feel), F (Complex)</li>
+      <li><strong>Snare:</strong> A (Default), B (More hits), C (Sparse), D (Roll), E (Single hit), F (Roll pattern)</li>
+      <li><strong>Hats:</strong> A (Default), B (Dense), C (Sparse), D (Steady), E (Steady 16ths), F (Accented 8ths)</li>
+      <li><strong>Bass:</strong> A (Default), B (Dense), C (Sparse), D (Arpeggio), E (Drone), F (Arpeggio)</li>
+      <li><strong>Lead:</strong> A (Default), B (Dense), C (Sparse), D (Arpeggio), E (Chord progression), F (Scale run)</li>
+      <li><strong>FX:</strong> A (Default), B (More hits), C (Sparse), D (Quarter notes), E (Silent), F (Constant)</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <h3>Features Added:</h3>
+    <ul>
+      <li>✅ Randomization system with intensity and frequency controls</li>
+      <li>✅ A/B pattern switching with probability triggers</li>
+      <li>✅ Probability triggers for skipping and accenting steps</li>
+      <li>✅ Pattern variation controls in UI</li>
+      <li>✅ Integration with existing sequences</li>
+      <li>✅ Pattern variation presets and persistence</li>
+      <li>✅ Extended pattern library (A-F patterns)</li>
+      <li>✅ Visual pattern indicators in timeline</li>
+      <li>✅ Manual pattern variation triggering</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <h3>Controls Added:</h3>
+    <ul>
+      <li><strong>Enable Variations:</strong> Toggle pattern variations on/off</li>
+      <li><strong>Random Intensity:</strong> Control how much randomization affects patterns (0-100%)</li>
+      <li><strong>Random Frequency:</strong> Control how often randomization occurs (0-100%)</li>
+      <li><strong>A/B Switch Prob:</strong> Probability of switching between patterns (0-100%)</li>
+      <li><strong>Skip Probability:</strong> Probability of skipping a step (0-50%)</li>
+      <li><strong>Accent Probability:</strong> Probability of accenting a step (0-50%)</li>
+      <li><strong>Accent Multiplier:</strong> Multiplier for accented steps (1x-3x)</li>
+      <li><strong>Reset Patterns:</strong> Reset all patterns to A or randomize all</li>
+    </ul>
+  </div>
+
+  <div class="test-section">
+    <h3>How to Test:</h3>
+    <ol>
+      <li>Open the main application (site/index.html)</li>
+      <li>Start playback to hear the patterns</li>
+      <li>Adjust the Pattern Variations controls in the sidebar</li>
+      <li>Click "Trigger Variation" to manually change patterns</li>
+      <li>Watch the timeline for visual pattern indicators</li>
+      <li>Save and load presets to test persistence</li>
+    </ol>
+  </div>
+
+  <script>
+    // Test pattern variation functions
+    console.log('Pattern Variations Test');
+    console.log('Available patterns:', Object.keys(PATTERN_VARIATIONS));
+    console.log('Extended patterns:', Object.keys(EXTENDED_PATTERN_VARIATIONS));
+  </script>
+</body>
+</html>

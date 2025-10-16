@@ -54,6 +54,94 @@ const AUTOMATION_TRACK_ORDER = new Map(
   AUTOMATION_TRACK_DEFINITIONS.map((definition, index) => [definition.id, index])
 );
 
+// Pattern Variation System
+const PATTERN_VARIATIONS = {
+  kick: {
+    A: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Default
+    B: [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0], // Syncopated
+    C: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], // Double time
+    D: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0]  // Half time
+  },
+  snare: {
+    A: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0], // Default
+    B: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // More hits
+    C: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Sparse
+    D: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0]  // Roll
+  },
+  hats: {
+    A: [0.6, 0, 0.45, 0, 0.7, 0.25, 0.5, 0.25, 0.65, 0, 0.45, 0, 0.75, 0.3, 0.55, 0.35], // Default
+    B: [0.8, 0.4, 0.6, 0.2, 0.8, 0.4, 0.6, 0.2, 0.8, 0.4, 0.6, 0.2, 0.8, 0.4, 0.6, 0.2], // Dense
+    C: [0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0], // Sparse
+    D: [0.7, 0.3, 0.5, 0.3, 0.7, 0.3, 0.5, 0.3, 0.7, 0.3, 0.5, 0.3, 0.7, 0.3, 0.5, 0.3]  // Steady
+  },
+  bass: {
+    A: ['C2', null, 'G1', null, 'C2', 'D2', null, 'G1', 'C2', null, 'A1', null, 'C2', 'D2', null, 'G1'], // Default
+    B: ['C2', 'G1', 'C2', 'G1', 'C2', 'D2', 'G1', 'D2', 'C2', 'G1', 'A1', 'G1', 'C2', 'D2', 'G1', 'D2'], // Dense
+    C: ['C2', null, null, null, 'C2', null, null, null, 'C2', null, null, null, 'C2', null, null, null], // Sparse
+    D: ['C2', 'E2', 'G2', 'A2', 'C2', 'E2', 'G2', 'A2', 'C2', 'E2', 'G2', 'A2', 'C2', 'E2', 'G2', 'A2']  // Arpeggio
+  },
+  lead: {
+    A: [['E4', 'B4'], null, ['G4'], null, ['A4'], null, ['B4', 'D5'], null, ['E5'], null, ['G4'], null, ['A4', 'C5'], null, ['B4'], null], // Default
+    B: [['E4', 'B4', 'G4'], ['A4'], ['G4', 'B4'], ['D5'], ['E5', 'G4'], ['A4'], ['B4', 'D5', 'E5'], ['G4'], ['E4', 'B4'], ['G4'], ['A4', 'C5'], ['B4'], ['E5', 'G4'], ['A4'], ['B4', 'D5'], ['E4']], // Dense
+    C: [['E4'], null, null, null, ['A4'], null, null, null, ['E5'], null, null, null, ['A4'], null, null, null], // Sparse
+    D: [['E4', 'G4', 'B4'], ['A4', 'C5'], ['G4', 'B4', 'D5'], ['E5', 'G4'], ['A4', 'C5', 'E5'], ['B4', 'D5'], ['G4', 'B4', 'E5'], ['A4', 'C5']] // Arpeggio
+  },
+  fx: {
+    A: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0], // Default
+    B: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // More hits
+    C: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], // Sparse
+    D: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]  // Quarter notes
+  }
+};
+
+// Additional pattern variations for more complexity
+const EXTENDED_PATTERN_VARIATIONS = {
+  kick: {
+    E: [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0], // Triplet feel
+    F: [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0]  // Complex
+  },
+  snare: {
+    E: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Single hit
+    F: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0]  // Roll pattern
+  },
+  hats: {
+    E: [0.4, 0.2, 0.4, 0.2, 0.4, 0.2, 0.4, 0.2, 0.4, 0.2, 0.4, 0.2, 0.4, 0.2, 0.4, 0.2], // Steady 16ths
+    F: [0.8, 0, 0.6, 0, 0.8, 0, 0.6, 0, 0.8, 0, 0.6, 0, 0.8, 0, 0.6, 0]  // Accented 8ths
+  },
+  bass: {
+    E: ['C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2'], // Drone
+    F: ['C2', 'E2', 'G2', 'A2', 'C2', 'E2', 'G2', 'A2', 'C2', 'E2', 'G2', 'A2', 'C2', 'E2', 'G2', 'A2']  // Arpeggio
+  },
+  lead: {
+    E: [['C4', 'E4', 'G4'], ['A4', 'C5'], ['G4', 'B4'], ['E5', 'G5'], ['C4', 'E4', 'G4'], ['A4', 'C5'], ['G4', 'B4'], ['E5', 'G5']], // Chord progression
+    F: [['E4'], ['F4'], ['G4'], ['A4'], ['B4'], ['C5'], ['D5'], ['E5'], ['D5'], ['C5'], ['B4'], ['A4'], ['G4'], ['F4'], ['E4'], ['D4']]  // Scale run
+  },
+  fx: {
+    E: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Silent
+    F: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  // Constant
+  }
+};
+
+const PATTERN_VARIATION_CONFIG = {
+  enabled: true,
+  randomization: {
+    enabled: true,
+    intensity: 0.3, // 0-1, how much to randomize
+    frequency: 0.1  // 0-1, how often to randomize
+  },
+  abPatterns: {
+    enabled: true,
+    switchProbability: 0.2, // 0-1, probability of switching A/B patterns
+    currentPattern: 'A' // Current active pattern
+  },
+  probabilityTriggers: {
+    enabled: true,
+    skipProbability: 0.1, // 0-1, probability of skipping a step
+    accentProbability: 0.15, // 0-1, probability of accenting a step
+    accentMultiplier: 1.5 // Multiplier for accented steps
+  }
+};
+
 function createSectionLayout(stepCount = STEP_COUNT) {
   const totalSteps = Math.max(Math.floor(stepCount), 0);
   if (totalSteps <= 0) {
@@ -397,6 +485,129 @@ const CONTROL_SCHEMA = [
         }
       }
     ]
+  },
+  {
+    group: 'Pattern Variations',
+    description: 'Randomization and pattern switching for dynamic arrangements.',
+    controls: [
+      {
+        id: 'patternVariationsEnabled',
+        label: 'Enable Variations',
+        type: 'select',
+        options: [
+          { value: 'true', label: 'On' },
+          { value: 'false', label: 'Off' }
+        ],
+        default: 'true',
+        apply: (value, app) => {
+          app.patternVariations.enabled = value === 'true';
+        }
+      },
+      {
+        id: 'randomizationIntensity',
+        label: 'Random Intensity',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.3,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.patternVariations.randomization.intensity = value;
+        }
+      },
+      {
+        id: 'randomizationFrequency',
+        label: 'Random Frequency',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.patternVariations.randomization.frequency = value;
+        }
+      },
+      {
+        id: 'abPatternSwitch',
+        label: 'A/B Switch Prob',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.2,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.patternVariations.abPatterns.switchProbability = value;
+        }
+      },
+      {
+        id: 'skipProbability',
+        label: 'Skip Probability',
+        type: 'range',
+        min: 0,
+        max: 0.5,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.patternVariations.probabilityTriggers.skipProbability = value;
+        }
+      },
+      {
+        id: 'accentProbability',
+        label: 'Accent Probability',
+        type: 'range',
+        min: 0,
+        max: 0.5,
+        step: 0.01,
+        default: 0.15,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.patternVariations.probabilityTriggers.accentProbability = value;
+        }
+      },
+      {
+        id: 'patternVariationReset',
+        label: 'Reset Patterns',
+        type: 'select',
+        options: [
+          { value: 'reset', label: 'Reset to A' },
+          { value: 'random', label: 'Random All' }
+        ],
+        default: 'reset',
+        apply: (value, app) => {
+          if (value === 'reset') {
+            Object.keys(app.patternVariations.currentPatterns).forEach(instrument => {
+              app.patternVariations.currentPatterns[instrument] = 'A';
+            });
+            app.patternVariations.abPatterns.currentPattern = 'A';
+          } else if (value === 'random') {
+            const patterns = ['A', 'B', 'C', 'D'];
+            Object.keys(app.patternVariations.currentPatterns).forEach(instrument => {
+              app.patternVariations.currentPatterns[instrument] = patterns[Math.floor(Math.random() * patterns.length)];
+            });
+            app.patternVariations.abPatterns.currentPattern = patterns[Math.floor(Math.random() * patterns.length)];
+          }
+          rebuildSequencesWithVariations(app);
+          drawTimeline(app);
+        }
+      },
+      {
+        id: 'accentMultiplier',
+        label: 'Accent Multiplier',
+        type: 'range',
+        min: 1,
+        max: 3,
+        step: 0.1,
+        default: 1.5,
+        format: value => `${value.toFixed(1)}x`,
+        apply: (value, app) => {
+          app.patternVariations.probabilityTriggers.accentMultiplier = value;
+        }
+      }
+    ]
   }
 ];
 
@@ -433,7 +644,35 @@ function createApp() {
     statusEl: document.getElementById('status'),
     sectionLabelEl: document.getElementById('sectionLabel'),
     statusTimer: null,
-    presetFileInput: null
+    presetFileInput: null,
+    patternVariations: {
+      enabled: true,
+      randomization: {
+        enabled: true,
+        intensity: 0.3,
+        frequency: 0.1
+      },
+      abPatterns: {
+        enabled: true,
+        switchProbability: 0.2,
+        currentPattern: 'A'
+      },
+      probabilityTriggers: {
+        enabled: true,
+        skipProbability: 0.1,
+        accentProbability: 0.15,
+        accentMultiplier: 1.5
+      },
+      currentPatterns: {
+        kick: 'A',
+        snare: 'A',
+        hats: 'A',
+        bass: 'A',
+        lead: 'A',
+        fx: 'A'
+      },
+      lastVariationStep: 0
+    }
   };
 }
 
@@ -454,6 +693,11 @@ function initializeApp(app) {
 
   app.controlState = Object.assign({}, defaultState, storedControls);
   app.automation = normalizeAutomationState(app.automation, STEP_COUNT);
+  
+  // Initialize pattern variations
+  if (storedPreset && storedPreset.patternVariations) {
+    app.patternVariations = Object.assign({}, app.patternVariations, storedPreset.patternVariations);
+  }
 
   if (externalPreset && externalPreset.controls) {
     Object.assign(app.controlState, externalPreset.controls);
@@ -559,7 +803,7 @@ function initializeAudioGraph() {
     volume: -20
   }).connect(buses.fx);
 
-  const sequences = buildSequences({ kick, snare, hats, bass, lead, noiseFx });
+  const sequences = buildSequences({ kick, snare, hats, bass, lead, noiseFx }, appInstance);
 
   return {
     master: masterGain,
@@ -578,77 +822,188 @@ function initializeAudioGraph() {
   };
 }
 
-function buildSequences(instruments) {
-  const kickPattern = [
-    1, 0, 0, 0,
-    1, 0, 0, 0,
-    1, 0, 0, 0,
-    1, 0, 0, 0
-  ];
-  const snarePattern = [
-    0, 0, 0, 0,
-    0, 0, 1, 0,
-    0, 0, 0, 0,
-    0, 0, 1, 0
-  ];
-  const hatPattern = [
-    0.6, 0, 0.45, 0,
-    0.7, 0.25, 0.5, 0.25,
-    0.65, 0, 0.45, 0,
-    0.75, 0.3, 0.55, 0.35
-  ];
-  const bassPattern = [
-    'C2', null, 'G1', null,
-    'C2', 'D2', null, 'G1',
-    'C2', null, 'A1', null,
-    'C2', 'D2', null, 'G1'
-  ];
-  const leadPattern = [
-    ['E4', 'B4'], null, ['G4'], null,
-    ['A4'], null, ['B4', 'D5'], null,
-    ['E5'], null, ['G4'], null,
-    ['A4', 'C5'], null, ['B4'], null
-  ];
-  const fxPattern = [
-    0, 0, 0, 0,
-    0, 0, 1, 0,
-    0, 0, 0, 0,
-    0, 0, 1, 0
-  ];
+// Pattern Variation Functions
+function applyPatternVariations(value, instrument, app) {
+  if (!app || !app.patternVariations || !app.patternVariations.enabled) {
+    return value;
+  }
+
+  const config = app.patternVariations;
+  let finalValue = value;
+
+  // Apply skip probability
+  if (config.probabilityTriggers.enabled && Math.random() < config.probabilityTriggers.skipProbability) {
+    return 0;
+  }
+
+  // Apply accent probability
+  if (config.probabilityTriggers.enabled && Math.random() < config.probabilityTriggers.accentProbability) {
+    finalValue *= config.probabilityTriggers.accentMultiplier;
+  }
+
+  // Apply randomization
+  if (config.randomization.enabled && Math.random() < config.randomization.frequency) {
+    const intensity = config.randomization.intensity;
+    const randomFactor = 1 + (Math.random() - 0.5) * intensity * 2;
+    finalValue *= randomFactor;
+  }
+
+  return Math.max(0, Math.min(finalValue, 1));
+}
+
+function updatePatternVariations(app) {
+  if (!app.patternVariations || !app.patternVariations.enabled) {
+    return;
+  }
+
+  const config = app.patternVariations;
+  const currentStep = app.timeline.currentStep || 0;
+
+  // Check if we should switch A/B patterns
+  if (config.abPatterns.enabled && Math.random() < config.abPatterns.switchProbability) {
+    const patterns = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const currentPattern = config.abPatterns.currentPattern;
+    const availablePatterns = patterns.filter(p => p !== currentPattern);
+    const newPattern = availablePatterns[Math.floor(Math.random() * availablePatterns.length)];
+    
+    config.abPatterns.currentPattern = newPattern;
+    
+    // Update individual instrument patterns
+    Object.keys(config.currentPatterns).forEach(instrument => {
+      if (Math.random() < 0.5) { // 50% chance to update each instrument
+        config.currentPatterns[instrument] = newPattern;
+      }
+    });
+
+    // Rebuild sequences with new patterns
+    rebuildSequencesWithVariations(app);
+  }
+
+  // Update randomization based on step
+  if (config.randomization.enabled && currentStep !== config.lastVariationStep) {
+    config.lastVariationStep = currentStep;
+  }
+}
+
+function triggerPatternVariation(app, instrument = null) {
+  if (!app.patternVariations || !app.patternVariations.enabled) {
+    return;
+  }
+
+  const patterns = ['A', 'B', 'C', 'D', 'E', 'F'];
+  
+  if (instrument && app.patternVariations.currentPatterns[instrument]) {
+    // Update specific instrument
+    const currentPattern = app.patternVariations.currentPatterns[instrument];
+    const availablePatterns = patterns.filter(p => p !== currentPattern);
+    app.patternVariations.currentPatterns[instrument] = availablePatterns[Math.floor(Math.random() * availablePatterns.length)];
+  } else {
+    // Update all instruments
+    Object.keys(app.patternVariations.currentPatterns).forEach(inst => {
+      app.patternVariations.currentPatterns[inst] = patterns[Math.floor(Math.random() * patterns.length)];
+    });
+    app.patternVariations.abPatterns.currentPattern = patterns[Math.floor(Math.random() * patterns.length)];
+  }
+
+  rebuildSequencesWithVariations(app);
+  drawTimeline(app);
+}
+
+function rebuildSequencesWithVariations(app) {
+  if (!app.audio || !app.audio.sequences) {
+    return;
+  }
+
+  // Stop existing sequences
+  app.audio.sequences.all.forEach(seq => {
+    if (seq.state === 'started') {
+      seq.stop();
+    }
+  });
+
+  // Rebuild sequences with current patterns
+  const newSequences = buildSequences(app.audio.instruments, app);
+  
+  // Update the sequences in the audio object
+  app.audio.sequences = newSequences;
+  
+  // Restart sequences if transport is running
+  if (Tone.Transport.state === 'started') {
+    newSequences.all.forEach(seq => seq.start(0));
+  }
+}
+
+function buildSequences(instruments, app = null) {
+  // Get current patterns or defaults
+  const getPattern = (instrument, variation = 'A') => {
+    if (app && app.patternVariations && app.patternVariations.enabled) {
+      // Check extended patterns first, then fall back to basic patterns
+      if (EXTENDED_PATTERN_VARIATIONS[instrument] && EXTENDED_PATTERN_VARIATIONS[instrument][variation]) {
+        return EXTENDED_PATTERN_VARIATIONS[instrument][variation];
+      }
+      return PATTERN_VARIATIONS[instrument][variation] || PATTERN_VARIATIONS[instrument]['A'];
+    }
+    return PATTERN_VARIATIONS[instrument]['A'];
+  };
+
+  const kickPattern = getPattern('kick', app?.patternVariations?.currentPatterns?.kick);
+  const snarePattern = getPattern('snare', app?.patternVariations?.currentPatterns?.snare);
+  const hatPattern = getPattern('hats', app?.patternVariations?.currentPatterns?.hats);
+  const bassPattern = getPattern('bass', app?.patternVariations?.currentPatterns?.bass);
+  const leadPattern = getPattern('lead', app?.patternVariations?.currentPatterns?.lead);
+  const fxPattern = getPattern('fx', app?.patternVariations?.currentPatterns?.fx);
 
   const kickSeq = new Tone.Sequence((time, velocity) => {
     if (velocity) {
-      instruments.kick.triggerAttackRelease('C1', '8n', time, velocity);
+      const finalVelocity = applyPatternVariations(velocity, 'kick', app);
+      if (finalVelocity > 0) {
+        instruments.kick.triggerAttackRelease('C1', '8n', time, finalVelocity);
+      }
     }
   }, kickPattern, '16n');
 
   const snareSeq = new Tone.Sequence((time, hit) => {
     if (hit) {
-      instruments.snare.triggerAttackRelease('16n', time, 0.8);
+      const finalHit = applyPatternVariations(hit, 'snare', app);
+      if (finalHit > 0) {
+        instruments.snare.triggerAttackRelease('16n', time, 0.8 * finalHit);
+      }
     }
   }, snarePattern, '16n');
 
   const hatSeq = new Tone.Sequence((time, velocity) => {
     if (velocity) {
-      instruments.hats.triggerAttackRelease('32n', time, velocity);
+      const finalVelocity = applyPatternVariations(velocity, 'hats', app);
+      if (finalVelocity > 0) {
+        instruments.hats.triggerAttackRelease('32n', time, finalVelocity);
+      }
     }
   }, hatPattern, '16n');
 
   const bassSeq = new Tone.Sequence((time, note) => {
     if (note) {
-      instruments.bass.triggerAttackRelease(note, '8n', time, 0.9);
+      const shouldPlay = applyPatternVariations(1, 'bass', app);
+      if (shouldPlay > 0) {
+        instruments.bass.triggerAttackRelease(note, '8n', time, 0.9);
+      }
     }
   }, bassPattern, '16n');
 
   const leadSeq = new Tone.Sequence((time, notes) => {
     if (notes && notes.length) {
-      notes.forEach(note => instruments.lead.triggerAttackRelease(note, '16n', time, 0.8));
+      const shouldPlay = applyPatternVariations(1, 'lead', app);
+      if (shouldPlay > 0) {
+        notes.forEach(note => instruments.lead.triggerAttackRelease(note, '16n', time, 0.8));
+      }
     }
   }, leadPattern, '16n');
 
   const fxSeq = new Tone.Sequence((time, trigger) => {
     if (trigger) {
-      instruments.noiseFx.triggerAttackRelease('2n', time, 0.35);
+      const finalTrigger = applyPatternVariations(trigger, 'fx', app);
+      if (finalTrigger > 0) {
+        instruments.noiseFx.triggerAttackRelease('2n', time, 0.35 * finalTrigger);
+      }
     }
   }, fxPattern, '16n');
 
@@ -814,6 +1169,21 @@ function setControlValue(app, control, value, options = {}) {
     drawTimeline(app);
   }
 
+  // Handle pattern variation controls
+  if (control.id === 'patternVariationsEnabled') {
+    app.patternVariations.enabled = normalizedValue === 'true';
+  } else if (control.id === 'randomizationIntensity') {
+    app.patternVariations.randomization.intensity = normalizedValue;
+  } else if (control.id === 'randomizationFrequency') {
+    app.patternVariations.randomization.frequency = normalizedValue;
+  } else if (control.id === 'abPatternSwitch') {
+    app.patternVariations.abPatterns.switchProbability = normalizedValue;
+  } else if (control.id === 'skipProbability') {
+    app.patternVariations.probabilityTriggers.skipProbability = normalizedValue;
+  } else if (control.id === 'accentProbability') {
+    app.patternVariations.probabilityTriggers.accentProbability = normalizedValue;
+  }
+
   if (!skipSave) {
     saveControlState(app.controlState);
   }
@@ -841,6 +1211,7 @@ function setupButtons(app) {
   const exportMixBtn = document.getElementById('exportMixButton');
   const exportStemsBtn = document.getElementById('exportStemsButton');
   const midiToggle = document.getElementById('midiLearnToggle');
+  const triggerVariationBtn = document.getElementById('triggerVariationButton');
 
   startBtn?.addEventListener('click', () => startPlayback(app));
   stopBtn?.addEventListener('click', () => stopPlayback(app));
@@ -848,6 +1219,7 @@ function setupButtons(app) {
   loadPresetBtn?.addEventListener('click', () => triggerPresetLoad(app));
   exportMixBtn?.addEventListener('click', () => exportMix(app));
   exportStemsBtn?.addEventListener('click', () => exportStems(app));
+  triggerVariationBtn?.addEventListener('click', () => triggerPatternVariation(app));
   midiToggle?.addEventListener('change', event => {
     const enabled = Boolean(event.target.checked);
     setMidiLearn(app, enabled);
@@ -946,7 +1318,8 @@ function buildPresetPayload(app, name) {
       tracks: app.automation.tracks.map(track => ({ id: track.id, values: [...track.values] })),
       sections: app.automation.sections.map(section => ({ ...section }))
     },
-    midiMappings: { ...app.midi.mappings }
+    midiMappings: { ...app.midi.mappings },
+    patternVariations: { ...app.patternVariations }
   };
 }
 
@@ -968,6 +1341,9 @@ function applyPreset(app, presetData) {
   if (presetData.midiMappings) {
     app.midi.mappings = { ...presetData.midiMappings };
     saveMidiMappings(app.midi.mappings);
+  }
+  if (presetData.patternVariations) {
+    app.patternVariations = Object.assign({}, app.patternVariations, presetData.patternVariations);
   }
   if (presetData.name) {
     app.presetName = presetData.name;
@@ -1183,6 +1559,42 @@ function drawTimeline(app) {
   const activeX = app.timeline.currentStep * stepWidth;
   ctx.fillStyle = 'rgba(73, 169, 255, 0.18)';
   ctx.fillRect(activeX, padding, stepWidth, areaHeight);
+
+  // Draw pattern variation indicators
+  if (app.patternVariations && app.patternVariations.enabled) {
+    const patternColors = {
+      'A': 'rgba(73, 169, 255, 0.3)',
+      'B': 'rgba(255, 73, 175, 0.3)',
+      'C': 'rgba(148, 255, 73, 0.3)',
+      'D': 'rgba(255, 180, 73, 0.3)',
+      'E': 'rgba(255, 100, 100, 0.3)',
+      'F': 'rgba(100, 255, 255, 0.3)'
+    };
+    
+    // Draw pattern indicators at the top
+    const indicatorHeight = 8 * ratio;
+    const currentPattern = app.patternVariations.abPatterns.currentPattern;
+    ctx.fillStyle = patternColors[currentPattern] || patternColors['A'];
+    ctx.fillRect(0, padding - indicatorHeight - 2, width, indicatorHeight);
+    
+    // Draw individual instrument pattern indicators
+    const instrumentPatterns = app.patternVariations.currentPatterns;
+    const instrumentColors = {
+      kick: 'rgba(255, 100, 100, 0.4)',
+      snare: 'rgba(100, 255, 100, 0.4)',
+      hats: 'rgba(100, 100, 255, 0.4)',
+      bass: 'rgba(255, 255, 100, 0.4)',
+      lead: 'rgba(255, 100, 255, 0.4)',
+      fx: 'rgba(100, 255, 255, 0.4)'
+    };
+    
+    let yOffset = padding - indicatorHeight - 12;
+    Object.entries(instrumentPatterns).forEach(([instrument, pattern]) => {
+      ctx.fillStyle = patternColors[pattern] || patternColors['A'];
+      ctx.fillRect(0, yOffset, width, 4);
+      yOffset -= 6;
+    });
+  }
 }
 
 function setupAutomationScheduling(app) {
@@ -1195,6 +1607,7 @@ function setupAutomationScheduling(app) {
     app.timeline.currentStep = step;
     applyAutomationForStep(app, step, time);
     syncSectionState(app, step);
+    updatePatternVariations(app);
     requestAnimationFrame(() => drawTimeline(app));
     app.automationStep = (step + 1) % STEP_COUNT;
   }, STEP_DURATION);
