@@ -672,7 +672,6 @@ function initializeApp(app) {
   setStatus(app, 'Idle');
 
   // Hide mobile loading indicator
-  const mobileLoading = document.getElementById('mobile-loading');
   if (mobileLoading) {
     setTimeout(() => {
       mobileLoading.style.display = 'none';
@@ -2060,6 +2059,17 @@ function applyAutomationForStep(app, step, time) {
   const driveTrack = getAutomationTrack(app, 'bassDrive');
   const resonanceTrack = getAutomationTrack(app, 'leadResonance');
   const masterTrack = getAutomationTrack(app, 'masterVolume');
+  
+  // New automation tracks
+  const reverbMixTrack = getAutomationTrack(app, 'reverbMix');
+  const reverbPreDelayTrack = getAutomationTrack(app, 'reverbPreDelay');
+  const reverbRoomSizeTrack = getAutomationTrack(app, 'reverbRoomSize');
+  const delayTimeTrack = getAutomationTrack(app, 'delayTime');
+  const delayMixTrack = getAutomationTrack(app, 'delayMix');
+  const delayFilterTrack = getAutomationTrack(app, 'delayFilter');
+  const distortionAmountTrack = getAutomationTrack(app, 'distortionAmount');
+  const distortionToneTrack = getAutomationTrack(app, 'distortionTone');
+  const distortionMixTrack = getAutomationTrack(app, 'distortionMix');
 
   const leadBase = getControlValue(app, 'leadFilterBase');
   const leadMod = getControlValue(app, 'leadFilterMod');
@@ -2079,7 +2089,16 @@ function applyAutomationForStep(app, step, time) {
     delayFeedback: delayTrack,
     bassDrive: driveTrack,
     leadResonance: resonanceTrack,
-    masterVolume: masterTrack
+    masterVolume: masterTrack,
+    reverbMix: reverbMixTrack,
+    reverbPreDelay: reverbPreDelayTrack,
+    reverbRoomSize: reverbRoomSizeTrack,
+    delayTime: delayTimeTrack,
+    delayMix: delayMixTrack,
+    delayFilter: delayFilterTrack,
+    distortionAmount: distortionAmountTrack,
+    distortionTone: distortionToneTrack,
+    distortionMix: distortionMixTrack
   }, step, time);
 
   const leadValue = clamp(getAutomationValue(lfoModulatedTracks.leadFilter, step), 0, 1);
@@ -2090,6 +2109,17 @@ function applyAutomationForStep(app, step, time) {
   const driveValue = clamp(getAutomationValue(lfoModulatedTracks.bassDrive, step), 0, 1);
   const resonanceValue = clamp(getAutomationValue(lfoModulatedTracks.leadResonance, step), 0, 1);
   const masterValue = clamp(getAutomationValue(lfoModulatedTracks.masterVolume, step), 0, 1);
+  
+  // New automation values
+  const reverbMixValue = clamp(getAutomationValue(lfoModulatedTracks.reverbMix, step), 0, 1);
+  const reverbPreDelayValue = clamp(getAutomationValue(lfoModulatedTracks.reverbPreDelay, step), 0, 1);
+  const reverbRoomSizeValue = clamp(getAutomationValue(lfoModulatedTracks.reverbRoomSize, step), 0, 1);
+  const delayTimeValue = clamp(getAutomationValue(lfoModulatedTracks.delayTime, step), 0, 1);
+  const delayMixValue = clamp(getAutomationValue(lfoModulatedTracks.delayMix, step), 0, 1);
+  const delayFilterValue = clamp(getAutomationValue(lfoModulatedTracks.delayFilter, step), 0, 1);
+  const distortionAmountValue = clamp(getAutomationValue(lfoModulatedTracks.distortionAmount, step), 0, 1);
+  const distortionToneValue = clamp(getAutomationValue(lfoModulatedTracks.distortionTone, step), 0, 1);
+  const distortionMixValue = clamp(getAutomationValue(lfoModulatedTracks.distortionMix, step), 0, 1);
 
   const leadFreq = leadBase + leadMod * leadValue;
   const fxAmount = fxValue * fxBase;
@@ -2099,6 +2129,17 @@ function applyAutomationForStep(app, step, time) {
   const driveAmount = driveValue;
   const resonanceAmount = 0.3 + (resonanceValue * 1.2); // 0.3 to 1.5
   const masterGain = 0.1 + (masterValue * 0.9); // 0.1 to 1.0
+  
+  // New calculated values
+  const reverbMix = reverbMixValue * 0.8; // 0 to 0.8
+  const reverbPreDelay = 0.01 + (reverbPreDelayValue * 0.09); // 0.01 to 0.1 seconds
+  const reverbRoomSize = 0.2 + (reverbRoomSizeValue * 0.8); // 0.2 to 1.0
+  const delayTime = 0.1 + (delayTimeValue * 0.9); // 0.1 to 1.0 seconds
+  const delayMix = delayMixValue * 0.6; // 0 to 0.6
+  const delayFilterFreq = 1000 + (delayFilterValue * 7000); // 1000 to 8000 Hz
+  const distortionAmount = distortionAmountValue * 0.8; // 0 to 0.8
+  const distortionTone = 1000 + (distortionToneValue * 4000); // 1000 to 5000 Hz
+  const distortionMix = distortionMixValue * 0.7; // 0 to 0.7
 
   const leadFrequency = app.audio.nodes.leadFilter.frequency;
   const leadFxGain = app.audio.nodes.leadFxSend.gain;
@@ -2107,6 +2148,13 @@ function applyAutomationForStep(app, step, time) {
   const delayNode = app.audio.nodes.delay;
   const driveNode = app.audio.nodes.bassDrive;
   const masterNode = app.audio.master;
+  
+  // New node references
+  const delayFilterNode = app.audio.nodes.delayFilter;
+  const delayMixNode = app.audio.nodes.delayMix;
+  const distortionNode = app.audio.nodes.distortion;
+  const distortionFilterNode = app.audio.nodes.distortionFilter;
+  const distortionMixNode = app.audio.nodes.distortionMix;
 
   if (typeof time === 'number') {
     leadFrequency.setValueAtTime(leadFrequency.value, time);
@@ -2116,8 +2164,23 @@ function applyAutomationForStep(app, step, time) {
     bassFrequency.setValueAtTime(bassFrequency.value, time);
     bassFrequency.linearRampToValueAtTime(bassFreq, time + 0.1);
     reverbNode.decay = reverbDecay;
+    reverbNode.wet.setValueAtTime(reverbNode.wet.value, time);
+    reverbNode.wet.linearRampToValueAtTime(reverbMix, time + 0.1);
+    reverbNode.preDelay = reverbPreDelay;
+    reverbNode.roomSize = reverbRoomSize;
+    delayNode.delayTime.setValueAtTime(delayNode.delayTime.value, time);
+    delayNode.delayTime.linearRampToValueAtTime(delayTime, time + 0.1);
     delayNode.feedback.setValueAtTime(delayNode.feedback.value, time);
     delayNode.feedback.linearRampToValueAtTime(delayFeedback, time + 0.1);
+    delayFilterNode.frequency.setValueAtTime(delayFilterNode.frequency.value, time);
+    delayFilterNode.frequency.linearRampToValueAtTime(delayFilterFreq, time + 0.1);
+    delayMixNode.gain.setValueAtTime(delayMixNode.gain.value, time);
+    delayMixNode.gain.linearRampToValueAtTime(delayMix, time + 0.1);
+    distortionNode.distortion = distortionAmount;
+    distortionFilterNode.frequency.setValueAtTime(distortionFilterNode.frequency.value, time);
+    distortionFilterNode.frequency.linearRampToValueAtTime(distortionTone, time + 0.1);
+    distortionMixNode.gain.setValueAtTime(distortionMixNode.gain.value, time);
+    distortionMixNode.gain.linearRampToValueAtTime(distortionMix, time + 0.1);
     driveNode.wet.setValueAtTime(driveNode.wet.value, time);
     driveNode.wet.linearRampToValueAtTime(driveAmount, time + 0.1);
     masterNode.gain.setValueAtTime(masterNode.gain.value, time);
@@ -2127,7 +2190,16 @@ function applyAutomationForStep(app, step, time) {
     leadFxGain.value = fxAmount;
     bassFrequency.value = bassFreq;
     reverbNode.decay = reverbDecay;
+    reverbNode.wet.value = reverbMix;
+    reverbNode.preDelay = reverbPreDelay;
+    reverbNode.roomSize = reverbRoomSize;
+    delayNode.delayTime.value = delayTime;
     delayNode.feedback.value = delayFeedback;
+    delayFilterNode.frequency.value = delayFilterFreq;
+    delayMixNode.gain.value = delayMix;
+    distortionNode.distortion = distortionAmount;
+    distortionFilterNode.frequency.value = distortionTone;
+    distortionMixNode.gain.value = distortionMix;
     driveNode.wet.value = driveAmount;
     masterNode.gain.value = masterGain;
   }
