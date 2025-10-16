@@ -723,6 +723,17 @@
       }
     }
 
+    @keyframes slideOutRight {
+      from {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateX(30px);
+      }
+    }
+
     .control-section {
       animation: fadeInUp 0.6s ease-out;
     }
@@ -1002,6 +1013,316 @@
       }
     }
 
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-content {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 1.5rem;
+      max-width: 90vw;
+      max-height: 90vh;
+      width: 800px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      color: var(--accent);
+      font-size: 1.5rem;
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 2rem;
+      cursor: pointer;
+      padding: 0;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+
+    .btn-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    /* Preset Search */
+    .preset-search {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .search-input, .category-select, .sort-select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+
+    .search-input:focus, .category-select:focus, .sort-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+    }
+
+    /* Preset Gallery */
+    .preset-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .preset-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preset-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 25px rgba(73, 169, 255, 0.15);
+    }
+
+    .preset-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent), #ff49af);
+    }
+
+    .preset-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0 0 0.5rem 0;
+    }
+
+    .preset-author {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin: 0 0 0.75rem 0;
+    }
+
+    .preset-description {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.4;
+      margin: 0 0 1rem 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .preset-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+    }
+
+    .preset-rating {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .star {
+      color: #ffd700;
+      font-size: 0.9rem;
+    }
+
+    .preset-category {
+      background: rgba(73, 169, 255, 0.1);
+      color: var(--accent);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .preset-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .preset-actions .btn {
+      flex: 1;
+      padding: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    /* Preset Upload */
+    .preset-upload {
+      border-top: 1px solid var(--border);
+      padding-top: 2rem;
+    }
+
+    .preset-upload h3 {
+      color: var(--accent);
+      margin: 0 0 1rem 0;
+    }
+
+    .upload-form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .preset-title-input, .preset-description-input, .preset-category-select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+
+    .preset-description-input {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .preset-title-input:focus, .preset-description-input:focus, .preset-category-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+    }
+
+    /* Share Modal */
+    .share-options {
+      display: grid;
+      gap: 2rem;
+    }
+
+    .share-option {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+    }
+
+    .share-option h3 {
+      color: var(--accent);
+      margin: 0 0 0.5rem 0;
+    }
+
+    .share-option p {
+      color: var(--muted);
+      margin: 0 0 1rem 0;
+      font-size: 0.9rem;
+    }
+
+    .share-link-input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      width: 100%;
+      margin-right: 0.5rem;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .modal-content {
+        width: 95vw;
+        max-height: 95vh;
+      }
+
+      .preset-search {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+      }
+
+      .preset-gallery {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .preset-card {
+        padding: 1rem;
+      }
+
+      .preset-actions {
+        flex-direction: column;
+      }
+
+      .share-options {
+        gap: 1.5rem;
+      }
+
+      .share-option {
+        padding: 1rem;
+      }
+    }
+
     /* Landscape mobile optimizations */
     @media (max-width: 768px) and (orientation: landscape) {
       .app-layout {
@@ -1034,6 +1355,8 @@
       <div class="header-group" aria-label="Presets">
         <button id="savePresetButton" class="btn">Save Preset</button>
         <button id="loadPresetButton" class="btn">Load Preset</button>
+        <button id="communityPresetsButton" class="btn btn-primary">Community</button>
+        <button id="sharePresetButton" class="btn">Share</button>
       </div>
       <div class="header-group" aria-label="Integrations">
         <label class="toggle" for="midiLearnToggle">
@@ -1063,6 +1386,87 @@
       </main>
     </div>
   </div>
+
+  <!-- Community Presets Modal -->
+  <div id="communityPresetsModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Community Presets</h2>
+        <button id="closeCommunityModal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="preset-search">
+          <input type="text" id="presetSearch" placeholder="Search presets..." class="search-input">
+          <select id="presetCategory" class="category-select">
+            <option value="">All Categories</option>
+            <option value="techno">Techno</option>
+            <option value="house">House</option>
+            <option value="ambient">Ambient</option>
+            <option value="experimental">Experimental</option>
+          </select>
+          <select id="presetSort" class="sort-select">
+            <option value="newest">Newest</option>
+            <option value="popular">Most Popular</option>
+            <option value="rating">Highest Rated</option>
+            <option value="name">Name A-Z</option>
+          </select>
+        </div>
+        <div id="presetGallery" class="preset-gallery">
+          <!-- Presets will be loaded here -->
+        </div>
+        <div class="preset-upload">
+          <h3>Share Your Preset</h3>
+          <div class="upload-form">
+            <input type="file" id="presetFileInput" accept=".json" style="display: none;">
+            <button id="selectPresetFile" class="btn">Select Preset File</button>
+            <input type="text" id="presetTitle" placeholder="Preset title..." class="preset-title-input">
+            <textarea id="presetDescription" placeholder="Describe your preset..." class="preset-description-input"></textarea>
+            <select id="presetCategorySelect" class="preset-category-select">
+              <option value="techno">Techno</option>
+              <option value="house">House</option>
+              <option value="ambient">Ambient</option>
+              <option value="experimental">Experimental</option>
+            </select>
+            <button id="uploadPreset" class="btn btn-primary">Upload to Community</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preset Share Modal -->
+  <div id="sharePresetModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Share Preset</h2>
+        <button id="closeShareModal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="share-options">
+          <div class="share-option">
+            <h3>Download Preset</h3>
+            <p>Download your current preset as a JSON file</p>
+            <button id="downloadCurrentPreset" class="btn btn-primary">Download</button>
+          </div>
+          <div class="share-option">
+            <h3>Generate Share Link</h3>
+            <p>Create a shareable link for your preset</p>
+            <button id="generateShareLink" class="btn">Generate Link</button>
+            <div id="shareLinkContainer" style="display: none; margin-top: 1rem;">
+              <input type="text" id="shareLink" readonly class="share-link-input">
+              <button id="copyShareLink" class="btn">Copy</button>
+            </div>
+          </div>
+          <div class="share-option">
+            <h3>Upload to Community</h3>
+            <p>Share your preset with the community</p>
+            <button id="uploadToCommunity" class="btn">Upload</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script type="text/javascript">const preset = JSON.parse(atob("e30="));</script>
   <script type="module" src="app-modular.js"></script>
 </body>

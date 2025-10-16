@@ -7,6 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { CommunityPresetManager } from './modules/community-preset-manager.js';
 
 import { 
   STEP_COUNT, 
@@ -27,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
   appInstance = createApp();
   initializeApp(appInstance);
   window.bodzinApp = appInstance;
+  window.communityPresetManager = appInstance.communityPresets;
 });
 
 function createApp() {
@@ -38,6 +40,7 @@ function createApp() {
     midi: null,
     storage: null,
     status: null,
+    communityPresets: null,
     
     // State
     controlState: {},
@@ -70,9 +73,13 @@ async function initializeApp(app) {
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
+  app.communityPresets = new CommunityPresetManager(app);
 
   // Initialize timeline
   app.timeline.initialize();
+
+  // Initialize community presets
+  app.communityPresets.initialize();
 
   // Configure transport
   app.audio.configureTransport();
