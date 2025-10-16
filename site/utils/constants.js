@@ -24,6 +24,14 @@ export const CURVE_TYPES = {
   SINE: 'sine'
 };
 
+export const CURVE_TYPES = {
+  LINEAR: 'linear',
+  BEZIER: 'bezier',
+  EXPONENTIAL: 'exponential',
+  LOGARITHMIC: 'logarithmic',
+  SINE: 'sine'
+};
+
 export const AUTOMATION_TRACK_DEFINITIONS = [
   {
     id: 'leadFilter',
@@ -148,3 +156,190 @@ export const SECTION_SEQUENCE_ACTIVITY = {
   Peak: { drums: true, bass: true, lead: true, fx: true },
   Break: { drums: true, bass: false, lead: false, fx: true }
 };
+
+export const CONTROL_SCHEMA = [
+  {
+    group: 'Transport',
+    description: 'Tempo and groove foundation.',
+    controls: [
+      {
+        id: 'tempo',
+        label: 'Tempo',
+        type: 'range',
+        min: 110,
+        max: 136,
+        step: 1,
+        default: 124,
+        format: value => `${Math.round(value)} BPM`,
+        apply: (value) => Tone.Transport.bpm.rampTo(value, 0.1)
+      },
+      {
+        id: 'swing',
+        label: 'Swing Amount',
+        type: 'range',
+        min: 0,
+        max: 0.45,
+        step: 0.01,
+        default: 0.08,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value) => {
+          Tone.Transport.swing = value;
+          Tone.Transport.swingSubdivision = '8n';
+        }
+      }
+    ]
+  },
+  {
+    group: 'Pattern Morphing',
+    description: 'Smooth transitions between sections.',
+    controls: [
+      {
+        id: 'morphingEnabled',
+        label: 'Enable Morphing',
+        type: 'checkbox',
+        default: false,
+        apply: (value, app) => {
+          if (app.patternMorphing) {
+            if (value) {
+              app.patternMorphing.startMorphing('Intro', 'Lift', 4, 'easeInOut');
+            } else {
+              app.patternMorphing.resetMorphing();
+            }
+          }
+        }
+      },
+      {
+        id: 'morphSource',
+        label: 'Source Section',
+        type: 'select',
+        options: SECTION_DEFINITIONS.map(section => ({
+          value: section.name,
+          label: section.name
+        })),
+        default: 'Intro',
+        apply: (value, app) => {
+          if (app.patternMorphing && app.patternMorphing.morphingState.isActive) {
+            app.patternMorphing.morphingState.sourceSection = value;
+          }
+        }
+      },
+      {
+        id: 'morphTarget',
+        label: 'Target Section',
+        type: 'select',
+        options: SECTION_DEFINITIONS.map(section => ({
+          value: section.name,
+          label: section.name
+        })),
+        default: 'Lift',
+        apply: (value, app) => {
+          if (app.patternMorphing && app.patternMorphing.morphingState.isActive) {
+            app.patternMorphing.morphingState.targetSection = value;
+          }
+        }
+      },
+      {
+        id: 'morphDuration',
+        label: 'Morph Duration',
+        type: 'range',
+        min: 1,
+        max: 8,
+        step: 1,
+        default: 4,
+        format: value => `${value} steps`,
+        apply: (value, app) => {
+          if (app.patternMorphing) {
+            app.patternMorphing.morphingState.morphDuration = value;
+          }
+        }
+      },
+      {
+        id: 'morphType',
+        label: 'Morph Type',
+        type: 'select',
+        options: [
+          { value: 'linear', label: 'Linear' },
+          { value: 'easeInOut', label: 'Ease In/Out' },
+          { value: 'easeIn', label: 'Ease In' },
+          { value: 'easeOut', label: 'Ease Out' },
+          { value: 'bezier', label: 'Bezier' },
+          { value: 'exponential', label: 'Exponential' },
+          { value: 'logarithmic', label: 'Logarithmic' },
+          { value: 'sine', label: 'Sine' }
+        ],
+        default: 'easeInOut',
+        apply: (value, app) => {
+          if (app.patternMorphing) {
+            app.patternMorphing.morphingState.easingFunction = value;
+          }
+        }
+      }
+    ]
+  },
+  {
+    group: 'Bus Levels',
+    description: 'Mix bus trims for the core stems.',
+    controls: [
+      {
+        id: 'drumLevel',
+        label: 'Drums Level',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -4,
+        format: value => `${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          if (app.audio?.buses?.drums) {
+            app.audio.buses.drums.gain.value = Tone.dbToGain(value);
+          }
+        }
+      },
+      {
+        id: 'bassLevel',
+        label: 'Bass Level',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -6,
+        format: value => `${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          if (app.audio?.buses?.bass) {
+            app.audio.buses.bass.gain.value = Tone.dbToGain(value);
+          }
+        }
+      },
+      {
+        id: 'leadLevel',
+        label: 'Lead Level',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -3,
+        format: value => `${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          if (app.audio?.buses?.lead) {
+            app.audio.buses.lead.gain.value = Tone.dbToGain(value);
+          }
+        }
+      },
+      {
+        id: 'fxLevel',
+        label: 'FX Return',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -8,
+        format: value => `${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          if (app.audio?.buses?.fx) {
+            app.audio.buses.fx.gain.value = Tone.dbToGain(value);
+          }
+        }
+      }
+    ]
+  }
+];

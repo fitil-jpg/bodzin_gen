@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pattern Morphing Demo</title>
+  <style>
+    :root {
+      --bg: #0f0f12;
+      --panel-bg: #18181d;
+      --accent: #49a9ff;
+      --border: #2a2a33;
+      --text: #f1f1f4;
+      --muted: #9a9aac;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Inter", "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 20px;
+      text-align: center;
+    }
+
+    .main-content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .controls {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .timeline {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #020205;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+      background: #5bb3ff;
+      transform: translateY(-2px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+    }
+
+    .btn.secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .status {
+      margin: 15px 0;
+      padding: 15px;
+      background: rgba(73, 169, 255, 0.1);
+      border-radius: 8px;
+      border-left: 4px solid var(--accent);
+    }
+
+    .pattern-display {
+      margin: 15px 0;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .morphing-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #49a9ff, #ff49af);
+      border-radius: 12px 12px 0 0;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease;
+    }
+
+    .morphing-active .morphing-bar {
+      animation: morphingProgress 2s ease-in-out infinite;
+    }
+
+    @keyframes morphingProgress {
+      0% { transform: scaleX(0); }
+      50% { transform: scaleX(1); }
+      100% { transform: scaleX(0); }
+    }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .section-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .section-card:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--accent);
+    }
+
+    .section-card.active {
+      background: var(--accent);
+      color: #020205;
+    }
+
+    .track-display {
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 6px;
+    }
+
+    .track-name {
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 5px;
+    }
+
+    .track-values {
+      display: flex;
+      gap: 2px;
+      flex-wrap: wrap;
+    }
+
+    .value-bar {
+      width: 20px;
+      height: 4px;
+      background: var(--accent);
+      border-radius: 2px;
+      opacity: 0.7;
+    }
+
+    .value-bar.morphed {
+      background: #ff49af;
+      opacity: 1;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.39/Tone.min.js"></script>
+</head>
+<body>
+  <div class="header">
+    <h1>Pattern Morphing Demo</h1>
+    <p>Interactive demonstration of pattern morphing between sections</p>
+  </div>
+
+  <div class="main-content">
+    <div class="controls">
+      <h3>Morphing Controls</h3>
+      
+      <div class="section-grid">
+        <div class="section-card" data-section="Intro">Intro</div>
+        <div class="section-card" data-section="Lift">Lift</div>
+        <div class="section-card" data-section="Peak">Peak</div>
+        <div class="section-card" data-section="Break">Break</div>
+      </div>
+
+      <div>
+        <button class="btn" onclick="startMorphing()">Start Morphing</button>
+        <button class="btn secondary" onclick="resetMorphing()">Reset</button>
+        <button class="btn secondary" onclick="toggleAutoMorph()">Auto Morph</button>
+      </div>
+
+      <div class="status" id="status">
+        Ready to test pattern morphing
+      </div>
+
+      <div>
+        <h4>Morph Settings</h4>
+        <label>
+          Duration: <input type="range" id="duration" min="1" max="8" value="4" style="width: 100%;">
+          <span id="durationValue">4 steps</span>
+        </label>
+        <br><br>
+        <label>
+          Type: 
+          <select id="morphType">
+            <option value="linear">Linear</option>
+            <option value="easeInOut" selected>Ease In/Out</option>
+            <option value="easeIn">Ease In</option>
+            <option value="easeOut">Ease Out</option>
+            <option value="bezier">Bezier</option>
+            <option value="exponential">Exponential</option>
+            <option value="logarithmic">Logarithmic</option>
+            <option value="sine">Sine</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="timeline" id="timeline">
+      <div class="morphing-bar" id="morphingBar"></div>
+      <h3>Pattern Visualization</h3>
+      <div id="patternDisplay" class="pattern-display">
+        Select a section to view its pattern
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { PatternMorphing } from './modules/pattern-morphing.js';
+    
+    // Create a mock app object
+    const mockApp = {
+      automation: {
+        sections: [
+          { name: 'Intro', start: 0, end: 3 },
+          { name: 'Lift', start: 4, end: 7 },
+          { name: 'Peak', start: 8, end: 11 },
+          { name: 'Break', start: 12, end: 15 }
+        ],
+        tracks: []
+      },
+      automationStep: 0,
+      status: {
+        updateStatus: (message) => {
+          document.getElementById('status').textContent = message;
+        }
+      }
+    };
+    
+    // Initialize pattern morphing
+    const patternMorphing = new PatternMorphing(mockApp);
+    mockApp.patternMorphing = patternMorphing;
+    
+    let selectedSource = 'Intro';
+    let selectedTarget = 'Lift';
+    let autoMorph = false;
+    let morphInterval = null;
+    
+    // Initialize UI
+    function initializeUI() {
+      // Section selection
+      document.querySelectorAll('.section-card').forEach(card => {
+        card.addEventListener('click', () => {
+          if (selectedSource === null) {
+            selectedSource = card.dataset.section;
+            card.classList.add('active');
+            updateUI();
+          } else if (selectedTarget === null) {
+            selectedTarget = card.dataset.section;
+            card.classList.add('active');
+            updateUI();
+          }
+        });
+      });
+      
+      // Duration slider
+      const durationSlider = document.getElementById('duration');
+      const durationValue = document.getElementById('durationValue');
+      durationSlider.addEventListener('input', (e) => {
+        durationValue.textContent = `${e.target.value} steps`;
+      });
+      
+      // Initial display
+      updateUI();
+    }
+    
+    function updateUI() {
+      // Update section cards
+      document.querySelectorAll('.section-card').forEach(card => {
+        card.classList.remove('active');
+        if (card.dataset.section === selectedSource || card.dataset.section === selectedTarget) {
+          card.classList.add('active');
+        }
+      });
+      
+      // Update pattern display
+      updatePatternDisplay();
+    }
+    
+    function updatePatternDisplay() {
+      const display = document.getElementById('patternDisplay');
+      const currentPattern = patternMorphing.getCurrentSectionPattern();
+      const currentSection = patternMorphing.getCurrentSection();
+      
+      if (patternMorphing.morphingState.isActive) {
+        const morphedPattern = patternMorphing.getMorphedPattern();
+        const progress = Math.round(patternMorphing.morphingState.morphProgress * 100);
+        const easedProgress = Math.round(patternMorphing.getEasedProgress() * 100);
+        
+        display.innerHTML = `
+          <h4>Morphing: ${patternMorphing.morphingState.sourceSection} → ${patternMorphing.morphingState.targetSection}</h4>
+          <p>Progress: ${progress}% | Eased: ${easedProgress}%</p>
+          <div class="track-display">
+            <div class="track-name">Lead Filter</div>
+            <div class="track-values">
+              ${morphedPattern.automation.leadFilter?.map((v, i) => 
+                `<div class="value-bar morphed" style="height: ${v * 20}px; opacity: ${0.5 + v * 0.5}"></div>`
+              ).join('')}
+            </div>
+          </div>
+          <div class="track-display">
+            <div class="track-name">FX Send</div>
+            <div class="track-values">
+              ${morphedPattern.automation.fxSend?.map((v, i) => 
+                `<div class="value-bar morphed" style="height: ${v * 20}px; opacity: ${0.5 + v * 0.5}"></div>`
+              ).join('')}
+            </div>
+          </div>
+        `;
+      } else {
+        display.innerHTML = `
+          <h4>Current Section: ${currentSection}</h4>
+          <p>Source: ${selectedSource} | Target: ${selectedTarget}</p>
+          <div class="track-display">
+            <div class="track-name">Lead Filter</div>
+            <div class="track-values">
+              ${currentPattern.automation.leadFilter?.map((v, i) => 
+                `<div class="value-bar" style="height: ${v * 20}px; opacity: ${0.5 + v * 0.5}"></div>`
+              ).join('')}
+            </div>
+          </div>
+          <div class="track-display">
+            <div class="track-name">FX Send</div>
+            <div class="track-values">
+              ${currentPattern.automation.fxSend?.map((v, i) => 
+                `<div class="value-bar" style="height: ${v * 20}px; opacity: ${0.5 + v * 0.5}"></div>`
+              ).join('')}
+            </div>
+          </div>
+        `;
+      }
+    }
+    
+    // Global functions
+    window.startMorphing = () => {
+      const duration = parseInt(document.getElementById('duration').value);
+      const morphType = document.getElementById('morphType').value;
+      
+      const success = patternMorphing.startMorphing(selectedSource, selectedTarget, duration, morphType);
+      if (success) {
+        document.getElementById('timeline').classList.add('morphing-active');
+        document.getElementById('status').textContent = `Morphing: ${selectedSource} → ${selectedTarget}`;
+      } else {
+        document.getElementById('status').textContent = 'Failed to start morphing';
+      }
+    };
+    
+    window.resetMorphing = () => {
+      patternMorphing.resetMorphing();
+      document.getElementById('timeline').classList.remove('morphing-active');
+      document.getElementById('status').textContent = 'Morphing reset';
+      updatePatternDisplay();
+    };
+    
+    window.toggleAutoMorph = () => {
+      autoMorph = !autoMorph;
+      if (autoMorph) {
+        morphInterval = setInterval(() => {
+          if (!patternMorphing.morphingState.isActive) {
+            const sections = ['Intro', 'Lift', 'Peak', 'Break'];
+            const currentIndex = sections.indexOf(selectedTarget);
+            const nextIndex = (currentIndex + 1) % sections.length;
+            selectedSource = selectedTarget;
+            selectedTarget = sections[nextIndex];
+            updateUI();
+            startMorphing();
+          }
+        }, 5000);
+        document.getElementById('status').textContent = 'Auto morphing enabled';
+      } else {
+        if (morphInterval) {
+          clearInterval(morphInterval);
+          morphInterval = null;
+        }
+        document.getElementById('status').textContent = 'Auto morphing disabled';
+      }
+    };
+    
+    // Animation loop
+    function animate() {
+      if (patternMorphing.morphingState.isActive) {
+        const stepProgress = (Date.now() % 4000) / 4000; // 4 second cycle
+        patternMorphing.updateMorphing(stepProgress);
+        updatePatternDisplay();
+      }
+      requestAnimationFrame(animate);
+    }
+    
+    // Initialize
+    initializeUI();
+    animate();
+  </script>
+</body>
+</html>

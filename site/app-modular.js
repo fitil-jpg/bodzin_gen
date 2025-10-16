@@ -7,6 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { PatternMorphing } from './modules/pattern-morphing.js';
 
 import { 
   STEP_COUNT, 
@@ -38,6 +39,7 @@ function createApp() {
     midi: null,
     storage: null,
     status: null,
+    patternMorphing: null,
     
     // State
     controlState: {},
@@ -70,6 +72,7 @@ async function initializeApp(app) {
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
+  app.patternMorphing = new PatternMorphing(app);
 
   // Initialize timeline
   app.timeline.initialize();
@@ -123,6 +126,11 @@ function setupButtons(app) {
   const exportMixBtn = document.getElementById('exportMixButton');
   const exportStemsBtn = document.getElementById('exportStemsButton');
   const midiToggle = document.getElementById('midiLearnToggle');
+  
+  // Morphing buttons
+  const morphToLiftBtn = document.getElementById('morphToLiftButton');
+  const morphToPeakBtn = document.getElementById('morphToPeakButton');
+  const morphToBreakBtn = document.getElementById('morphToBreakButton');
 
   startBtn?.addEventListener('click', () => startPlayback(app));
   stopBtn?.addEventListener('click', () => stopPlayback(app));
@@ -133,6 +141,22 @@ function setupButtons(app) {
   midiToggle?.addEventListener('change', event => {
     const enabled = Boolean(event.target.checked);
     app.midi.setLearning(enabled);
+  });
+  
+  // Morphing button handlers
+  morphToLiftBtn?.addEventListener('click', () => {
+    const currentSection = app.patternMorphing?.getCurrentSection() || 'Intro';
+    app.patternMorphing?.startMorphing(currentSection, 'Lift', 4, 'easeInOut');
+  });
+  
+  morphToPeakBtn?.addEventListener('click', () => {
+    const currentSection = app.patternMorphing?.getCurrentSection() || 'Intro';
+    app.patternMorphing?.startMorphing(currentSection, 'Peak', 4, 'easeInOut');
+  });
+  
+  morphToBreakBtn?.addEventListener('click', () => {
+    const currentSection = app.patternMorphing?.getCurrentSection() || 'Intro';
+    app.patternMorphing?.startMorphing(currentSection, 'Break', 4, 'easeInOut');
   });
 
   const fileInput = document.createElement('input');
@@ -516,6 +540,14 @@ function setupAutomationScheduling(app) {
   app.automationEvent = Tone.Transport.scheduleRepeat(time => {
     const step = app.automationStep % STEP_COUNT;
     app.timeline.currentStep = step;
+    
+    // Update pattern morphing
+    if (app.patternMorphing) {
+      const stepProgress = step / STEP_COUNT;
+      app.patternMorphing.updateMorphing(stepProgress);
+      app.patternMorphing.applyMorphedPattern();
+    }
+    
     applyAutomationForStep(app, step, time);
     syncSectionState(app, step);
     requestAnimationFrame(() => app.timeline.draw());

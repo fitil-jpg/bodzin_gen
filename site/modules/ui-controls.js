@@ -56,6 +56,9 @@ export class UIControls {
         opt.textContent = option.label;
         input.appendChild(opt);
       });
+    } else if (control.type === 'checkbox') {
+      input = document.createElement('input');
+      input.type = 'checkbox';
     } else {
       input = document.createElement('input');
       input.type = 'range';
@@ -109,6 +112,8 @@ export class UIControls {
   getInputValue(control, input) {
     if (control.type === 'select') {
       return input.value;
+    } else if (control.type === 'checkbox') {
+      return input.checked;
     }
     const numeric = parseFloat(input.value);
     if (!Number.isFinite(numeric)) {
@@ -122,7 +127,9 @@ export class UIControls {
     const entry = this.controls.get(control.id);
     let normalizedValue = value;
     
-    if (control.type !== 'select') {
+    if (control.type === 'checkbox') {
+      normalizedValue = Boolean(value);
+    } else if (control.type !== 'select') {
       const min = Number(control.min);
       const max = Number(control.max);
       normalizedValue = clamp(typeof value === 'number' ? value : parseFloat(value), min, max);
@@ -133,10 +140,17 @@ export class UIControls {
     if (entry) {
       if (control.type === 'select') {
         entry.input.value = String(normalizedValue);
+      } else if (control.type === 'checkbox') {
+        entry.input.checked = normalizedValue;
+        entry.valueEl.textContent = normalizedValue ? 'ON' : 'OFF';
       } else {
         entry.input.value = String(normalizedValue);
+        entry.valueEl.textContent = this.formatControlValue(control, normalizedValue);
       }
-      entry.valueEl.textContent = this.formatControlValue(control, normalizedValue);
+      
+      if (control.type !== 'checkbox') {
+        entry.valueEl.textContent = this.formatControlValue(control, normalizedValue);
+      }
       
       // Add visual feedback animation
       entry.row.style.transform = 'scale(1.02)';

@@ -53,3 +53,16 @@ export function downloadBlob(blob, filename) {
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
 }
+
+export function lerp(start, end, factor) {
+  return start + (end - start) * factor;
+}
+
+export function smoothstep(edge0, edge1, x) {
+  const t = clamp((x - edge0) / (edge1 - edge0), 0.0, 1.0);
+  return t * t * (3.0 - 2.0 * t);
+}
+
+export function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
