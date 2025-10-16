@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pattern Chaining Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f0f12;
+            color: #f1f1f4;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #2a2a33;
+            border-radius: 8px;
+            background: rgba(24, 24, 29, 0.5);
+        }
+        button {
+            background: #49a9ff;
+            color: #020205;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5bb3ff;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(73, 169, 255, 0.1);
+            border-radius: 5px;
+        }
+        .pattern-display {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.39/Tone.min.js"></script>
+</head>
+<body>
+    <h1>Pattern Chaining Test</h1>
+    
+    <div class="test-section">
+        <h2>Pattern Chaining Manager Test</h2>
+        <button onclick="testPatternGeneration()">Test Pattern Generation</button>
+        <button onclick="testVariations()">Test Variations</button>
+        <button onclick="testTransitions()">Test Transitions</button>
+        <div id="status" class="status">Ready to test...</div>
+        <div id="patternOutput" class="pattern-display"></div>
+    </div>
+
+    <script type="module">
+        // Mock AudioEngine for testing
+        class MockAudioEngine {
+            constructor() {
+                this.sequences = {
+                    byInstrument: {
+                        kick: { values: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] },
+                        snare: { values: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0] },
+                        hats: { values: [0.6, 0, 0.45, 0, 0.7, 0.25, 0.5, 0.25, 0.65, 0, 0.45, 0, 0.75, 0.3, 0.55, 0.35] },
+                        bass: { values: ['C2', null, 'G1', null, 'C2', 'D2', null, 'G1', 'C2', null, 'A1', null, 'C2', 'D2', null, 'G1'] },
+                        lead: { values: [['E4', 'B4'], null, ['G4'], null, ['A4'], null, ['B4', 'D5'], null, ['E5'], null, ['G4'], null, ['A4', 'C5'], null, ['B4'], null] },
+                        fx: { values: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0] }
+                    }
+                };
+            }
+        }
+
+        // Import the PatternChainManager
+        import { PatternChainManager } from './site/modules/pattern-chain-manager.js';
+
+        const audioEngine = new MockAudioEngine();
+        const patternChain = new PatternChainManager(audioEngine);
+
+        window.testPatternGeneration = function() {
+            const status = document.getElementById('status');
+            const output = document.getElementById('patternOutput');
+            
+            status.textContent = 'Testing pattern generation...';
+            
+            // Test pattern generation for each instrument
+            const instruments = ['kick', 'snare', 'hats', 'bass', 'lead', 'fx'];
+            let outputText = 'Generated Patterns:\n\n';
+            
+            instruments.forEach(instrument => {
+                const chain = patternChain.patternChains.get(instrument);
+                if (chain) {
+                    outputText += `${instrument.toUpperCase()}:\n`;
+                    chain.patterns.forEach((pattern, index) => {
+                        outputText += `  Pattern ${index + 1}: [${pattern.slice(0, 8).join(', ')}...]\n`;
+                    });
+                    outputText += '\n';
+                }
+            });
+            
+            output.textContent = outputText;
+            status.textContent = 'Pattern generation test completed!';
+        };
+
+        window.testVariations = function() {
+            const status = document.getElementById('status');
+            const output = document.getElementById('patternOutput');
+            
+            status.textContent = 'Testing pattern variations...';
+            
+            // Test variation system
+            const kickChain = patternChain.patternChains.get('kick');
+            if (kickChain) {
+                const originalPattern = kickChain.patterns[0];
+                const variedPattern = patternChain.createPatternVariation(originalPattern, 1);
+                
+                let outputText = 'Variation Test:\n\n';
+                outputText += `Original: [${originalPattern.join(', ')}]\n`;
+                outputText += `Varied:   [${variedPattern.join(', ')}]\n\n`;
+                
+                // Test different variation types
+                const variationTypes = ['velocity', 'timing', 'note', 'rhythm', 'silence'];
+                outputText += 'Variation Types Available:\n';
+                variationTypes.forEach(type => {
+                    outputText += `- ${type}\n`;
+                });
+                
+                output.textContent = outputText;
+            }
+            
+            status.textContent = 'Variation test completed!';
+        };
+
+        window.testTransitions = function() {
+            const status = document.getElementById('status');
+            const output = document.getElementById('patternOutput');
+            
+            status.textContent = 'Testing pattern transitions...';
+            
+            // Test transition system
+            const kickChain = patternChain.patternChains.get('kick');
+            if (kickChain) {
+                let outputText = 'Transition Test:\n\n';
+                outputText += `Chain Length: ${patternChain.chainLength}\n`;
+                outputText += `Variation Intensity: ${Math.round(patternChain.variationIntensity * 100)}%\n`;
+                outputText += `Transition Mode: ${patternChain.transitionMode}\n\n`;
+                
+                outputText += 'Transition Points:\n';
+                kickChain.transitionPoints.forEach((point, index) => {
+                    outputText += `  ${index + 1}. From ${point.from} to ${point.to} at step ${point.transitionStep} (${point.transitionType})\n`;
+                });
+                
+                output.textContent = outputText;
+            }
+            
+            status.textContent = 'Transition test completed!';
+        };
+
+        // Initialize test
+        document.getElementById('status').textContent = 'Pattern Chaining Manager loaded successfully!';
+    </script>
+</body>
+</html>
