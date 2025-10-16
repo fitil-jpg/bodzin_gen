@@ -7,6 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { MobileGestures } from './modules/mobile-gestures.js';
 
 import { 
   STEP_COUNT, 
@@ -38,6 +39,7 @@ function createApp() {
     midi: null,
     storage: null,
     status: null,
+    mobileGestures: null,
     
     // State
     controlState: {},
@@ -70,6 +72,7 @@ async function initializeApp(app) {
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
+  app.mobileGestures = new MobileGestures(app);
 
   // Initialize timeline
   app.timeline.initialize();
@@ -107,6 +110,20 @@ async function initializeApp(app) {
   
   // Initialize MIDI
   await app.midi.initialize();
+  
+  // Initialize mobile gestures
+  app.mobileGestures.initialize();
+  
+  // Register service worker for offline functionality
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('Service Worker registered:', registration);
+      })
+      .catch(error => {
+        console.log('Service Worker registration failed:', error);
+      });
+  }
   
   // Apply initial state
   applyAutomationForStep(app, 0);
