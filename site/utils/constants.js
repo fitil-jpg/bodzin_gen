@@ -148,3 +148,209 @@ export const SECTION_SEQUENCE_ACTIVITY = {
   Peak: { drums: true, bass: true, lead: true, fx: true },
   Break: { drums: true, bass: false, lead: false, fx: true }
 };
+
+export const CONTROL_SCHEMA = [
+  {
+    group: 'Transport',
+    description: 'Tempo and groove foundation.',
+    controls: [
+      {
+        id: 'tempo',
+        label: 'Tempo',
+        type: 'range',
+        min: 110,
+        max: 136,
+        step: 1,
+        default: 124,
+        format: value => `${Math.round(value)} BPM`,
+        apply: (value) => Tone.Transport.bpm.rampTo(value, 0.1)
+      },
+      {
+        id: 'swing',
+        label: 'Swing Amount',
+        type: 'range',
+        min: 0,
+        max: 0.45,
+        step: 0.01,
+        default: 0.08,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value) => {
+          Tone.Transport.swing = value;
+          Tone.Transport.swingSubdivision = '8n';
+        }
+      }
+    ]
+  },
+  {
+    group: 'Probability Triggers',
+    description: 'Dynamic trigger system with probability-based patterns.',
+    controls: [
+      {
+        id: 'probabilityEnabled',
+        label: 'Enable Probability Triggers',
+        type: 'select',
+        options: [
+          { value: false, label: 'Fixed Patterns' },
+          { value: true, label: 'Probability Based' }
+        ],
+        default: false,
+        apply: (value, app) => {
+          app.audio.setProbabilityTriggersEnabled(value);
+        }
+      },
+      {
+        id: 'probabilityEntropy',
+        label: 'Randomness',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.5,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setEntropy(value);
+        }
+      },
+      {
+        id: 'kickProbability',
+        label: 'Kick Probability',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.8,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setBaseProbability('kick', value);
+        }
+      },
+      {
+        id: 'snareProbability',
+        label: 'Snare Probability',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.6,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setBaseProbability('snare', value);
+        }
+      },
+      {
+        id: 'hatsProbability',
+        label: 'Hats Probability',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.7,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setBaseProbability('hats', value);
+        }
+      },
+      {
+        id: 'bassProbability',
+        label: 'Bass Probability',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.6,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setBaseProbability('bass', value);
+        }
+      },
+      {
+        id: 'leadProbability',
+        label: 'Lead Probability',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.5,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setBaseProbability('lead', value);
+        }
+      },
+      {
+        id: 'fxProbability',
+        label: 'FX Probability',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.3,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setBaseProbability('fx', value);
+        }
+      }
+    ]
+  },
+  {
+    group: 'Bus Levels',
+    description: 'Mix bus trims for the core stems.',
+    controls: [
+      {
+        id: 'drumLevel',
+        label: 'Drums Level',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -4,
+        format: value => `${Math.round(value)} dB`,
+        apply: (value, app) => {
+          const db = 20 * Math.log10(Math.max(0.001, Math.pow(10, value / 20)));
+          app.audio.buses.drums.gain.value = db;
+        }
+      },
+      {
+        id: 'bassLevel',
+        label: 'Bass Level',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -6,
+        format: value => `${Math.round(value)} dB`,
+        apply: (value, app) => {
+          const db = 20 * Math.log10(Math.max(0.001, Math.pow(10, value / 20)));
+          app.audio.buses.bass.gain.value = db;
+        }
+      },
+      {
+        id: 'leadLevel',
+        label: 'Lead Level',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -3,
+        format: value => `${Math.round(value)} dB`,
+        apply: (value, app) => {
+          const db = 20 * Math.log10(Math.max(0.001, Math.pow(10, value / 20)));
+          app.audio.buses.lead.gain.value = db;
+        }
+      },
+      {
+        id: 'fxLevel',
+        label: 'FX Return',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -8,
+        format: value => `${Math.round(value)} dB`,
+        apply: (value, app) => {
+          const db = 20 * Math.log10(Math.max(0.001, Math.pow(10, value / 20)));
+          app.audio.buses.fx.gain.value = db;
+        }
+      }
+    ]
+  }
+];

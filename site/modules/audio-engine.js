@@ -7,6 +7,7 @@ import {
   SECTION_SEQUENCE_ACTIVITY 
 } from '../utils/constants.js';
 import { setBusLevel, clamp } from '../utils/helpers.js';
+import { ProbabilityManager } from './probability-manager.js';
 
 export class AudioEngine {
   constructor() {
@@ -16,6 +17,10 @@ export class AudioEngine {
     this.instruments = null;
     this.sequences = null;
     this.sequencesStarted = false;
+    this.probabilityManager = new ProbabilityManager();
+    this.useProbabilityTriggers = false;
+    this.currentStep = 0;
+    this.currentSection = null;
   }
 
   initialize() {
@@ -35,6 +40,7 @@ export class AudioEngine {
     this.nodes = this.createEffects();
     this.instruments = this.createInstruments();
     this.sequences = this.buildSequences(this.instruments);
+    this.probabilityManager.initializeProbabilityTracks();
 
     this.connectEffects();
     return this;
@@ -257,5 +263,173 @@ export class AudioEngine {
     if (bus) {
       setBusLevel(bus, db);
     }
+  }
+
+  /**
+   * Enable or disable probability-based triggers
+   */
+  setProbabilityTriggersEnabled(enabled) {
+    this.useProbabilityTriggers = enabled;
+  }
+
+  /**
+   * Update current step and section for probability calculations
+   */
+  updateStepContext(step, section = null) {
+    this.currentStep = step;
+    this.currentSection = section;
+  }
+
+  /**
+   * Process probability-based triggers for all instruments
+   */
+  processProbabilityTriggers(time) {
+    if (!this.useProbabilityTriggers) return;
+
+    const context = {
+      step: this.currentStep,
+      section: this.currentSection
+    };
+
+    // Process each instrument
+    const instruments = ['kick', 'snare', 'hats', 'bass', 'lead', 'fx'];
+    
+    instruments.forEach(instrument => {
+      if (this.probabilityManager.shouldTrigger(instrument, this.currentStep, context)) {
+        const triggerInfo = this.probabilityManager.getTriggerInfo(instrument, this.currentStep, context);
+        this.triggerInstrument(instrument, time, triggerInfo);
+      }
+    });
+  }
+
+  /**
+   * Trigger a specific instrument with probability-based parameters
+   */
+  triggerInstrument(instrument, time, triggerInfo) {
+    const { velocity, isAccent, isGhost } = triggerInfo;
+    
+    switch (instrument) {
+      case 'kick':
+        this.instruments.kick.triggerAttackRelease('C1', '8n', time, velocity);
+        break;
+        
+      case 'snare':
+        this.instruments.snare.triggerAttackRelease('16n', time, velocity);
+        break;
+        
+      case 'hats':
+        this.instruments.hats.triggerAttackRelease('32n', time, velocity);
+        break;
+        
+      case 'bass':
+        // Use a simple bass pattern for probability triggers
+        const bassNotes = ['C2', 'G1', 'A1', 'D2'];
+        const noteIndex = this.currentStep % bassNotes.length;
+        const note = bassNotes[noteIndex];
+        if (note) {
+          this.instruments.bass.triggerAttackRelease(note, '8n', time, velocity);
+        }
+        break;
+        
+      case 'lead':
+        // Use a simple lead pattern for probability triggers
+        const leadNotes = [['E4', 'B4'], ['G4'], ['A4'], ['B4', 'D5']];
+        const leadIndex = this.currentStep % leadNotes.length;
+        const notes = leadNotes[leadIndex];
+        if (notes && notes.length) {
+          notes.forEach(note => {
+            this.instruments.lead.triggerAttackRelease(note, '16n', time, velocity);
+          });
+        }
+        break;
+        
+      case 'fx':
+        this.instruments.noiseFx.triggerAttackRelease('2n', time, velocity);
+        break;
+    }
+  }
+
+  /**
+   * Get probability manager for external configuration
+   */
+  getProbabilityManager() {
+    return this.probabilityManager;
+  }
+
+  /**
+   * Set probability curve for an instrument
+   */
+  setProbabilityCurve(instrument, curve, curveType) {
+    this.probabilityManager.setProbabilityCurve(instrument, curve, curveType);
+  }
+
+  /**
+   * Set base probability for an instrument
+   */
+  setBaseProbability(instrument, probability) {
+    this.probabilityManager.setBaseProbability(instrument, probability);
+  }
+
+  /**
+   * Set humanization for an instrument
+   */
+  setHumanization(instrument, amount) {
+    this.probabilityManager.setHumanization(instrument, amount);
+  }
+
+  /**
+   * Set accent settings for an instrument
+   */
+  setAccentSettings(instrument, probability, multiplier) {
+    this.probabilityManager.setAccentSettings(instrument, probability, multiplier);
+  }
+
+  /**
+   * Set ghost note settings for an instrument
+   */
+  setGhostNoteSettings(instrument, probability, multiplier) {
+    this.probabilityManager.setGhostNoteSettings(instrument, probability, multiplier);
+  }
+
+  /**
+   * Set pattern lock for an instrument
+   */
+  setPatternLock(instrument, enabled, steps) {
+    this.probabilityManager.setPatternLock(instrument, enabled, steps);
+  }
+
+  /**
+   * Set global entropy
+   */
+  setEntropy(entropy) {
+    this.probabilityManager.setEntropy(entropy);
+  }
+
+  /**
+   * Set quantization
+   */
+  setQuantization(quantization) {
+    this.probabilityManager.setQuantization(quantization);
+  }
+
+  /**
+   * Export probability settings
+   */
+  exportProbabilitySettings() {
+    return this.probabilityManager.exportSettings();
+  }
+
+  /**
+   * Import probability settings
+   */
+  importProbabilitySettings(data) {
+    this.probabilityManager.importSettings(data);
+  }
+
+  /**
+   * Reset probability settings to defaults
+   */
+  resetProbabilitySettings() {
+    this.probabilityManager.resetToDefaults();
   }
 }
