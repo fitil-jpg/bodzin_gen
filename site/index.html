@@ -445,6 +445,13 @@
       font-weight: 500;
     }
 
+    #patternStatus {
+      font-size: 0.9rem;
+      color: var(--accent);
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
     .timeline-container {
       display: flex;
       flex-direction: column;
@@ -1043,6 +1050,12 @@
         <button id="exportMixButton" class="btn">Export Mix</button>
         <button id="exportStemsButton" class="btn">Export Stems</button>
       </div>
+      <div class="header-group" aria-label="Pattern Variations">
+        <button id="patternAButton" class="btn btn-primary">Pattern A</button>
+        <button id="patternBButton" class="btn">Pattern B</button>
+        <button id="patternCButton" class="btn">Pattern C</button>
+        <button id="randomizePatternButton" class="btn">Randomize</button>
+      </div>
     </header>
     <div class="app-layout">
       <aside class="sidebar">
@@ -1054,6 +1067,7 @@
           <div class="timeline-header">
             <div id="sectionLabel">Section: Intro</div>
             <div id="status">Status: Idle</div>
+            <div id="patternStatus">Pattern: A</div>
           </div>
           <div class="timeline-container">
             <canvas id="timeline" width="1200" height="240" aria-label="Arrangement timeline"></canvas>
