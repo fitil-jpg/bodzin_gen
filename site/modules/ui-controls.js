@@ -141,14 +141,37 @@ export class UIControls {
       // Add visual feedback animation
       entry.row.style.transform = 'scale(1.02)';
       entry.valueEl.style.color = '#49a9ff';
-      setTimeout(() => {
-        entry.row.style.transform = '';
-        entry.valueEl.style.color = '';
-      }, 200);
+      
+      // Enhanced feedback for EQ controls
+      if (control.id.includes('eq')) {
+        entry.row.style.background = 'linear-gradient(90deg, rgba(73, 169, 255, 0.1), transparent)';
+        entry.row.style.borderLeftColor = 'rgba(73, 169, 255, 0.8)';
+        entry.valueEl.style.textShadow = '0 0 12px rgba(73, 169, 255, 0.6)';
+        entry.valueEl.style.transform = 'scale(1.1)';
+        
+        setTimeout(() => {
+          entry.row.style.transform = '';
+          entry.valueEl.style.color = '';
+          entry.row.style.background = '';
+          entry.row.style.borderLeftColor = '';
+          entry.valueEl.style.textShadow = '';
+          entry.valueEl.style.transform = '';
+        }, 300);
+      } else {
+        setTimeout(() => {
+          entry.row.style.transform = '';
+          entry.valueEl.style.color = '';
+        }, 200);
+      }
     }
 
     if (control.apply) {
       control.apply(normalizedValue, this.app);
+    }
+
+    // Update EQ visualizer if this is an EQ control
+    if (control.id.includes('eq') && this.app.eqVisualizer) {
+      this.app.eqVisualizer.update();
     }
 
     if (control.affectsAutomation && this.app.timeline) {

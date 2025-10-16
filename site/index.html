@@ -475,6 +475,22 @@
       opacity: 1;
     }
 
+    #eqDisplay {
+      width: 100%;
+      height: 120px;
+      background: rgba(8, 8, 11, 0.6);
+      border: 1px solid rgba(73, 169, 255, 0.2);
+      border-radius: 0.5rem;
+      opacity: 0.9;
+      transition: opacity 0.3s ease;
+      margin-top: 0.5rem;
+    }
+
+    #eqDisplay:hover {
+      opacity: 1;
+      border-color: rgba(73, 169, 255, 0.4);
+    }
+
     @media (max-width: 1024px) {
       .app-header {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -767,6 +783,81 @@
       box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
     }
 
+    /* EQ-specific styling */
+    .control-row[data-control-id*="eq"] {
+      background: linear-gradient(90deg, rgba(73, 169, 255, 0.02), transparent);
+      border-left: 3px solid rgba(73, 169, 255, 0.3);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .control-row[data-control-id*="eq"]:hover {
+      background: linear-gradient(90deg, rgba(73, 169, 255, 0.05), transparent);
+      border-left-color: rgba(73, 169, 255, 0.6);
+      transform: translateX(4px);
+    }
+
+    .control-row[data-control-id*="eq"] .control-value {
+      color: var(--accent);
+      font-weight: 600;
+      text-shadow: 0 0 8px rgba(73, 169, 255, 0.3);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"] {
+      background: linear-gradient(90deg, 
+        rgba(73, 169, 255, 0.1) 0%, 
+        rgba(73, 169, 255, 0.2) 50%, 
+        rgba(73, 169, 255, 0.1) 100%);
+      border: 1px solid rgba(73, 169, 255, 0.2);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"]::-webkit-slider-thumb {
+      background: linear-gradient(135deg, var(--accent), #3d8bff);
+      box-shadow: 0 2px 8px rgba(73, 169, 255, 0.4), 
+                  0 0 0 2px rgba(73, 169, 255, 0.1);
+      border: 2px solid var(--bg);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 4px 16px rgba(73, 169, 255, 0.6),
+                  0 0 0 4px rgba(73, 169, 255, 0.2);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"]::-webkit-slider-thumb:active {
+      transform: scale(1.25);
+      box-shadow: 0 6px 20px rgba(73, 169, 255, 0.8),
+                  0 0 0 6px rgba(73, 169, 255, 0.3);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"]::-moz-range-thumb {
+      background: linear-gradient(135deg, var(--accent), #3d8bff);
+      box-shadow: 0 2px 8px rgba(73, 169, 255, 0.4), 
+                  0 0 0 2px rgba(73, 169, 255, 0.1);
+      border: 2px solid var(--bg);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"]::-moz-range-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 4px 16px rgba(73, 169, 255, 0.6),
+                  0 0 0 4px rgba(73, 169, 255, 0.2);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"]::-moz-range-thumb:active {
+      transform: scale(1.25);
+      box-shadow: 0 6px 20px rgba(73, 169, 255, 0.8),
+                  0 0 0 6px rgba(73, 169, 255, 0.3);
+    }
+
+    /* EQ section header styling */
+    .control-section h3:contains("EQ") {
+      background: linear-gradient(135deg, var(--accent), #3d8bff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 20px rgba(73, 169, 255, 0.3);
+    }
+
     .control-section:nth-child(2) { animation-delay: 0.1s; }
     .control-section:nth-child(3) { animation-delay: 0.2s; }
     .control-section:nth-child(4) { animation-delay: 0.3s; }
@@ -937,6 +1028,12 @@
         padding: 0.4rem 0.6rem;
         min-height: 36px;
       }
+
+      /* Mobile EQ display adjustments */
+      #eqDisplay {
+        height: 80px;
+        margin-top: 0.25rem;
+      }
     }
 
     /* Touch-specific optimizations */
@@ -1058,6 +1155,7 @@
           <div class="timeline-container">
             <canvas id="timeline" width="1200" height="240" aria-label="Arrangement timeline"></canvas>
             <canvas id="waveform" width="1200" height="80" aria-label="Audio waveform visualization"></canvas>
+            <canvas id="eqDisplay" width="1200" height="120" aria-label="EQ frequency response visualization"></canvas>
           </div>
         </section>
       </main>
