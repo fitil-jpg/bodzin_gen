@@ -7,6 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { LFOManager } from './modules/lfo-manager.js';
 
 import { 
   STEP_COUNT, 
@@ -38,6 +39,7 @@ function createApp() {
     midi: null,
     storage: null,
     status: null,
+    lfo: null,
     
     // State
     controlState: {},
@@ -70,6 +72,7 @@ async function initializeApp(app) {
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
+  app.lfo = new LFOManager(app).initialize();
 
   // Initialize timeline
   app.timeline.initialize();
@@ -82,8 +85,9 @@ async function initializeApp(app) {
   const storedPreset = app.storage.loadPresetState();
   const externalPreset = typeof preset !== 'undefined' ? preset : null;
   const defaultState = app.uiControls.buildDefaultControlState();
+  const lfoDefaults = app.lfo.getDefaultControlState();
 
-  app.controlState = Object.assign({}, defaultState, storedControls);
+  app.controlState = Object.assign({}, defaultState, lfoDefaults, storedControls);
   app.automation = normalizeAutomationState(app.automation, STEP_COUNT);
 
   if (externalPreset && externalPreset.controls) {
@@ -108,6 +112,9 @@ async function initializeApp(app) {
   // Initialize MIDI
   await app.midi.initialize();
   
+  // Sync LFO with control state
+  app.lfo.syncWithControlState(app.controlState);
+
   // Apply initial state
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
@@ -547,9 +554,73 @@ function updateSectionLabel(app, step, sectionOverride) {
 }
 
 function applyAutomationForStep(app, step, time) {
-  // This would contain the automation logic
-  // For now, it's a placeholder
-  console.log(`Applying automation for step ${step}`);
+  // Apply LFO modulation
+  if (app.lfo) {
+    app.lfo.applyModulation();
+  }
+  
+  // Apply automation track values
+  if (app.automation && app.automation.tracks) {
+    app.automation.tracks.forEach(track => {
+      const value = track.values[step] || 0;
+      applyAutomationTrackValue(app, track.id, value);
+    });
+  }
+}
+
+function applyAutomationTrackValue(app, trackId, value) {
+  if (!app.audio || !app.audio.nodes) return;
+
+  switch (trackId) {
+    case 'leadFilter':
+      if (app.audio.nodes.leadFilter) {
+        const baseFreq = app.controlState.leadFilterBase || 520;
+        const modRange = app.controlState.leadFilterMod || 2600;
+        const freq = baseFreq + (value * modRange);
+        app.audio.nodes.leadFilter.frequency.value = freq;
+      }
+      break;
+    case 'fxSend':
+      if (app.audio.nodes.leadFxSend) {
+        app.audio.nodes.leadFxSend.gain.value = value;
+      }
+      break;
+    case 'bassFilter':
+      if (app.audio.nodes.bassFilter) {
+        const baseFreq = app.controlState.bassFilterBase || 140;
+        const modRange = app.controlState.bassFilterMod || 260;
+        const freq = baseFreq + (value * modRange);
+        app.audio.nodes.bassFilter.frequency.value = freq;
+      }
+      break;
+    case 'reverbDecay':
+      if (app.audio.nodes.reverb) {
+        const decay = 1 + (value * 11); // 1 to 12 seconds
+        app.audio.nodes.reverb.decay = decay;
+      }
+      break;
+    case 'delayFeedback':
+      if (app.audio.nodes.delay) {
+        app.audio.nodes.delay.feedback.value = value;
+      }
+      break;
+    case 'bassDrive':
+      if (app.audio.nodes.bassDrive) {
+        app.audio.nodes.bassDrive.wet.value = value;
+      }
+      break;
+    case 'leadResonance':
+      if (app.audio.nodes.leadFilter) {
+        app.audio.nodes.leadFilter.Q.value = value * 6;
+      }
+      break;
+    case 'masterVolume':
+      if (app.audio.master) {
+        const db = -24 + (value * 30); // -24 to 6 dB
+        app.audio.master.volume.value = db;
+      }
+      break;
+  }
 }
 
 async function exportMix(app) {
