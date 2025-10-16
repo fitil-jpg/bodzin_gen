@@ -45,6 +45,51 @@ const AUTOMATION_TRACK_DEFINITIONS = [
       0.24, 0.25, 0.26, 0.28, 0.34, 0.4, 0.48, 0.54,
       0.52, 0.46, 0.4, 0.34, 0.3, 0.28, 0.26, 0.24
     ]
+  },
+  {
+    id: 'reverbDecay',
+    label: 'Reverb Decay',
+    color: '#ff6b35',
+    curve: [
+      0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65,
+      0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1, 0.95
+    ]
+  },
+  {
+    id: 'delayFeedback',
+    label: 'Delay Feedback',
+    color: '#4ecdc4',
+    curve: [
+      0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
+      0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15
+    ]
+  },
+  {
+    id: 'bassDrive',
+    label: 'Bass Drive',
+    color: '#f7b731',
+    curve: [
+      0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55,
+      0.6, 0.65, 0.7, 0.75, 0.8, 0.75, 0.7, 0.65
+    ]
+  },
+  {
+    id: 'leadResonance',
+    label: 'Lead Resonance',
+    color: '#a55eea',
+    curve: [
+      0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8,
+      0.9, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4
+    ]
+  },
+  {
+    id: 'masterVolume',
+    label: 'Master Volume',
+    color: '#26de81',
+    curve: [
+      0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95,
+      1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65
+    ]
   }
 ];
 
@@ -53,6 +98,57 @@ const DEFAULT_AUTOMATION = createDefaultAutomation(STEP_COUNT);
 const AUTOMATION_TRACK_ORDER = new Map(
   AUTOMATION_TRACK_DEFINITIONS.map((definition, index) => [definition.id, index])
 );
+
+const LFO_DEFINITIONS = [
+  {
+    id: 'lfo1',
+    label: 'LFO 1',
+    color: '#ff6b6b',
+    rate: 0.5, // Hz
+    depth: 0.3,
+    waveform: 'sine',
+    target: 'leadFilter',
+    enabled: true
+  },
+  {
+    id: 'lfo2',
+    label: 'LFO 2',
+    color: '#4ecdc4',
+    rate: 0.25, // Hz
+    depth: 0.2,
+    waveform: 'triangle',
+    target: 'fxSend',
+    enabled: false
+  },
+  {
+    id: 'lfo3',
+    label: 'LFO 3',
+    color: '#45b7d1',
+    rate: 1.0, // Hz
+    depth: 0.15,
+    waveform: 'square',
+    target: 'bassFilter',
+    enabled: false
+  },
+  {
+    id: 'lfo4',
+    label: 'LFO 4',
+    color: '#96ceb4',
+    rate: 0.125, // Hz
+    depth: 0.25,
+    waveform: 'sawtooth',
+    target: 'reverbDecay',
+    enabled: false
+  }
+];
+
+const CURVE_TYPES = {
+  LINEAR: 'linear',
+  BEZIER: 'bezier',
+  EXPONENTIAL: 'exponential',
+  LOGARITHMIC: 'logarithmic',
+  SINE: 'sine'
+};
 
 function createSectionLayout(stepCount = STEP_COUNT) {
   const totalSteps = Math.max(Math.floor(stepCount), 0);
@@ -95,7 +191,10 @@ function createAutomationTrack(definition, stepCount = STEP_COUNT) {
     id: definition.id,
     label: definition.label,
     color: definition.color,
-    values: normalizeAutomationValues(definition.curve || [], stepCount)
+    values: normalizeAutomationValues(definition.curve || [], stepCount, definition.curveType),
+    curveType: definition.curveType || CURVE_TYPES.LINEAR,
+    lfo: definition.lfo || null,
+    breakpoints: definition.breakpoints || []
   };
 }
 
@@ -1164,11 +1263,28 @@ function drawTimeline(app) {
     ctx.stroke();
   }
 
-  app.automation.tracks.forEach(track => {
+  // Draw automation tracks with better visualization
+  const trackHeight = areaHeight / Math.max(app.automation.tracks.length, 1);
+  
+  app.automation.tracks.forEach((track, trackIndex) => {
+    const trackY = padding + trackIndex * trackHeight;
+    const trackAreaHeight = trackHeight - 4 * ratio; // Small gap between tracks
+    
+    // Draw track background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+    ctx.fillRect(0, trackY, width, trackAreaHeight);
+    
+    // Draw track label
+    ctx.fillStyle = track.color;
+    ctx.font = `${10 * ratio}px Inter, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(track.label, 4 * ratio, trackY + 12 * ratio);
+    
+    // Draw automation curve
     ctx.beginPath();
     track.values.forEach((value, index) => {
       const x = index * stepWidth + stepWidth / 2;
-      const y = padding + (1 - value) * areaHeight;
+      const y = trackY + (1 - value) * trackAreaHeight;
       if (index === 0) {
         ctx.moveTo(x, y);
       } else {
@@ -1178,6 +1294,27 @@ function drawTimeline(app) {
     ctx.strokeStyle = track.color;
     ctx.lineWidth = 2 * ratio;
     ctx.stroke();
+    
+    // Draw LFO indicator if track has LFO
+    const lfo = LFO_DEFINITIONS.find(l => l.target === track.id && l.enabled);
+    if (lfo) {
+      ctx.fillStyle = lfo.color;
+      ctx.font = `${8 * ratio}px Inter, sans-serif`;
+      ctx.textAlign = 'right';
+      ctx.fillText(`LFO: ${lfo.waveform}`, width - 4 * ratio, trackY + 12 * ratio);
+    }
+    
+    // Draw breakpoints if they exist
+    if (track.breakpoints && track.breakpoints.length > 0) {
+      track.breakpoints.forEach(bp => {
+        const x = bp.step * stepWidth + stepWidth / 2;
+        const y = trackY + (1 - bp.value) * trackAreaHeight;
+        ctx.fillStyle = track.color;
+        ctx.beginPath();
+        ctx.arc(x, y, 3 * ratio, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
   });
 
   const activeX = app.timeline.currentStep * stepWidth;
@@ -1245,23 +1382,58 @@ function applyAutomationForStep(app, step, time) {
   const leadTrack = getAutomationTrack(app, 'leadFilter');
   const fxTrack = getAutomationTrack(app, 'fxSend');
   const bassTrack = getAutomationTrack(app, 'bassFilter');
+  const reverbTrack = getAutomationTrack(app, 'reverbDecay');
+  const delayTrack = getAutomationTrack(app, 'delayFeedback');
+  const driveTrack = getAutomationTrack(app, 'bassDrive');
+  const resonanceTrack = getAutomationTrack(app, 'leadResonance');
+  const masterTrack = getAutomationTrack(app, 'masterVolume');
+
   const leadBase = getControlValue(app, 'leadFilterBase');
   const leadMod = getControlValue(app, 'leadFilterMod');
   const fxBase = getControlValue(app, 'leadFxSend');
   const bassBase = getControlValue(app, 'bassFilterBase');
   const bassMod = getControlValue(app, 'bassFilterMod');
+  const reverbBase = getControlValue(app, 'reverbDecay');
+  const delayBase = getControlValue(app, 'delayFeedback');
+  const driveBase = getControlValue(app, 'bassDrive');
 
-  const leadValue = clamp(getAutomationValue(leadTrack, step), 0, 1);
-  const fxValue = clamp(getAutomationValue(fxTrack, step), 0, 1);
-  const bassValue = clamp(getAutomationValue(bassTrack, step), 0, 1);
+  // Apply LFOs to tracks
+  const lfoModulatedTracks = applyLFOModulation(app, {
+    leadFilter: leadTrack,
+    fxSend: fxTrack,
+    bassFilter: bassTrack,
+    reverbDecay: reverbTrack,
+    delayFeedback: delayTrack,
+    bassDrive: driveTrack,
+    leadResonance: resonanceTrack,
+    masterVolume: masterTrack
+  }, step, time);
+
+  const leadValue = clamp(getAutomationValue(lfoModulatedTracks.leadFilter, step), 0, 1);
+  const fxValue = clamp(getAutomationValue(lfoModulatedTracks.fxSend, step), 0, 1);
+  const bassValue = clamp(getAutomationValue(lfoModulatedTracks.bassFilter, step), 0, 1);
+  const reverbValue = clamp(getAutomationValue(lfoModulatedTracks.reverbDecay, step), 0, 1);
+  const delayValue = clamp(getAutomationValue(lfoModulatedTracks.delayFeedback, step), 0, 1);
+  const driveValue = clamp(getAutomationValue(lfoModulatedTracks.bassDrive, step), 0, 1);
+  const resonanceValue = clamp(getAutomationValue(lfoModulatedTracks.leadResonance, step), 0, 1);
+  const masterValue = clamp(getAutomationValue(lfoModulatedTracks.masterVolume, step), 0, 1);
 
   const leadFreq = leadBase + leadMod * leadValue;
   const fxAmount = fxValue * fxBase;
   const bassFreq = bassBase + bassMod * bassValue;
+  const reverbDecay = 0.5 + (reverbValue * 11.5); // 0.5 to 12 seconds
+  const delayFeedback = delayValue * 0.8; // 0 to 0.8
+  const driveAmount = driveValue;
+  const resonanceAmount = 0.3 + (resonanceValue * 1.2); // 0.3 to 1.5
+  const masterGain = 0.1 + (masterValue * 0.9); // 0.1 to 1.0
 
   const leadFrequency = app.audio.nodes.leadFilter.frequency;
   const leadFxGain = app.audio.nodes.leadFxSend.gain;
   const bassFrequency = app.audio.nodes.bassFilter.frequency;
+  const reverbNode = app.audio.nodes.reverb;
+  const delayNode = app.audio.nodes.delay;
+  const driveNode = app.audio.nodes.bassDrive;
+  const masterNode = app.audio.master;
 
   if (typeof time === 'number') {
     leadFrequency.setValueAtTime(leadFrequency.value, time);
@@ -1270,10 +1442,21 @@ function applyAutomationForStep(app, step, time) {
     leadFxGain.linearRampToValueAtTime(fxAmount, time + 0.1);
     bassFrequency.setValueAtTime(bassFrequency.value, time);
     bassFrequency.linearRampToValueAtTime(bassFreq, time + 0.1);
+    reverbNode.decay = reverbDecay;
+    delayNode.feedback.setValueAtTime(delayNode.feedback.value, time);
+    delayNode.feedback.linearRampToValueAtTime(delayFeedback, time + 0.1);
+    driveNode.wet.setValueAtTime(driveNode.wet.value, time);
+    driveNode.wet.linearRampToValueAtTime(driveAmount, time + 0.1);
+    masterNode.gain.setValueAtTime(masterNode.gain.value, time);
+    masterNode.gain.linearRampToValueAtTime(masterGain, time + 0.1);
   } else {
     leadFrequency.value = leadFreq;
     leadFxGain.value = fxAmount;
     bassFrequency.value = bassFreq;
+    reverbNode.decay = reverbDecay;
+    delayNode.feedback.value = delayFeedback;
+    driveNode.wet.value = driveAmount;
+    masterNode.gain.value = masterGain;
   }
 }
 
@@ -1298,7 +1481,56 @@ function getAutomationValue(track, step) {
   return Number.isFinite(numericValue) ? numericValue : 0;
 }
 
-function normalizeAutomationValues(values, stepCount = STEP_COUNT) {
+function applyLFOModulation(app, tracks, step, time) {
+  const currentTime = time || Tone.now();
+  const modulatedTracks = { ...tracks };
+
+  LFO_DEFINITIONS.forEach(lfo => {
+    if (!lfo.enabled) return;
+    
+    const targetTrack = tracks[lfo.target];
+    if (!targetTrack) return;
+
+    const lfoValue = generateLFOValue(lfo, currentTime);
+    const baseValue = getAutomationValue(targetTrack, step);
+    const modulatedValue = baseValue + (lfoValue * lfo.depth);
+    
+    // Create a copy of the track with LFO modulation
+    modulatedTracks[lfo.target] = {
+      ...targetTrack,
+      values: [...targetTrack.values],
+      lfoModulated: true
+    };
+    
+    // Apply LFO to the current step
+    if (modulatedTracks[lfo.target].values[step] !== undefined) {
+      modulatedTracks[lfo.target].values[step] = clamp(modulatedValue, 0, 1);
+    }
+  });
+
+  return modulatedTracks;
+}
+
+function generateLFOValue(lfo, time) {
+  const phase = (time * lfo.rate) % 1;
+  
+  switch (lfo.waveform) {
+    case 'sine':
+      return Math.sin(phase * Math.PI * 2) * 0.5 + 0.5;
+    case 'triangle':
+      return phase < 0.5 ? phase * 2 : 2 - (phase * 2);
+    case 'square':
+      return phase < 0.5 ? 1 : 0;
+    case 'sawtooth':
+      return phase;
+    case 'reverseSawtooth':
+      return 1 - phase;
+    default:
+      return Math.sin(phase * Math.PI * 2) * 0.5 + 0.5;
+  }
+}
+
+function normalizeAutomationValues(values, stepCount = STEP_COUNT, curveType = CURVE_TYPES.LINEAR) {
   const totalSteps = Math.max(Math.floor(stepCount), 0);
   if (totalSteps <= 0) {
     return [];
@@ -1338,9 +1570,41 @@ function normalizeAutomationValues(values, stepCount = STEP_COUNT) {
       return lowerValue;
     }
     const ratio = scaledIndex - lowerIndex;
-    const interpolated = lowerValue + (upperValue - lowerValue) * ratio;
+    const interpolated = interpolateCurve(lowerValue, upperValue, ratio, curveType);
     return clamp(interpolated, 0, 1);
   });
+}
+
+function interpolateCurve(start, end, t, curveType) {
+  switch (curveType) {
+    case CURVE_TYPES.LINEAR:
+      return start + (end - start) * t;
+    case CURVE_TYPES.EXPONENTIAL:
+      return start + (end - start) * (t * t);
+    case CURVE_TYPES.LOGARITHMIC:
+      return start + (end - start) * Math.sqrt(t);
+    case CURVE_TYPES.SINE:
+      return start + (end - start) * (Math.sin(t * Math.PI - Math.PI / 2) * 0.5 + 0.5);
+    case CURVE_TYPES.BEZIER:
+      // Simple bezier with control points at 0.25 and 0.75
+      const p0 = start;
+      const p1 = start + (end - start) * 0.25;
+      const p2 = start + (end - start) * 0.75;
+      const p3 = end;
+      return bezierInterpolation(p0, p1, p2, p3, t);
+    default:
+      return start + (end - start) * t;
+  }
+}
+
+function bezierInterpolation(p0, p1, p2, p3, t) {
+  const u = 1 - t;
+  const tt = t * t;
+  const uu = u * u;
+  const uuu = uu * u;
+  const ttt = tt * t;
+  
+  return uuu * p0 + 3 * uu * t * p1 + 3 * u * tt * p2 + ttt * p3;
 }
 
 function normalizeAutomationState(automation, stepCount = STEP_COUNT) {
