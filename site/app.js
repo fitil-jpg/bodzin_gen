@@ -664,6 +664,7 @@ function initializeApp(app) {
   setupButtons(app);
   setupTimeline(app);
   setupWaveform(app);
+  setupWaveformControls(app);
   setupAutomationScheduling(app);
   setupMidi(app);
   applyAutomationForStep(app, 0);
@@ -1524,10 +1525,47 @@ function setupWaveform(app) {
   syncWaveformCanvas(app);
   resizeObserver.observe(app.waveform.canvas);
   
-  // Create analyser for waveform visualization
-  app.waveform.analyser = new Tone.Analyser('waveform', 1024);
+  // Create multiple analysers for different visualizations
+  app.waveform.analyser = new Tone.Analyser('waveform', 2048);
+  app.waveform.fftAnalyser = new Tone.Analyser('fft', 1024);
   app.audio.master.connect(app.waveform.analyser);
+  app.audio.master.connect(app.waveform.fftAnalyser);
+  
   app.waveform.dataArray = new Uint8Array(app.waveform.analyser.size);
+  app.waveform.fftDataArray = new Uint8Array(app.waveform.fftAnalyser.size);
+  
+  // Waveform visualization settings
+  app.waveform.settings = {
+    mode: 'bars', // 'bars', 'line', 'oscilloscope', 'spectrum'
+    sensitivity: 1.0,
+    smoothing: 0.8,
+    colorMode: 'gradient', // 'gradient', 'solid', 'rainbow'
+    showGrid: true,
+    showPeaks: true,
+    peakDecay: 0.95,
+    barWidth: 2,
+    barSpacing: 1,
+    showFrequency: false,
+    showRMS: false,
+    showPeakHold: true,
+    peakHoldTime: 2000 // milliseconds
+  };
+  
+  // Recording visualization
+  app.waveform.recording = {
+    isRecording: false,
+    recordedData: [],
+    maxRecordLength: 1000, // frames
+    playbackPosition: 0,
+    isPlaying: false
+  };
+  
+  // Peak detection
+  app.waveform.peaks = new Array(1024).fill(0);
+  app.waveform.peakDecay = 0.95;
+  app.waveform.peakHold = new Array(1024).fill(0);
+  app.waveform.peakHoldTime = 2000; // milliseconds
+  app.waveform.lastPeakHoldUpdate = Date.now();
   
   startWaveformAnimation(app);
 }
@@ -1551,7 +1589,37 @@ function startWaveformAnimation(app) {
   
   function animate() {
     if (app.waveform.analyser && app.waveform.ctx) {
-      drawWaveform(app);
+      // Record data if recording
+      if (app.waveform.recording.isRecording) {
+        const data = new Uint8Array(app.waveform.analyser.size);
+        app.waveform.analyser.getValue(data);
+        app.waveform.recording.recordedData.push(Array.from(data));
+        
+        // Limit recorded data length
+        if (app.waveform.recording.recordedData.length > app.waveform.recording.maxRecordLength) {
+          app.waveform.recording.recordedData.shift();
+        }
+      }
+      
+      // Play recorded data if playing
+      if (app.waveform.recording.isPlaying && app.waveform.recording.recordedData.length > 0) {
+        const playbackData = app.waveform.recording.recordedData[app.waveform.recording.playbackPosition];
+        if (playbackData) {
+          // Use recorded data for visualization
+          const tempData = new Uint8Array(playbackData);
+          const originalData = app.waveform.dataArray;
+          app.waveform.dataArray = tempData;
+          drawWaveform(app);
+          app.waveform.dataArray = originalData;
+          
+          app.waveform.recording.playbackPosition++;
+          if (app.waveform.recording.playbackPosition >= app.waveform.recording.recordedData.length) {
+            app.waveform.recording.playbackPosition = 0; // Loop
+          }
+        }
+      } else {
+        drawWaveform(app);
+      }
     }
     app.waveform.animationId = requestAnimationFrame(animate);
   }
@@ -1559,8 +1627,194 @@ function startWaveformAnimation(app) {
   animate();
 }
 
+function setupWaveformControls(app) {
+  const modeSelect = document.getElementById('waveformMode');
+  const colorSelect = document.getElementById('waveformColor');
+  const gridToggle = document.getElementById('waveformGrid');
+  const peaksToggle = document.getElementById('waveformPeaks');
+  
+  if (modeSelect) {
+    modeSelect.addEventListener('change', (e) => {
+      app.waveform.settings.mode = e.target.value;
+      setStatus(app, `Waveform mode: ${e.target.value}`);
+    });
+  }
+  
+  if (colorSelect) {
+    colorSelect.addEventListener('change', (e) => {
+      app.waveform.settings.colorMode = e.target.value;
+      setStatus(app, `Color mode: ${e.target.value}`);
+    });
+  }
+  
+  if (gridToggle) {
+    gridToggle.addEventListener('change', (e) => {
+      app.waveform.settings.showGrid = e.target.checked;
+    });
+  }
+  
+  if (peaksToggle) {
+    peaksToggle.addEventListener('change', (e) => {
+      app.waveform.settings.showPeaks = e.target.checked;
+    });
+  }
+  
+  // Add sensitivity control
+  const sensitivityControl = document.createElement('div');
+  sensitivityControl.className = 'waveform-control-group';
+  sensitivityControl.innerHTML = `
+    <label for="waveformSensitivity" class="waveform-label">Sensitivity</label>
+    <input type="range" id="waveformSensitivity" min="0.1" max="3" step="0.1" value="1" class="waveform-slider">
+    <span id="waveformSensitivityValue" class="waveform-value">1.0</span>
+  `;
+  
+  const controlsContainer = document.querySelector('.waveform-controls');
+  if (controlsContainer) {
+    controlsContainer.appendChild(sensitivityControl);
+    
+    const sensitivitySlider = document.getElementById('waveformSensitivity');
+    const sensitivityValue = document.getElementById('waveformSensitivityValue');
+    
+    if (sensitivitySlider && sensitivityValue) {
+      sensitivitySlider.addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        app.waveform.settings.sensitivity = value;
+        sensitivityValue.textContent = value.toFixed(1);
+      });
+    }
+  }
+  
+  // Add smoothing control
+  const smoothingControl = document.createElement('div');
+  smoothingControl.className = 'waveform-control-group';
+  smoothingControl.innerHTML = `
+    <label for="waveformSmoothing" class="waveform-label">Smoothing</label>
+    <input type="range" id="waveformSmoothing" min="0" max="0.95" step="0.05" value="0.8" class="waveform-slider">
+    <span id="waveformSmoothingValue" class="waveform-value">0.8</span>
+  `;
+  
+  if (controlsContainer) {
+    controlsContainer.appendChild(smoothingControl);
+    
+    const smoothingSlider = document.getElementById('waveformSmoothing');
+    const smoothingValue = document.getElementById('waveformSmoothingValue');
+    
+    if (smoothingSlider && smoothingValue) {
+      smoothingSlider.addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        app.waveform.settings.smoothing = value;
+        smoothingValue.textContent = value.toFixed(2);
+      });
+    }
+  }
+  
+  // Add recording controls
+  const recordingControl = document.createElement('div');
+  recordingControl.className = 'waveform-control-group';
+  recordingControl.innerHTML = `
+    <button id="waveformRecord" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Record</button>
+    <button id="waveformPlay" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Play</button>
+    <button id="waveformClear" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Clear</button>
+  `;
+  
+  if (controlsContainer) {
+    controlsContainer.appendChild(recordingControl);
+    
+    const recordBtn = document.getElementById('waveformRecord');
+    const playBtn = document.getElementById('waveformPlay');
+    const clearBtn = document.getElementById('waveformClear');
+    
+    if (recordBtn) {
+      recordBtn.addEventListener('click', () => {
+        toggleWaveformRecording(app);
+      });
+    }
+    
+    if (playBtn) {
+      playBtn.addEventListener('click', () => {
+        toggleWaveformPlayback(app);
+      });
+    }
+    
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        clearWaveformRecording(app);
+      });
+    }
+  }
+  
+  // Add waveform presets
+  const presetControl = document.createElement('div');
+  presetControl.className = 'waveform-control-group';
+  presetControl.innerHTML = `
+    <label for="waveformPreset" class="waveform-label">Preset</label>
+    <select id="waveformPreset" class="waveform-control">
+      <option value="default">Default</option>
+      <option value="minimal">Minimal</option>
+      <option value="spectrum">Spectrum</option>
+      <option value="oscilloscope">Oscilloscope</option>
+      <option value="recording">Recording</option>
+    </select>
+  `;
+  
+  if (controlsContainer) {
+    controlsContainer.appendChild(presetControl);
+    
+    const presetSelect = document.getElementById('waveformPreset');
+    if (presetSelect) {
+      presetSelect.addEventListener('change', (e) => {
+        applyWaveformPreset(app, e.target.value);
+      });
+    }
+  }
+  
+  // Add additional display options
+  const displayControl = document.createElement('div');
+  displayControl.className = 'waveform-control-group';
+  displayControl.innerHTML = `
+    <label class="waveform-toggle">
+      <input type="checkbox" id="waveformFrequency">
+      Freq
+    </label>
+    <label class="waveform-toggle">
+      <input type="checkbox" id="waveformRMS">
+      RMS
+    </label>
+    <label class="waveform-toggle">
+      <input type="checkbox" id="waveformPeakHold" checked>
+      Peak Hold
+    </label>
+  `;
+  
+  if (controlsContainer) {
+    controlsContainer.appendChild(displayControl);
+    
+    const freqToggle = document.getElementById('waveformFrequency');
+    const rmsToggle = document.getElementById('waveformRMS');
+    const peakHoldToggle = document.getElementById('waveformPeakHold');
+    
+    if (freqToggle) {
+      freqToggle.addEventListener('change', (e) => {
+        app.waveform.settings.showFrequency = e.target.checked;
+      });
+    }
+    
+    if (rmsToggle) {
+      rmsToggle.addEventListener('change', (e) => {
+        app.waveform.settings.showRMS = e.target.checked;
+      });
+    }
+    
+    if (peakHoldToggle) {
+      peakHoldToggle.addEventListener('change', (e) => {
+        app.waveform.settings.showPeakHold = e.target.checked;
+      });
+    }
+  }
+}
+
 function drawWaveform(app) {
-  const { canvas, ctx, analyser, dataArray } = app.waveform;
+  const { canvas, ctx, analyser, fftAnalyser, dataArray, fftDataArray, settings } = app.waveform;
   if (!ctx || !analyser) return;
   
   const ratio = app.waveform.deviceRatio;
@@ -1569,37 +1823,568 @@ function drawWaveform(app) {
   
   ctx.clearRect(0, 0, width, height);
   
+  // Get audio data
   analyser.getValue(dataArray);
+  fftAnalyser.getValue(fftDataArray);
   
-  const barWidth = (width / dataArray.length) * 2.5;
-  let x = 0;
+  // Apply smoothing
+  const smoothedData = applySmoothing(dataArray, settings.smoothing);
   
-  // Create gradient for waveform bars
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, 'rgba(73, 169, 255, 0.8)');
-  gradient.addColorStop(0.5, 'rgba(255, 73, 175, 0.6)');
-  gradient.addColorStop(1, 'rgba(148, 255, 73, 0.4)');
+  // Update peaks
+  updatePeaks(app, smoothedData);
   
-  ctx.fillStyle = gradient;
-  
-  for (let i = 0; i < dataArray.length; i++) {
-    const barHeight = (dataArray[i] / 255) * height;
-    const y = (height - barHeight) / 2;
-    
-    // Add some visual flair with rounded rectangles
-    ctx.beginPath();
-    ctx.roundRect(x, y, barWidth, barHeight, 2);
-    ctx.fill();
-    
-    x += barWidth + 1;
+  // Draw based on mode
+  switch (settings.mode) {
+    case 'bars':
+      drawBarsWaveform(ctx, smoothedData, width, height, settings, ratio);
+      break;
+    case 'line':
+      drawLineWaveform(ctx, smoothedData, width, height, settings, ratio);
+      break;
+    case 'oscilloscope':
+      drawOscilloscopeWaveform(ctx, smoothedData, width, height, settings, ratio);
+      break;
+    case 'spectrum':
+      drawSpectrumWaveform(ctx, fftDataArray, width, height, settings, ratio);
+      break;
+    default:
+      drawBarsWaveform(ctx, smoothedData, width, height, settings, ratio);
   }
   
-  // Add a subtle glow effect
+  // Draw grid if enabled
+  if (settings.showGrid) {
+    drawWaveformGrid(ctx, width, height, ratio);
+  }
+  
+  // Draw peaks if enabled
+  if (settings.showPeaks) {
+    drawPeakIndicators(ctx, app.waveform.peaks, width, height, settings, ratio);
+  }
+  
+  // Draw frequency information if enabled
+  if (settings.showFrequency) {
+    drawFrequencyInfo(ctx, fftDataArray, width, height, ratio);
+  }
+  
+  // Draw RMS level if enabled
+  if (settings.showRMS) {
+    drawRMSLevel(ctx, smoothedData, width, height, ratio);
+  }
+  
+  // Draw peak hold if enabled
+  if (settings.showPeakHold) {
+    drawPeakHold(ctx, app.waveform.peakHold, width, height, settings, ratio);
+  }
+  
+  // Draw recording visualization if recording
+  if (app.waveform.recording.isRecording) {
+    drawRecordingIndicator(ctx, width, height, ratio);
+  }
+  
+  // Add glow effect
+  addWaveformGlow(ctx, width, height, ratio);
+}
+
+function applySmoothing(data, factor) {
+  const smoothed = new Array(data.length);
+  smoothed[0] = data[0];
+  
+  for (let i = 1; i < data.length; i++) {
+    smoothed[i] = smoothed[i - 1] * factor + data[i] * (1 - factor);
+  }
+  
+  return smoothed;
+}
+
+function updatePeaks(app, data) {
+  const peaks = app.waveform.peaks;
+  const peakHold = app.waveform.peakHold;
+  const decay = app.waveform.peakDecay;
+  const now = Date.now();
+  
+  for (let i = 0; i < data.length; i++) {
+    // Update regular peaks
+    if (data[i] > peaks[i]) {
+      peaks[i] = data[i];
+    } else {
+      peaks[i] *= decay;
+    }
+    
+    // Update peak hold
+    if (data[i] > peakHold[i]) {
+      peakHold[i] = data[i];
+      app.waveform.lastPeakHoldUpdate = now;
+    }
+  }
+  
+  // Decay peak hold over time
+  if (now - app.waveform.lastPeakHoldUpdate > app.waveform.peakHoldTime) {
+    for (let i = 0; i < peakHold.length; i++) {
+      peakHold[i] *= 0.99; // Slow decay
+    }
+  }
+}
+
+function drawBarsWaveform(ctx, data, width, height, settings, ratio) {
+  const barWidth = settings.barWidth * ratio;
+  const barSpacing = settings.barSpacing * ratio;
+  const totalBarWidth = barWidth + barSpacing;
+  const centerY = height / 2;
+  
+  // Create gradient based on color mode
+  const gradient = createWaveformGradient(ctx, width, height, settings.colorMode);
+  ctx.fillStyle = gradient;
+  
+  for (let i = 0; i < data.length; i++) {
+    const barHeight = (data[i] / 255) * height * settings.sensitivity;
+    const x = i * totalBarWidth;
+    const y = centerY - barHeight / 2;
+    
+    // Draw rounded rectangle
+    ctx.beginPath();
+    ctx.roundRect(x, y, barWidth, barHeight, 2 * ratio);
+    ctx.fill();
+  }
+}
+
+function drawLineWaveform(ctx, data, width, height, settings, ratio) {
+  const centerY = height / 2;
+  const stepX = width / data.length;
+  
+  ctx.beginPath();
+  ctx.strokeStyle = createWaveformColor(settings.colorMode, 0);
+  ctx.lineWidth = 2 * ratio;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  
+  for (let i = 0; i < data.length; i++) {
+    const x = i * stepX;
+    const y = centerY - (data[i] / 255) * height * settings.sensitivity / 2;
+    
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+  
+  ctx.stroke();
+  
+  // Fill area under the line
+  ctx.lineTo(width, centerY);
+  ctx.lineTo(0, centerY);
+  ctx.closePath();
+  
+  const gradient = createWaveformGradient(ctx, width, height, settings.colorMode);
+  ctx.fillStyle = gradient;
+  ctx.globalAlpha = 0.3;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawOscilloscopeWaveform(ctx, data, width, height, settings, ratio) {
+  const centerY = height / 2;
+  const stepX = width / data.length;
+  
+  // Draw multiple traces for oscilloscope effect
+  for (let trace = 0; trace < 3; trace++) {
+    ctx.beginPath();
+    ctx.strokeStyle = createWaveformColor(settings.colorMode, trace / 3);
+    ctx.lineWidth = 1 * ratio;
+    ctx.globalAlpha = 0.6 - trace * 0.2;
+    
+    for (let i = 0; i < data.length; i++) {
+      const x = i * stepX;
+      const y = centerY - (data[i] / 255) * height * settings.sensitivity / 2 + (trace - 1) * 10;
+      
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    
+    ctx.stroke();
+  }
+  
+  ctx.globalAlpha = 1;
+}
+
+function drawSpectrumWaveform(ctx, fftData, width, height, settings, ratio) {
+  const barWidth = (width / fftData.length) * 2;
+  const centerY = height / 2;
+  
+  for (let i = 0; i < fftData.length; i++) {
+    const barHeight = (fftData[i] / 255) * height * settings.sensitivity;
+    const x = i * barWidth;
+    const y = centerY - barHeight / 2;
+    
+    // Color based on frequency
+    const hue = (i / fftData.length) * 360;
+    ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+    
+    ctx.fillRect(x, y, barWidth - 1, barHeight);
+  }
+}
+
+function createWaveformGradient(ctx, width, height, colorMode) {
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  
+  switch (colorMode) {
+    case 'gradient':
+      gradient.addColorStop(0, 'rgba(73, 169, 255, 0.8)');
+      gradient.addColorStop(0.5, 'rgba(255, 73, 175, 0.6)');
+      gradient.addColorStop(1, 'rgba(148, 255, 73, 0.4)');
+      break;
+    case 'rainbow':
+      gradient.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
+      gradient.addColorStop(0.2, 'rgba(255, 165, 0, 0.8)');
+      gradient.addColorStop(0.4, 'rgba(255, 255, 0, 0.8)');
+      gradient.addColorStop(0.6, 'rgba(0, 255, 0, 0.8)');
+      gradient.addColorStop(0.8, 'rgba(0, 0, 255, 0.8)');
+      gradient.addColorStop(1, 'rgba(128, 0, 128, 0.8)');
+      break;
+    case 'solid':
+    default:
+      gradient.addColorStop(0, 'rgba(73, 169, 255, 0.8)');
+      gradient.addColorStop(1, 'rgba(73, 169, 255, 0.8)');
+      break;
+  }
+  
+  return gradient;
+}
+
+function createWaveformColor(colorMode, position) {
+  switch (colorMode) {
+    case 'gradient':
+      return `hsl(${200 + position * 60}, 70%, 60%)`;
+    case 'rainbow':
+      return `hsl(${position * 360}, 70%, 60%)`;
+    case 'solid':
+    default:
+      return '#49a9ff';
+  }
+}
+
+function drawWaveformGrid(ctx, width, height, ratio) {
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.lineWidth = 1 * ratio;
+  ctx.setLineDash([2 * ratio, 2 * ratio]);
+  
+  // Horizontal lines
+  for (let i = 0; i <= 4; i++) {
+    const y = (height / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+  
+  // Vertical lines
+  for (let i = 0; i <= 8; i++) {
+    const x = (width / 8) * i;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+  
+  ctx.setLineDash([]);
+}
+
+function drawPeakIndicators(ctx, peaks, width, height, settings, ratio) {
+  const barWidth = settings.barWidth * ratio;
+  const barSpacing = settings.barSpacing * ratio;
+  const totalBarWidth = barWidth + barSpacing;
+  const centerY = height / 2;
+  
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.lineWidth = 1 * ratio;
+  
+  for (let i = 0; i < peaks.length; i++) {
+    if (peaks[i] > 10) { // Only draw if peak is significant
+      const x = i * totalBarWidth + barWidth / 2;
+      const y = centerY - (peaks[i] / 255) * height * settings.sensitivity / 2;
+      
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, centerY);
+      ctx.stroke();
+    }
+  }
+}
+
+function addWaveformGlow(ctx, width, height, ratio) {
+  // Add subtle glow effect
   ctx.shadowColor = 'rgba(73, 169, 255, 0.3)';
-  ctx.shadowBlur = 10;
-  ctx.fillStyle = 'rgba(73, 169, 255, 0.1)';
+  ctx.shadowBlur = 10 * ratio;
+  ctx.fillStyle = 'rgba(73, 169, 255, 0.05)';
   ctx.fillRect(0, 0, width, height);
   ctx.shadowBlur = 0;
+}
+
+function drawFrequencyInfo(ctx, fftData, width, height, ratio) {
+  // Find dominant frequency
+  let maxIndex = 0;
+  let maxValue = 0;
+  
+  for (let i = 0; i < fftData.length; i++) {
+    if (fftData[i] > maxValue) {
+      maxValue = fftData[i];
+      maxIndex = i;
+    }
+  }
+  
+  // Calculate frequency (simplified)
+  const frequency = (maxIndex / fftData.length) * 20000; // Assuming 20kHz max
+  const frequencyText = frequency > 1000 ? `${(frequency / 1000).toFixed(1)}kHz` : `${Math.round(frequency)}Hz`;
+  
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.font = `${10 * ratio}px Inter, sans-serif`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText(frequencyText, width - 10 * ratio, 10 * ratio);
+}
+
+function drawRMSLevel(ctx, data, width, height, ratio) {
+  // Calculate RMS
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) {
+    sum += data[i] * data[i];
+  }
+  const rms = Math.sqrt(sum / data.length);
+  const rmsPercent = (rms / 255) * 100;
+  
+  // Draw RMS bar
+  const barWidth = 4 * ratio;
+  const barHeight = height - 20 * ratio;
+  const barX = width - 20 * ratio;
+  const barY = 10 * ratio;
+  
+  // Background
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.fillRect(barX, barY, barWidth, barHeight);
+  
+  // RMS level
+  const levelHeight = (rmsPercent / 100) * barHeight;
+  ctx.fillStyle = rmsPercent > 80 ? '#ff6b6b' : rmsPercent > 50 ? '#ffa726' : '#4caf50';
+  ctx.fillRect(barX, barY + barHeight - levelHeight, barWidth, levelHeight);
+  
+  // Label
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.font = `${8 * ratio}px Inter, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('RMS', barX + barWidth / 2, barY + barHeight + 5 * ratio);
+}
+
+function drawPeakHold(ctx, peakHold, width, height, settings, ratio) {
+  if (!peakHold) return;
+  
+  const barWidth = settings.barWidth * ratio;
+  const barSpacing = settings.barSpacing * ratio;
+  const totalBarWidth = barWidth + barSpacing;
+  const centerY = height / 2;
+  
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.lineWidth = 1 * ratio;
+  ctx.setLineDash([2 * ratio, 2 * ratio]);
+  
+  for (let i = 0; i < peakHold.length; i++) {
+    if (peakHold[i] > 10) {
+      const x = i * totalBarWidth + barWidth / 2;
+      const y = centerY - (peakHold[i] / 255) * height * settings.sensitivity / 2;
+      
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, centerY);
+      ctx.stroke();
+    }
+  }
+  
+  ctx.setLineDash([]);
+}
+
+function drawRecordingIndicator(ctx, width, height, ratio) {
+  const time = Date.now() * 0.01;
+  const alpha = 0.5 + 0.5 * Math.sin(time);
+  
+  ctx.fillStyle = `rgba(255, 0, 0, ${alpha})`;
+  ctx.font = `${12 * ratio}px Inter, sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText('● REC', 10 * ratio, 10 * ratio);
+  
+  // Pulsing border
+  ctx.strokeStyle = `rgba(255, 0, 0, ${alpha * 0.5})`;
+  ctx.lineWidth = 2 * ratio;
+  ctx.strokeRect(0, 0, width, height);
+}
+
+function toggleWaveformRecording(app) {
+  const recording = app.waveform.recording;
+  const recordBtn = document.getElementById('waveformRecord');
+  
+  if (recording.isRecording) {
+    recording.isRecording = false;
+    if (recordBtn) {
+      recordBtn.textContent = 'Record';
+      recordBtn.style.background = 'rgba(255, 255, 255, 0.04)';
+    }
+    setStatus(app, 'Waveform recording stopped');
+  } else {
+    recording.isRecording = true;
+    recording.recordedData = [];
+    if (recordBtn) {
+      recordBtn.textContent = 'Stop';
+      recordBtn.style.background = 'rgba(255, 0, 0, 0.2)';
+    }
+    setStatus(app, 'Waveform recording started');
+  }
+}
+
+function toggleWaveformPlayback(app) {
+  const recording = app.waveform.recording;
+  const playBtn = document.getElementById('waveformPlay');
+  
+  if (recording.isPlaying) {
+    recording.isPlaying = false;
+    if (playBtn) {
+      playBtn.textContent = 'Play';
+      playBtn.style.background = 'rgba(255, 255, 255, 0.04)';
+    }
+    setStatus(app, 'Waveform playback stopped');
+  } else {
+    if (recording.recordedData.length === 0) {
+      setStatus(app, 'No recorded data to play');
+      return;
+    }
+    recording.isPlaying = true;
+    recording.playbackPosition = 0;
+    if (playBtn) {
+      playBtn.textContent = 'Stop';
+      playBtn.style.background = 'rgba(0, 255, 0, 0.2)';
+    }
+    setStatus(app, 'Waveform playback started');
+  }
+}
+
+function clearWaveformRecording(app) {
+  const recording = app.waveform.recording;
+  recording.recordedData = [];
+  recording.isRecording = false;
+  recording.isPlaying = false;
+  recording.playbackPosition = 0;
+  
+  const recordBtn = document.getElementById('waveformRecord');
+  const playBtn = document.getElementById('waveformPlay');
+  
+  if (recordBtn) {
+    recordBtn.textContent = 'Record';
+    recordBtn.style.background = 'rgba(255, 255, 255, 0.04)';
+  }
+  if (playBtn) {
+    playBtn.textContent = 'Play';
+    playBtn.style.background = 'rgba(255, 255, 255, 0.04)';
+  }
+  
+  setStatus(app, 'Waveform recording cleared');
+}
+
+function applyWaveformPreset(app, presetName) {
+  const presets = {
+    default: {
+      mode: 'bars',
+      colorMode: 'gradient',
+      sensitivity: 1.0,
+      smoothing: 0.8,
+      showGrid: true,
+      showPeaks: true,
+      showFrequency: false,
+      showRMS: false,
+      showPeakHold: true
+    },
+    minimal: {
+      mode: 'line',
+      colorMode: 'solid',
+      sensitivity: 0.8,
+      smoothing: 0.9,
+      showGrid: false,
+      showPeaks: false,
+      showFrequency: false,
+      showRMS: false,
+      showPeakHold: false
+    },
+    spectrum: {
+      mode: 'spectrum',
+      colorMode: 'rainbow',
+      sensitivity: 1.2,
+      smoothing: 0.6,
+      showGrid: true,
+      showPeaks: false,
+      showFrequency: true,
+      showRMS: true,
+      showPeakHold: false
+    },
+    oscilloscope: {
+      mode: 'oscilloscope',
+      colorMode: 'gradient',
+      sensitivity: 1.5,
+      smoothing: 0.3,
+      showGrid: true,
+      showPeaks: true,
+      showFrequency: false,
+      showRMS: false,
+      showPeakHold: true
+    },
+    recording: {
+      mode: 'bars',
+      colorMode: 'gradient',
+      sensitivity: 1.0,
+      smoothing: 0.7,
+      showGrid: true,
+      showPeaks: true,
+      showFrequency: true,
+      showRMS: true,
+      showPeakHold: true
+    }
+  };
+  
+  const preset = presets[presetName] || presets.default;
+  
+  // Apply preset settings
+  Object.assign(app.waveform.settings, preset);
+  
+  // Update UI controls
+  const modeSelect = document.getElementById('waveformMode');
+  const colorSelect = document.getElementById('waveformColor');
+  const sensitivitySlider = document.getElementById('waveformSensitivity');
+  const smoothingSlider = document.getElementById('waveformSmoothing');
+  const gridToggle = document.getElementById('waveformGrid');
+  const peaksToggle = document.getElementById('waveformPeaks');
+  const freqToggle = document.getElementById('waveformFrequency');
+  const rmsToggle = document.getElementById('waveformRMS');
+  const peakHoldToggle = document.getElementById('waveformPeakHold');
+  
+  if (modeSelect) modeSelect.value = preset.mode;
+  if (colorSelect) colorSelect.value = preset.colorMode;
+  if (sensitivitySlider) {
+    sensitivitySlider.value = preset.sensitivity;
+    const sensitivityValue = document.getElementById('waveformSensitivityValue');
+    if (sensitivityValue) sensitivityValue.textContent = preset.sensitivity.toFixed(1);
+  }
+  if (smoothingSlider) {
+    smoothingSlider.value = preset.smoothing;
+    const smoothingValue = document.getElementById('waveformSmoothingValue');
+    if (smoothingValue) smoothingValue.textContent = preset.smoothing.toFixed(2);
+  }
+  if (gridToggle) gridToggle.checked = preset.showGrid;
+  if (peaksToggle) peaksToggle.checked = preset.showPeaks;
+  if (freqToggle) freqToggle.checked = preset.showFrequency;
+  if (rmsToggle) rmsToggle.checked = preset.showRMS;
+  if (peakHoldToggle) peakHoldToggle.checked = preset.showPeakHold;
+  
+  setStatus(app, `Waveform preset: ${presetName}`);
 }
 
 function createParticle(x, y, color) {

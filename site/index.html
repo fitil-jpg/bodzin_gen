@@ -441,19 +441,138 @@
       border-radius: 1rem;
     }
 
-    /* Mobile-first responsive design */
+    /* Waveform container and controls */
+    .waveform-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .waveform-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .waveform-control {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 0.25rem;
+      color: var(--text);
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      min-height: 28px;
+    }
+
+    .waveform-control:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--accent);
+    }
+
+    .waveform-control:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+    }
+
+    .waveform-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+      color: var(--text);
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      transition: background 0.15s ease;
+    }
+
+    .waveform-toggle:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .waveform-toggle input[type="checkbox"] {
+      accent-color: var(--accent);
+      margin: 0;
+    }
+
+    .waveform-control-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 0.25rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .waveform-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .waveform-slider {
+      width: 60px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .waveform-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .waveform-slider::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .waveform-value {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 30px;
+      text-align: right;
+    }
+
     #waveform {
       width: 100%;
-      height: 80px;
+      height: 120px;
       background: rgba(8, 8, 11, 0.4);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 0.5rem;
-      opacity: 0.8;
+      opacity: 0.9;
       transition: opacity 0.3s ease;
+      cursor: crosshair;
     }
 
     #waveform:hover {
       opacity: 1;
+      border-color: rgba(73, 169, 255, 0.3);
     }
 
     @media (max-width: 1024px) {
@@ -481,6 +600,22 @@
     }
 
     @media (max-width: 768px) {
+    .waveform-controls {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+    }
+
+    .waveform-control-group {
+      justify-content: space-between;
+      padding: 0.5rem;
+    }
+
+    .waveform-control {
+      flex: 1;
+      min-width: 80px;
+    }
+
     .control-section {
       margin-bottom: 1.5rem;
       padding: 1rem;
@@ -932,7 +1067,30 @@
           </div>
           <div class="timeline-container">
             <canvas id="timeline" width="1200" height="240" aria-label="Arrangement timeline"></canvas>
-            <canvas id="waveform" width="1200" height="80" aria-label="Audio waveform visualization"></canvas>
+            <div class="waveform-container">
+              <div class="waveform-controls">
+                <select id="waveformMode" class="waveform-control">
+                  <option value="bars">Bars</option>
+                  <option value="line">Line</option>
+                  <option value="oscilloscope">Oscilloscope</option>
+                  <option value="spectrum">Spectrum</option>
+                </select>
+                <select id="waveformColor" class="waveform-control">
+                  <option value="gradient">Gradient</option>
+                  <option value="solid">Solid</option>
+                  <option value="rainbow">Rainbow</option>
+                </select>
+                <label class="waveform-toggle">
+                  <input type="checkbox" id="waveformGrid" checked>
+                  Grid
+                </label>
+                <label class="waveform-toggle">
+                  <input type="checkbox" id="waveformPeaks" checked>
+                  Peaks
+                </label>
+              </div>
+              <canvas id="waveform" width="1200" height="120" aria-label="Audio waveform visualization"></canvas>
+            </div>
           </div>
         </section>
       </main>
