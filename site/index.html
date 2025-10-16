@@ -3,7 +3,11 @@
 <head>
   <meta charset="utf-8">
   <title>Bodzin Generator Toolkit</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f0f12">
   <style>
     :root {
       color-scheme: dark;
@@ -18,6 +22,19 @@
     * {
       box-sizing: border-box;
       font-family: "Inter", "Segoe UI", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    input, select, textarea {
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
     }
 
     body {
@@ -70,6 +87,12 @@
       color: var(--text);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
+      min-height: 44px;
+      min-width: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
       position: relative;
       overflow: hidden;
     }
@@ -144,6 +167,8 @@
       background: rgba(255, 255, 255, 0.03);
       cursor: pointer;
       font-weight: 600;
+      min-height: 44px;
+      touch-action: manipulation;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
       overflow: hidden;
@@ -186,6 +211,183 @@
       flex: 1;
       display: grid;
       gap: 1rem;
+    }
+
+    .control-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .control-section h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.1rem;
+      color: var(--accent);
+    }
+
+    .control-description {
+      margin: 0 0 1rem 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .control-row:last-child {
+      border-bottom: none;
+    }
+
+    .control-row .label {
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .control-input {
+      display: flex;
+      align-items: center;
+    }
+
+    .control-value {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 500;
+      min-width: 60px;
+      text-align: right;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg);
+      box-shadow: 0 2px 8px rgba(73, 169, 255, 0.3);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
+    }
+
+    input[type="range"]::-webkit-slider-thumb:active {
+      transform: scale(1.2);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--bg);
+      box-shadow: 0 2px 8px rgba(73, 169, 255, 0.3);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    input[type="range"]::-moz-range-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
+    }
+
+    input[type="range"]::-moz-range-thumb:active {
+      transform: scale(1.2);
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+    }
+
+    select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      min-height: 40px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    select:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--accent);
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+    }
+
+    .midi-learning {
+      background: rgba(73, 169, 255, 0.1) !important;
+      border-color: var(--accent) !important;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .mobile-loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(73, 169, 255, 0.3);
+      border-top: 3px solid var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+
+    .loading-text {
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
     .main-panel {
@@ -239,6 +441,7 @@
       border-radius: 1rem;
     }
 
+    /* Mobile-first responsive design */
     #waveform {
       width: 100%;
       height: 80px;
@@ -256,17 +459,28 @@
     @media (max-width: 1024px) {
       .app-header {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 1rem clamp(1rem, 3vw, 2rem);
+        gap: 0.75rem;
       }
 
       .app-layout {
         grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1rem clamp(1rem, 3vw, 2rem) 1.5rem;
       }
 
       .sidebar {
         order: 2;
+        padding: 1rem;
+      }
+
+      .timeline-card {
+        padding: 1rem;
+        min-height: 300px;
       }
     }
 
+    @media (max-width: 768px) {
     .control-section {
       margin-bottom: 1.5rem;
       padding: 1rem;
@@ -465,10 +679,217 @@
     @media (max-width: 720px) {
       .app-header {
         grid-template-columns: 1fr;
+        padding: 0.75rem 1rem;
+        gap: 0.5rem;
       }
 
       .header-group {
         justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        min-height: 40px;
+      }
+
+      .toggle {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+        min-height: 40px;
+      }
+
+      .app-layout {
+        padding: 0.75rem 1rem 1rem;
+        gap: 0.75rem;
+      }
+
+      .sidebar {
+        padding: 0.75rem;
+        border-radius: 1rem;
+      }
+
+      .timeline-card {
+        padding: 0.75rem;
+        border-radius: 1rem;
+        min-height: 250px;
+      }
+
+      .timeline-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      #sectionLabel {
+        font-size: 1rem;
+      }
+
+      #status {
+        font-size: 0.85rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .app-header {
+        padding: 0.5rem;
+        gap: 0.25rem;
+      }
+
+      .header-group {
+        gap: 0.25rem;
+      }
+
+      .btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        min-height: 36px;
+        min-width: 36px;
+      }
+
+      .toggle {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.85rem;
+        min-height: 36px;
+      }
+
+      .app-layout {
+        padding: 0.5rem;
+        gap: 0.5rem;
+      }
+
+      .sidebar {
+        padding: 0.5rem;
+        border-radius: 0.75rem;
+      }
+
+      .timeline-card {
+        padding: 0.5rem;
+        border-radius: 0.75rem;
+        min-height: 200px;
+      }
+
+      .control-section h3 {
+        font-size: 1rem;
+        margin: 0.5rem 0;
+      }
+
+      .control-description {
+        font-size: 0.8rem;
+        margin: 0.25rem 0 0.5rem;
+      }
+
+      .control-row {
+        padding: 0.5rem 0;
+      }
+
+      .control-row .label {
+        font-size: 0.85rem;
+      }
+
+      .control-value {
+        font-size: 0.8rem;
+      }
+
+      input[type="range"] {
+        height: 6px;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        width: 20px;
+        height: 20px;
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+      }
+
+      select {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+        min-height: 36px;
+      }
+    }
+
+    /* Touch-specific optimizations */
+    @media (hover: none) and (pointer: coarse) {
+      .btn:hover {
+        transform: none;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .btn:active {
+        transform: scale(0.95);
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .btn-primary:active {
+        background: rgba(73, 169, 255, 0.8);
+        transform: scale(0.95);
+      }
+
+      .toggle:active {
+        background: rgba(255, 255, 255, 0.06);
+        transform: scale(0.95);
+      }
+
+      /* Improve touch targets for range inputs */
+      input[type="range"] {
+        height: 12px;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        width: 28px;
+        height: 28px;
+        margin-top: -8px;
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+        border: none;
+      }
+
+      /* Better touch feedback for controls */
+      .control-row:active {
+        background: rgba(255, 255, 255, 0.02);
+        transform: scale(0.98);
+      }
+    }
+
+    /* Prevent text selection on mobile */
+    @media (max-width: 768px) {
+      .btn, .toggle, .control-row, #timeline {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+    }
+
+    /* High DPI display optimizations */
+    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+      .btn, .toggle {
+        border-width: 0.5px;
+      }
+    }
+
+    /* Landscape mobile optimizations */
+    @media (max-width: 768px) and (orientation: landscape) {
+      .app-layout {
+        grid-template-columns: 300px 1fr;
+        gap: 1rem;
+      }
+
+      .sidebar {
+        order: 1;
+      }
+
+      .timeline-card {
+        min-height: 150px;
       }
     }
   </style>
@@ -476,6 +897,10 @@
 </head>
 <body>
   <div class="app-shell">
+    <div id="mobile-loading" class="mobile-loading" style="display: none;">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading...</div>
+    </div>
     <header class="app-header">
       <div class="header-group" aria-label="Transport">
         <button id="startButton" class="btn btn-primary">Start</button>
