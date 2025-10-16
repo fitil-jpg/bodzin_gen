@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Test</title>
+</head>
+<body>
+    <h1>Testing Modular Architecture</h1>
+    <div id="test-results"></div>
+    
+    <script type="module">
+        // Test module imports
+        try {
+            const { AudioEngine } = await import('./modules/audio/audioEngine.js');
+            const { ControlManager } = await import('./modules/controls/controlManager.js');
+            const { AutomationEngine } = await import('./modules/automation/automationEngine.js');
+            const { UIManager } = await import('./modules/ui/uiManager.js');
+            const { PresetManager } = await import('./modules/presets/presetManager.js');
+            const { Helpers } = await import('./modules/utils/helpers.js');
+            
+            document.getElementById('test-results').innerHTML = `
+                <h2>✅ All modules loaded successfully!</h2>
+                <ul>
+                    <li>AudioEngine: ${AudioEngine.name}</li>
+                    <li>ControlManager: ${ControlManager.name}</li>
+                    <li>AutomationEngine: ${AutomationEngine.name}</li>
+                    <li>UIManager: ${UIManager.name}</li>
+                    <li>PresetManager: ${PresetManager.name}</li>
+                    <li>Helpers: ${Helpers.name}</li>
+                </ul>
+                <p>Modular architecture is working correctly!</p>
+            `;
+        } catch (error) {
+            document.getElementById('test-results').innerHTML = `
+                <h2>❌ Module loading failed</h2>
+                <p>Error: ${error.message}</p>
+            `;
+        }
+    </script>
+</body>
+</html>
