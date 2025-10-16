@@ -2289,6 +2289,32 @@ function updateLEDIndicators(app, section) {
   
   const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
   const defaultState = { drums: true, bass: true, lead: true, fx: true };
+  
+  // Update each LED based on the current section's sequence activity
+  Object.keys(app.leds).forEach(groupName => {
+    const led = app.leds[groupName];
+    if (!led) return;
+    
+    const hasExplicitSetting = arrangement && Object.prototype.hasOwnProperty.call(arrangement, groupName);
+    const shouldEnable = hasExplicitSetting
+      ? Boolean(arrangement[groupName])
+      : defaultState[groupName] !== undefined
+        ? defaultState[groupName]
+        : true;
+    
+    if (shouldEnable) {
+      led.classList.add('active');
+    } else {
+      led.classList.remove('active');
+    }
+  });
+}
+
+function updateLEDIndicators(app, section) {
+  if (!app.leds) return;
+  
+  const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
+  const defaultState = { drums: true, bass: true, lead: true, fx: true };
   const isPlaying = Tone.Transport.state === 'started';
   
   // Update each LED based on the current section's sequence activity
