@@ -4,9 +4,11 @@ import {
   LOOP_DURATION, 
   SECTION_DEFINITIONS,
   LFO_DEFINITIONS,
+  ENVELOPE_FOLLOWER_DEFINITIONS,
   SECTION_SEQUENCE_ACTIVITY 
 } from '../utils/constants.js';
 import { setBusLevel, clamp } from '../utils/helpers.js';
+import { createToneEnvelopeFollower } from './envelope-follower.js';
 
 export class AudioEngine {
   constructor() {
@@ -16,6 +18,8 @@ export class AudioEngine {
     this.instruments = null;
     this.sequences = null;
     this.sequencesStarted = false;
+    this.envelopeFollowers = null;
+    this.lfos = null;
   }
 
   initialize() {
@@ -35,8 +39,12 @@ export class AudioEngine {
     this.nodes = this.createEffects();
     this.instruments = this.createInstruments();
     this.sequences = this.buildSequences(this.instruments);
+    this.envelopeFollowers = this.createEnvelopeFollowers();
+    this.lfos = this.createLFOs();
 
     this.connectEffects();
+    this.connectEnvelopeFollowers();
+    this.connectLFOs();
     return this;
   }
 
@@ -63,6 +71,121 @@ export class AudioEngine {
     this.buses.fx.connect(this.nodes.reverb);
     this.nodes.delay.connect(this.master);
     this.nodes.reverb.connect(this.master);
+  }
+
+  createEnvelopeFollowers() {
+    const followers = {};
+    
+    ENVELOPE_FOLLOWER_DEFINITIONS.forEach(def => {
+      if (def.enabled) {
+        const follower = createToneEnvelopeFollower({
+          attackTime: def.attackTime,
+          releaseTime: def.releaseTime,
+          sensitivity: def.sensitivity,
+          threshold: def.threshold,
+          gate: def.gate
+        });
+        
+        followers[def.id] = {
+          node: follower,
+          definition: def,
+          target: null
+        };
+      }
+    });
+    
+    return followers;
+  }
+
+  createLFOs() {
+    const lfos = {};
+    
+    LFO_DEFINITIONS.forEach(def => {
+      if (def.enabled) {
+        const lfo = new Tone.LFO({
+          frequency: def.rate,
+          type: def.waveform,
+          amplitude: def.depth
+        });
+        
+        lfo.start();
+        
+        lfos[def.id] = {
+          node: lfo,
+          definition: def,
+          target: null
+        };
+      }
+    });
+    
+    return lfos;
+  }
+
+  connectEnvelopeFollowers() {
+    Object.values(this.envelopeFollowers).forEach(follower => {
+      const { node, definition } = follower;
+      const source = this.getAudioSource(definition.source);
+      const target = this.getParameterTarget(definition.target);
+      
+      if (source && target) {
+        // Connect source to envelope follower
+        source.connect(node);
+        
+        // Store target for later modulation
+        follower.target = target;
+      }
+    });
+  }
+
+  connectLFOs() {
+    Object.values(this.lfos).forEach(lfo => {
+      const { node, definition } = lfo;
+      const target = this.getParameterTarget(definition.target);
+      
+      if (target) {
+        // Connect LFO to target parameter
+        node.connect(target);
+        lfo.target = target;
+      }
+    });
+  }
+
+  getAudioSource(sourceName) {
+    switch (sourceName) {
+      case 'lead':
+        return this.instruments?.lead;
+      case 'bass':
+        return this.instruments?.bass;
+      case 'drums':
+        return this.buses?.drums;
+      case 'fx':
+        return this.buses?.fx;
+      default:
+        return null;
+    }
+  }
+
+  getParameterTarget(targetName) {
+    switch (targetName) {
+      case 'leadFilter':
+        return this.nodes?.leadFilter?.frequency;
+      case 'bassFilter':
+        return this.nodes?.bassFilter?.frequency;
+      case 'fxSend':
+        return this.nodes?.leadFxSend?.gain;
+      case 'reverbDecay':
+        return this.nodes?.reverb?.decay;
+      case 'delayFeedback':
+        return this.nodes?.delay?.feedback;
+      case 'bassDrive':
+        return this.nodes?.bassDrive?.distortion;
+      case 'leadResonance':
+        return this.nodes?.leadFilter?.Q;
+      case 'masterVolume':
+        return this.master?.gain;
+      default:
+        return null;
+    }
   }
 
   createInstruments() {
@@ -257,5 +380,107 @@ export class AudioEngine {
     if (bus) {
       setBusLevel(bus, db);
     }
+  }
+
+  // Envelope Follower Controls
+  setEnvelopeFollowerEnabled(followerId, enabled) {
+    const follower = this.envelopeFollowers[followerId];
+    if (follower) {
+      if (enabled && !follower.node.context) {
+        // Recreate follower if it was disabled
+        const def = follower.definition;
+        follower.node = createToneEnvelopeFollower({
+          attackTime: def.attackTime,
+          releaseTime: def.releaseTime,
+          sensitivity: def.sensitivity,
+          threshold: def.threshold,
+          gate: def.gate
+        });
+        
+        const source = this.getAudioSource(def.source);
+        const target = this.getParameterTarget(def.target);
+        
+        if (source && target) {
+          source.connect(follower.node);
+          follower.target = target;
+        }
+      } else if (!enabled && follower.node.context) {
+        // Disconnect and dispose
+        follower.node.disconnect();
+        follower.target = null;
+      }
+    }
+  }
+
+  setEnvelopeFollowerConfig(followerId, config) {
+    const follower = this.envelopeFollowers[followerId];
+    if (follower && follower.node) {
+      follower.node.setConfig(config);
+    }
+  }
+
+  getEnvelopeFollowerLevel(followerId) {
+    const follower = this.envelopeFollowers[followerId];
+    return follower?.node?.getLevel() || 0;
+  }
+
+  getEnvelopeFollowerInputLevel(followerId) {
+    const follower = this.envelopeFollowers[followerId];
+    return follower?.node?.getInputLevel() || 0;
+  }
+
+  isEnvelopeFollowerActive(followerId) {
+    const follower = this.envelopeFollowers[followerId];
+    return follower?.node?.isEnvelopeActive() || false;
+  }
+
+  // LFO Controls
+  setLFOEnabled(lfoId, enabled) {
+    const lfo = this.lfos[lfoId];
+    if (lfo) {
+      if (enabled) {
+        lfo.node.start();
+      } else {
+        lfo.node.stop();
+      }
+    }
+  }
+
+  setLFOConfig(lfoId, config) {
+    const lfo = this.lfos[lfoId];
+    if (lfo && lfo.node) {
+      if (config.frequency !== undefined) {
+        lfo.node.frequency.value = config.frequency;
+      }
+      if (config.amplitude !== undefined) {
+        lfo.node.amplitude.value = config.amplitude;
+      }
+      if (config.type !== undefined) {
+        lfo.node.type = config.type;
+      }
+    }
+  }
+
+  getLFOValue(lfoId) {
+    const lfo = this.lfos[lfoId];
+    return lfo?.node?.value || 0;
+  }
+
+  // Get all envelope follower levels for visualization
+  getAllEnvelopeFollowerLevels() {
+    const levels = {};
+    Object.keys(this.envelopeFollowers).forEach(id => {
+      levels[id] = this.getEnvelopeFollowerLevel(id);
+    });
+    return levels;
+  }
+
+  // Get all LFO values for visualization
+  getAllLFOValues() {
+    const values = {};
+    Object.keys(this.lfos).forEach(id => {
+      values[id] = this.getLFOValue(id);
+    });
+    return values;
   }
 }
