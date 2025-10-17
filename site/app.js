@@ -646,6 +646,124 @@ const CONTROL_SCHEMA = [
     ]
   },
   {
+    group: 'Envelope Followers',
+    description: 'Dynamic modulation based on audio signal amplitude.',
+    controls: [
+      {
+        id: 'envFollower1Enabled',
+        label: 'EF1 Enable',
+        type: 'select',
+        options: [
+          { value: false, label: 'Off' },
+          { value: true, label: 'On' }
+        ],
+        default: false,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerEnabled('envFollower1', value);
+        }
+      },
+      {
+        id: 'envFollower1Attack',
+        label: 'EF1 Attack',
+        type: 'range',
+        min: 0.001,
+        max: 0.1,
+        step: 0.001,
+        default: 0.01,
+        format: value => `${(value * 1000).toFixed(1)} ms`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower1', { attackTime: value });
+        }
+      },
+      {
+        id: 'envFollower1Release',
+        label: 'EF1 Release',
+        type: 'range',
+        min: 0.01,
+        max: 1.0,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${(value * 1000).toFixed(0)} ms`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower1', { releaseTime: value });
+        }
+      },
+      {
+        id: 'envFollower1Sensitivity',
+        label: 'EF1 Sensitivity',
+        type: 'range',
+        min: 0.1,
+        max: 5.0,
+        step: 0.1,
+        default: 1.0,
+        format: value => `${value.toFixed(1)}x`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower1', { sensitivity: value });
+        }
+      },
+      {
+        id: 'envFollower2Enabled',
+        label: 'EF2 Enable',
+        type: 'select',
+        options: [
+          { value: false, label: 'Off' },
+          { value: true, label: 'On' }
+        ],
+        default: false,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerEnabled('envFollower2', value);
+        }
+      },
+      {
+        id: 'envFollower2Attack',
+        label: 'EF2 Attack',
+        type: 'range',
+        min: 0.001,
+        max: 0.1,
+        step: 0.001,
+        default: 0.005,
+        format: value => `${(value * 1000).toFixed(1)} ms`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower2', { attackTime: value });
+        }
+      },
+      {
+        id: 'envFollower2Release',
+        label: 'EF2 Release',
+        type: 'range',
+        min: 0.01,
+        max: 1.0,
+        step: 0.01,
+        default: 0.05,
+        format: value => `${(value * 1000).toFixed(0)} ms`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower2', { releaseTime: value });
+        }
+      },
+      {
+        id: 'envFollower2Sensitivity',
+        label: 'EF2 Sensitivity',
+        type: 'range',
+        min: 0.1,
+        max: 5.0,
+        step: 0.1,
+        default: 1.2,
+        format: value => `${value.toFixed(1)}x`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower2', { sensitivity: value });
+        }
+      },
+      {
+        id: 'envFollower2Threshold',
+        label: 'EF2 Threshold',
+        type: 'range',
+        min: 0.0,
+        max: 1.0,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower2', { threshold: value });
     group: 'Pattern Variations',
     description: 'Randomization and pattern switching for dynamic arrangements.',
     controls: [
@@ -3100,6 +3218,17 @@ function applyAutomationForStep(app, step, time) {
     masterOverdrive: masterOverdriveTrack
   }, step, time);
 
+  // Apply envelope follower modulation
+  const envModulatedTracks = applyEnvelopeFollowerModulation(app, lfoModulatedTracks, step, time);
+
+  const leadValue = clamp(getAutomationValue(envModulatedTracks.leadFilter, step), 0, 1);
+  const fxValue = clamp(getAutomationValue(envModulatedTracks.fxSend, step), 0, 1);
+  const bassValue = clamp(getAutomationValue(envModulatedTracks.bassFilter, step), 0, 1);
+  const reverbValue = clamp(getAutomationValue(envModulatedTracks.reverbDecay, step), 0, 1);
+  const delayValue = clamp(getAutomationValue(envModulatedTracks.delayFeedback, step), 0, 1);
+  const driveValue = clamp(getAutomationValue(envModulatedTracks.bassDrive, step), 0, 1);
+  const resonanceValue = clamp(getAutomationValue(envModulatedTracks.leadResonance, step), 0, 1);
+  const masterValue = clamp(getAutomationValue(envModulatedTracks.masterVolume, step), 0, 1);
   const leadValue = clamp(getAutomationValue(lfoModulatedTracks.leadFilter, step), 0, 1);
   const fxValue = clamp(getAutomationValue(lfoModulatedTracks.fxSend, step), 0, 1);
   const bassValue = clamp(getAutomationValue(lfoModulatedTracks.bassFilter, step), 0, 1);
@@ -3224,6 +3353,45 @@ function applyLFOModulation(app, tracks, step, time) {
     // Apply LFO to the current step
     if (modulatedTracks[lfo.target].values[step] !== undefined) {
       modulatedTracks[lfo.target].values[step] = clamp(modulatedValue, 0, 1);
+    }
+  });
+
+  return modulatedTracks;
+}
+
+function applyEnvelopeFollowerModulation(app, tracks, step, time) {
+  const modulatedTracks = { ...tracks };
+
+  if (!app.audio || !app.audio.envelopeFollowers) {
+    return modulatedTracks;
+  }
+
+  Object.values(app.audio.envelopeFollowers).forEach(follower => {
+    const { node, definition } = follower;
+    if (!node || !definition.enabled) return;
+    
+    const targetTrack = tracks[definition.target];
+    if (!targetTrack) return;
+    
+    // Get current envelope level
+    const envelopeLevel = node.getLevel();
+    const inputLevel = node.getInputLevel();
+    
+    // Apply envelope follower modulation
+    const baseValue = getAutomationValue(targetTrack, step);
+    const modulationAmount = envelopeLevel * 0.3; // Scale down for subtle effect
+    const modulatedValue = baseValue + modulationAmount;
+    
+    // Create a copy of the track with envelope follower modulation
+    modulatedTracks[definition.target] = {
+      ...targetTrack,
+      values: [...targetTrack.values],
+      envModulated: true
+    };
+    
+    // Apply envelope follower to the current step
+    if (modulatedTracks[definition.target].values[step] !== undefined) {
+      modulatedTracks[definition.target].values[step] = clamp(modulatedValue, 0, 1);
     }
   });
 

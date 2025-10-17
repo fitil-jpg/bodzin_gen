@@ -216,6 +216,61 @@ export const LFO_DEFINITIONS = [
   }
 ];
 
+export const ENVELOPE_FOLLOWER_DEFINITIONS = [
+  {
+    id: 'envFollower1',
+    label: 'Envelope Follower 1',
+    color: '#ff9f43',
+    source: 'lead', // Audio source to follow
+    target: 'leadFilter', // Parameter to modulate
+    attackTime: 0.01, // 10ms
+    releaseTime: 0.1, // 100ms
+    sensitivity: 1.0,
+    threshold: 0.0,
+    gate: false,
+    enabled: false
+  },
+  {
+    id: 'envFollower2',
+    label: 'Envelope Follower 2',
+    color: '#ff6348',
+    source: 'bass',
+    target: 'bassFilter',
+    attackTime: 0.005, // 5ms
+    releaseTime: 0.05, // 50ms
+    sensitivity: 1.2,
+    threshold: 0.1,
+    gate: true,
+    enabled: false
+  },
+  {
+    id: 'envFollower3',
+    label: 'Envelope Follower 3',
+    color: '#ff7675',
+    source: 'drums',
+    target: 'fxSend',
+    attackTime: 0.02, // 20ms
+    releaseTime: 0.2, // 200ms
+    sensitivity: 0.8,
+    threshold: 0.05,
+    gate: false,
+    enabled: false
+  },
+  {
+    id: 'envFollower4',
+    label: 'Envelope Follower 4',
+    color: '#fd79a8',
+    source: 'lead',
+    target: 'reverbDecay',
+    attackTime: 0.05, // 50ms
+    releaseTime: 0.5, // 500ms
+    sensitivity: 0.6,
+    threshold: 0.15,
+    gate: true,
+    enabled: false
+  }
+];
+
 export const SECTION_SEQUENCE_ACTIVITY = {
   Intro: { drums: true, bass: false, lead: false, fx: false },
   Lift: { drums: true, bass: true, lead: false, fx: true },
