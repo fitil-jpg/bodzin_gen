@@ -60,6 +60,8 @@ export class AudioEngine {
       lead: new Tone.Gain(0.8),
       fx: new Tone.Gain(0.5)
     };
+    // Connect all buses to EQ chain instead of directly to master
+    Object.values(this.buses).forEach(bus => bus.connect(this.nodes.eq.chain));
 
     this.nodes = this.createEffects();
     
@@ -124,6 +126,9 @@ export class AudioEngine {
 
     const sidechainGain = new Tone.Gain(1);
 
+    // Create EQ with multiple frequency bands
+    const eq = this.createEQ();
+
     return {
       delay,
       reverb,
@@ -131,6 +136,77 @@ export class AudioEngine {
       leadFxSend,
       bassFilter,
       bassDrive,
+      eq
+    };
+  }
+
+  createEQ() {
+    // Create EQ bands with different frequency ranges
+    const eqBands = {
+      lowShelf: new Tone.Filter({
+        type: 'lowshelf',
+        frequency: 120,
+        gain: 0
+      }),
+      lowMid: new Tone.Filter({
+        type: 'peaking',
+        frequency: 400,
+        Q: 1,
+        gain: 0
+      }),
+      mid: new Tone.Filter({
+        type: 'peaking',
+        frequency: 1000,
+        Q: 1,
+        gain: 0
+      }),
+      highMid: new Tone.Filter({
+        type: 'peaking',
+        frequency: 3000,
+        Q: 1,
+        gain: 0
+      }),
+      highShelf: new Tone.Filter({
+        type: 'highshelf',
+        frequency: 8000,
+        gain: 0
+      })
+    };
+
+    // Chain the EQ bands together
+    const eqChain = new Tone.Gain(1);
+    eqChain.chain(
+      eqBands.lowShelf,
+      eqBands.lowMid,
+      eqBands.mid,
+      eqBands.highMid,
+      eqBands.highShelf
+    );
+
+    return {
+      chain: eqChain,
+      bands: eqBands,
+      // Method to get current frequency response for visualization
+      getFrequencyResponse: () => {
+        const frequencies = [];
+        const magnitudes = [];
+        
+        // Generate frequency points for visualization (20Hz to 20kHz)
+        for (let i = 0; i < 1000; i++) {
+          const freq = 20 * Math.pow(10, (i / 1000) * Math.log10(20000 / 20));
+          frequencies.push(freq);
+          
+          // Calculate combined response of all EQ bands
+          let magnitude = 0;
+          Object.values(eqBands).forEach(band => {
+            const response = band.getFrequencyResponse(freq);
+            magnitude += response;
+          });
+          magnitudes.push(magnitude);
+        }
+        
+        return { frequencies, magnitudes };
+      }
       sidechainCompressor,
       sidechainGain
       leadDistortion,
@@ -146,6 +222,8 @@ export class AudioEngine {
     this.nodes.delay.connect(this.master);
     this.nodes.reverb.connect(this.master);
     
+    // Connect EQ to master bus
+    this.nodes.eq.chain.connect(this.master);
     // Initialize sidechain state
     this.sidechainEnabled = true;
   }

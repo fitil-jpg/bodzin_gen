@@ -549,6 +549,72 @@ const CONTROL_SCHEMA = [
     ]
   },
   {
+    group: 'EQ',
+    description: 'Multi-band equalizer with visual feedback.',
+    controls: [
+      {
+        id: 'eqLowShelf',
+        label: 'Low Shelf',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 0.5,
+        default: 0,
+        format: value => `${value > 0 ? '+' : ''}${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          app.audio.nodes.eq.bands.lowShelf.gain.value = value;
+        }
+      },
+      {
+        id: 'eqLowMid',
+        label: 'Low Mid',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 0.5,
+        default: 0,
+        format: value => `${value > 0 ? '+' : ''}${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          app.audio.nodes.eq.bands.lowMid.gain.value = value;
+        }
+      },
+      {
+        id: 'eqMid',
+        label: 'Mid',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 0.5,
+        default: 0,
+        format: value => `${value > 0 ? '+' : ''}${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          app.audio.nodes.eq.bands.mid.gain.value = value;
+        }
+      },
+      {
+        id: 'eqHighMid',
+        label: 'High Mid',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 0.5,
+        default: 0,
+        format: value => `${value > 0 ? '+' : ''}${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          app.audio.nodes.eq.bands.highMid.gain.value = value;
+        }
+      },
+      {
+        id: 'eqHighShelf',
+        label: 'High Shelf',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 0.5,
+        default: 0,
+        format: value => `${value > 0 ? '+' : ''}${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          app.audio.nodes.eq.bands.highShelf.gain.value = value;
     group: 'Distortion & Overdrive',
     description: 'Harmonic saturation and drive effects.',
     controls: [

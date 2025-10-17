@@ -7,17 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
-import { CommunityPresetManager } from './modules/community-preset-manager.js';
-import { PresetVersioning } from './modules/preset-versioning.js';
-import { SearchFilter } from './modules/search-filter.js';
-import { PatternMorphing } from './modules/pattern-morphing.js';
-import { PatternChainManager } from './modules/pattern-chain-manager.js';
-import { MobileGestures } from './modules/mobile-gestures.js';
-import { PresetManager } from './modules/preset-manager.js';
-import { PresetLibraryUI } from './modules/preset-library-ui.js';
-import { PresetManager } from './modules/preset-manager.js';
-import { PresetLibraryUI } from './modules/preset-library-ui.js';
-import { PatternVariationManager } from './modules/pattern-variation-manager.js';
+import { EQVisualizer } from './modules/eq-visualizer.js';
 
 import { 
   STEP_COUNT, 
@@ -81,7 +71,10 @@ function createApp() {
       dataArray: null,
       animationId: null,
       deviceRatio: window.devicePixelRatio || 1
-    }
+    },
+    
+    // EQ Visualizer
+    eqVisualizer: null
   };
 }
 
@@ -140,6 +133,7 @@ async function initializeApp(app) {
   app.uiControls.render();
   setupButtons(app);
   setupWaveform(app);
+  setupEQVisualizer(app);
   setupAutomationScheduling(app);
   
   // Start gain reduction meter animation
@@ -712,6 +706,22 @@ function setupWaveform(app) {
   app.waveform.dataArray = new Uint8Array(app.waveform.analyser.size);
   
   startWaveformAnimation(app);
+}
+
+function setupEQVisualizer(app) {
+  const eqCanvas = document.getElementById('eqDisplay');
+  if (!eqCanvas) return;
+  
+  // Initialize EQ visualizer
+  app.eqVisualizer = new EQVisualizer(eqCanvas, app.audio);
+  
+  // Handle window resize
+  const resizeObserver = new ResizeObserver(() => {
+    if (app.eqVisualizer) {
+      app.eqVisualizer.resize();
+    }
+  });
+  resizeObserver.observe(eqCanvas);
 }
 
 function syncWaveformCanvas(app) {
