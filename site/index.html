@@ -158,6 +158,249 @@
       border-color: var(--border);
     }
 
+    .btn-danger {
+      background: linear-gradient(135deg, #ff4757, #ff3742);
+      color: white;
+      border-color: rgba(255, 71, 87, 0.45);
+    }
+
+    .btn-danger:hover {
+      background: linear-gradient(135deg, #ff5a6b, #ff4a55);
+      box-shadow: 0 8px 24px rgba(255, 71, 87, 0.35);
+    }
+
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-content {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 80vh;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .close-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .history-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .history-entry:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: var(--accent);
+    }
+
+    .history-info {
+      flex: 1;
+    }
+
+    .history-name {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .history-details {
+      font-size: 0.85rem;
+      color: var(--muted);
+      display: flex;
+      gap: 1rem;
+    }
+
+    .history-version {
+      background: var(--accent);
+      color: var(--bg);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .modal-actions {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+    .search-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      position: relative;
+    }
+
+    .search-input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      min-height: 40px;
+      min-width: 200px;
+      transition: all 0.3s ease;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .search-input::placeholder {
+      color: var(--muted);
+    }
+
+    .filter-select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      min-height: 40px;
+      min-width: 120px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .filter-select:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--accent);
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+    }
+
+    #clearSearchButton {
+      padding: 0.4rem 0.8rem;
+      min-width: 40px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .control-row.hidden {
+      display: none;
+    }
+
+    .control-section.hidden {
+      display: none;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: rgba(24, 24, 29, 0.95);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      z-index: 100;
+      margin-top: 0.25rem;
+      backdrop-filter: blur(8px);
+    }
+
+    .search-results.hidden {
+      display: none;
+    }
+
+    .search-results .result-count {
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .search-results .shortcuts {
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    mark {
+      background: rgba(73, 169, 255, 0.3);
+      color: var(--accent);
+      padding: 0.1em 0.2em;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
     .toggle {
       display: inline-flex;
       align-items: center;
@@ -216,6 +459,53 @@
 
     .control-section {
       margin-bottom: 1.5rem;
+    }
+
+    .randomize-section {
+      margin-top: 2rem;
+      padding: 1.25rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .randomize-section:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: var(--accent);
+    }
+
+    .randomize-section h3 {
+      margin: 0 0 1rem 0;
+      font-size: 1.1rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .randomize-buttons {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .randomize-buttons .btn {
+      justify-content: flex-start;
+      text-align: left;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .randomize-buttons .btn:hover {
+      transform: translateX(4px);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .randomize-buttons .btn-primary {
+      margin-top: 0.5rem;
+      justify-content: center;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .control-section h3 {
@@ -409,6 +699,68 @@
       100% { transform: rotate(360deg); }
     }
 
+    /* Morphing animations */
+    @keyframes morphingPulse {
+      0%, 100% { 
+        opacity: 0.6;
+        transform: scale(1);
+      }
+      50% { 
+        opacity: 1;
+        transform: scale(1.05);
+      }
+    }
+
+    @keyframes morphingGlow {
+      0%, 100% { 
+        box-shadow: 0 0 10px rgba(73, 169, 255, 0.3);
+      }
+      50% { 
+        box-shadow: 0 0 20px rgba(73, 169, 255, 0.6), 0 0 30px rgba(255, 73, 175, 0.4);
+      }
+    }
+
+    @keyframes morphingWave {
+      0% { 
+        transform: translateX(-100%);
+        opacity: 0;
+      }
+      50% { 
+        opacity: 1;
+      }
+      100% { 
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+
+    .morphing-active {
+      animation: morphingPulse 2s ease-in-out infinite;
+    }
+
+    .morphing-button {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .morphing-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      animation: morphingWave 2s ease-in-out infinite;
+    }
+
+    .morphing-progress {
+      position: relative;
+      background: linear-gradient(90deg, #49a9ff, #ff49af);
+      background-size: 200% 100%;
+      animation: morphingGlow 1.5s ease-in-out infinite;
+    }
+
     .main-panel {
       display: flex;
       flex-direction: column;
@@ -431,48 +783,92 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
     }
 
-    #sectionLabel {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: var(--accent);
+    .timeline-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
     }
 
-    #status {
+    .zoom-controls, .pan-controls, .timeline-options {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .zoom-level {
       font-size: 0.9rem;
-      color: var(--muted);
-      font-weight: 500;
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 50px;
+      text-align: center;
     }
 
-    .timeline-container {
+    .timeline-options .toggle {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+      min-height: 32px;
+    }
+
+    .timeline-controls .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Waveform container and controls */
+    .waveform-container {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
-      flex: 1;
     }
 
-    #timeline {
-      width: 100%;
-      flex: 1;
-      background: rgba(8, 8, 11, 0.6);
-      border: 1px dashed rgba(73, 169, 255, 0.3);
-      border-radius: 1rem;
-    }
-
-    /* Mobile-first responsive design */
-    #waveform {
-      width: 100%;
-      height: 80px;
-      background: rgba(8, 8, 11, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+    .waveform-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
       border-radius: 0.5rem;
-      opacity: 0.8;
-      transition: opacity 0.3s ease;
+      flex-wrap: wrap;
     }
 
-    #waveform:hover {
+    .waveform-control {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 0.25rem;
+      color: var(--text);
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      min-height: 28px;
+    }
+
+    .waveform-control:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--accent);
+    }
+
+    #eqDisplay {
+      width: 100%;
+      height: 120px;
+      background: rgba(8, 8, 11, 0.6);
+      border: 1px solid rgba(73, 169, 255, 0.2);
+      border-radius: 0.5rem;
+      opacity: 0.9;
+      transition: opacity 0.3s ease;
+      margin-top: 0.5rem;
+    }
+
+    #eqDisplay:hover {
       opacity: 1;
+      border-color: rgba(73, 169, 255, 0.4);
     }
 
     @media (max-width: 1024px) {
@@ -500,6 +896,567 @@
     }
 
     @media (max-width: 768px) {
+    .control-section {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .randomize-section {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-radius: 0.75rem;
+    }
+
+    .randomize-buttons {
+      gap: 0.5rem;
+    }
+
+    .randomize-buttons .btn {
+      padding: 0.6rem 0.8rem;
+      font-size: 0.85rem;
+    }
+
+    .control-section:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .control-section h3 {
+      margin: 0 0 0.5rem 0;
+      color: var(--accent);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .control-description {
+      margin: 0 0 1rem 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+      line-height: 1.4;
+    .waveform-control:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+    }
+
+    .waveform-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+      color: var(--text);
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      transition: background 0.15s ease;
+    }
+
+    .waveform-toggle:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .waveform-toggle input[type="checkbox"] {
+      accent-color: var(--accent);
+      margin: 0;
+    }
+
+    .waveform-control-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 0.25rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .waveform-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .waveform-slider {
+      width: 60px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .waveform-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .waveform-slider::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .waveform-value {
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 30px;
+      text-align: right;
+    }
+
+    #waveform {
+      width: 100%;
+      height: 120px;
+      background: rgba(8, 8, 11, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.5rem;
+      opacity: 0.9;
+      transition: opacity 0.3s ease;
+      cursor: crosshair;
+    }
+
+    #waveform:hover {
+      opacity: 1;
+      border-color: rgba(73, 169, 255, 0.3);
+    .timeline-controls .btn:disabled:hover {
+      transform: none;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .zoom-level {
+      transition: all 0.2s ease;
+    }
+
+    @media (max-width: 768px) {
+      .timeline-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+      }
+
+      .timeline-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+      }
+
+      .zoom-controls, .pan-controls, .timeline-options {
+        gap: 0.25rem;
+      }
+
+      .timeline-controls .btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+        min-height: 36px;
+        min-width: 36px;
+      }
+
+      .zoom-level {
+        font-size: 0.8rem;
+        min-width: 40px;
+      }
+    }
+
+    #sectionLabel {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    #status {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    #patternStatus {
+      font-size: 0.9rem;
+      color: var(--accent);
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .timeline-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      flex: 1;
+    }
+
+    #timeline {
+      width: 100%;
+      flex: 1;
+      background: rgba(8, 8, 11, 0.6);
+      border: 1px dashed rgba(73, 169, 255, 0.3);
+      border-radius: 1rem;
+    }
+
+    /* Mobile-first responsive design */
+    #waveform {
+      width: 100%;
+      height: 80px;
+      background: rgba(8, 8, 11, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.5rem;
+      opacity: 0.8;
+      transition: opacity 0.3s ease;
+      touch-action: manipulation;
+    }
+
+    #waveform:hover {
+      opacity: 1;
+    }
+
+    /* Mobile gesture controls */
+    .gesture-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .gesture-indicator {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: rgba(73, 169, 255, 0.8);
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: white;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
+    }
+
+    .gesture-indicator.active {
+      opacity: 1;
+    }
+
+    /* Mobile timeline touch controls */
+    .timeline-touch-controls {
+      position: relative;
+      touch-action: pan-x pinch-zoom;
+    }
+
+    .timeline-touch-controls::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      z-index: 1;
+    }
+
+    /* Mobile control panels */
+    .mobile-control-panel {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(24, 24, 29, 0.95);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      padding: 1rem;
+      z-index: 20;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .mobile-control-panel.active {
+      transform: translateY(0);
+    }
+
+    .mobile-control-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .mobile-tab {
+      flex: 1;
+      min-width: 80px;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .mobile-tab.active {
+      background: var(--accent);
+      color: #020205;
+      border-color: var(--accent);
+    }
+
+    .mobile-control-content {
+      max-height: 60vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Mobile floating action button */
+    .mobile-fab {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--accent), #3d8bff);
+      border: none;
+      border-radius: 50%;
+      color: #020205;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(73, 169, 255, 0.4);
+      z-index: 15;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mobile-fab:active {
+      transform: scale(0.95);
+    }
+
+    /* Mobile timeline gestures */
+    .timeline-gesture-zone {
+      position: relative;
+      touch-action: pan-x;
+      cursor: grab;
+    }
+
+    .timeline-gesture-zone:active {
+      cursor: grabbing;
+    }
+
+    /* Mobile parameter editing */
+    .mobile-parameter-editor {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 15, 18, 0.95);
+      backdrop-filter: blur(12px);
+      z-index: 25;
+      display: none;
+      flex-direction: column;
+      padding: 1rem;
+    }
+
+    .mobile-parameter-editor.active {
+      display: flex;
+    }
+
+    .parameter-editor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .parameter-editor-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .parameter-editor-close {
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      color: var(--text);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .parameter-editor-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .parameter-value-display {
+      text-align: center;
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 2rem 0;
+    }
+
+    .parameter-slider-container {
+      position: relative;
+      margin: 2rem 0;
+    }
+
+    .parameter-slider {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .parameter-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
+    }
+
+    .parameter-slider::-moz-range-thumb {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
+    }
+
+    @media (max-width: 1024px) {
+      .app-header {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 1rem clamp(1rem, 3vw, 2rem);
+        gap: 0.75rem;
+      }
+
+      .search-container {
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+      }
+
+      .search-input {
+        min-width: 100%;
+      }
+
+      .filter-select {
+        min-width: 100%;
+      }
+
+      .app-layout {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1rem clamp(1rem, 3vw, 2rem) 1.5rem;
+      }
+
+      .sidebar {
+        order: 2;
+        padding: 1rem;
+      }
+
+      .timeline-card {
+        padding: 1rem;
+        min-height: 300px;
+      }
+    }
+
+    @media (max-width: 768px) {
+    .waveform-controls {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+    }
+
+    .waveform-control-group {
+      justify-content: space-between;
+      padding: 0.5rem;
+    }
+
+    .waveform-control {
+      flex: 1;
+      min-width: 80px;
+      .app-header {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .header-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+      }
+
+      .search-container {
+        flex-direction: row;
+        gap: 0.5rem;
+      }
+
+      .search-input {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .filter-select {
+        min-width: 120px;
+      }
+    .led-indicators {
+      gap: 6px;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+    }
+
+    .led-indicator {
+      width: 10px;
+      height: 10px;
+    }
+
+    .led-label {
+      font-size: 9px;
+    }
+
     .control-section {
       margin-bottom: 1.5rem;
       padding: 1rem;
@@ -723,6 +1680,17 @@
       }
     }
 
+    @keyframes slideOutRight {
+      from {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateX(30px);
+      }
+    }
+
     .control-section {
       animation: fadeInUp 0.6s ease-out;
     }
@@ -771,6 +1739,112 @@
     .control-section:nth-child(3) { animation-delay: 0.2s; }
     .control-section:nth-child(4) { animation-delay: 0.3s; }
     .control-section:nth-child(5) { animation-delay: 0.4s; }
+    .control-section:nth-child(6) { animation-delay: 0.5s; }
+
+    /* Compressor/Limiter specific styling */
+    .control-section[data-group="Compressor/Limiter"] {
+      background: linear-gradient(135deg, rgba(255, 73, 175, 0.05), rgba(73, 169, 255, 0.05));
+      border: 1px solid rgba(255, 73, 175, 0.2);
+    }
+
+    .control-section[data-group="Compressor/Limiter"] h3 {
+      background: linear-gradient(135deg, #ff49af, #49a9ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .control-section[data-group="Compressor/Limiter"] .control-row {
+      border-left: 3px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .control-section[data-group="Compressor/Limiter"] .control-row:hover {
+      border-left-color: #ff49af;
+      background: rgba(255, 73, 175, 0.05);
+    }
+
+    /* Gain reduction meter styling */
+    .gain-reduction-meter {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 0.25rem;
+    }
+
+    .gain-reduction-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #26de81, #f7b731, #ff6b6b);
+      width: 0%;
+      transition: width 0.1s ease;
+    }
+
+    /* Compressor status indicator */
+    .compressor-status {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #26de81;
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+
+    .compressor-status.active {
+      opacity: 1;
+      background: #ff6b6b;
+      box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+    }
+
+    .compressor-status.compressing {
+      background: #f7b731;
+      animation: pulse 0.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.7; }
+    }
+
+    /* Compressor ratio display */
+    .compressor-ratio-display {
+      position: absolute;
+      bottom: 0.5rem;
+      right: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    /* Enhanced compressor controls */
+    .control-section[data-group="Compressor/Limiter"] .control-row {
+      position: relative;
+    }
+
+    .control-section[data-group="Compressor/Limiter"] .control-row:hover {
+      transform: translateX(4px);
+    }
+
+    /* Compressor threshold indicator */
+    .threshold-indicator {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 2px;
+      height: 20px;
+      background: var(--accent);
+      transform: translateY(-50%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .control-section[data-group="Compressor/Limiter"] .control-row:hover .threshold-indicator {
+      opacity: 1;
+    }
 
     .timeline-card {
       animation: slideInRight 0.8s ease-out;
@@ -806,6 +1880,19 @@
         grid-template-columns: 1fr;
         padding: 0.75rem 1rem;
         gap: 0.5rem;
+      }
+
+      .search-input {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+        min-height: 36px;
+      }
+
+      .filter-select {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+        min-height: 36px;
+        min-width: 100px;
       }
 
       .header-group {
@@ -995,12 +2082,665 @@
       }
     }
 
+    /* LED Indicator Styles */
+    .led-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .led-indicator.active {
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(73, 169, 255, 0.6);
+      border-color: rgba(73, 169, 255, 0.8);
+      animation: ledPulse 1.5s ease-in-out infinite;
+    }
+
+    .led-indicator.active::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      animation: ledGlow 2s ease-in-out infinite;
+    }
+
+    .led-indicator.drums.active {
+      background: #ff6b6b;
+      box-shadow: 0 0 8px rgba(255, 107, 107, 0.6);
+      border-color: rgba(255, 107, 107, 0.8);
+      animation-delay: 0s;
+    }
+
+    .led-indicator.bass.active {
+      background: #4ecdc4;
+      box-shadow: 0 0 8px rgba(78, 205, 196, 0.6);
+      border-color: rgba(78, 205, 196, 0.8);
+      animation-delay: 0.2s;
+    }
+
+    .led-indicator.lead.active {
+      background: #45b7d1;
+      box-shadow: 0 0 8px rgba(69, 183, 209, 0.6);
+      border-color: rgba(69, 183, 209, 0.8);
+      animation-delay: 0.4s;
+    }
+
+    .led-indicator.fx.active {
+      background: #96ceb4;
+      box-shadow: 0 0 8px rgba(150, 206, 180, 0.6);
+      border-color: rgba(150, 206, 180, 0.8);
+      animation-delay: 0.6s;
+    }
+
+    @keyframes ledPulse {
+      0%, 100% { 
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% { 
+        transform: scale(1.1);
+        opacity: 0.8;
+      }
+    }
+
+    @keyframes ledGlow {
+      0%, 100% { 
+        opacity: 0.8;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      50% { 
+        opacity: 0.4;
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+    }
+
+    .led-indicators {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(4px);
+      transition: all 0.3s ease;
+    }
+
+    .led-indicators:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .led-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .led-label {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
     /* High DPI display optimizations */
     @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
       .btn, .toggle {
         border-width: 0.5px;
       }
     }
+
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-content {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 1.5rem;
+      max-width: 90vw;
+      max-height: 90vh;
+      width: 800px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalSlideIn 0.3s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      color: var(--accent);
+      font-size: 1.5rem;
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 2rem;
+      cursor: pointer;
+      padding: 0;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+
+    .btn-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    /* EQ-specific styling */
+    .control-row[data-control-id*="eq"] {
+      background: linear-gradient(90deg, rgba(73, 169, 255, 0.02), transparent);
+      border-left: 3px solid rgba(73, 169, 255, 0.3);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .control-row[data-control-id*="eq"]:hover {
+      background: linear-gradient(90deg, rgba(73, 169, 255, 0.05), transparent);
+      border-left-color: rgba(73, 169, 255, 0.6);
+      transform: translateX(4px);
+    }
+
+    .control-row[data-control-id*="eq"] .control-value {
+      color: var(--accent);
+      font-weight: 600;
+      text-shadow: 0 0 8px rgba(73, 169, 255, 0.3);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"] {
+      background: linear-gradient(90deg, 
+        rgba(73, 169, 255, 0.1) 0%, 
+        rgba(73, 169, 255, 0.2) 50%, 
+        rgba(73, 169, 255, 0.1) 100%);
+      border: 1px solid rgba(73, 169, 255, 0.2);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"]::-webkit-slider-thumb {
+      background: linear-gradient(135deg, var(--accent), #3d8bff);
+      box-shadow: 0 2px 8px rgba(73, 169, 255, 0.4), 
+                  0 0 0 2px rgba(73, 169, 255, 0.1);
+      border: 2px solid var(--bg);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 4px 16px rgba(73, 169, 255, 0.6),
+                  0 0 0 4px rgba(73, 169, 255, 0.2);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"]::-webkit-slider-thumb:active {
+      transform: scale(1.25);
+      box-shadow: 0 6px 20px rgba(73, 169, 255, 0.8),
+                  0 0 0 6px rgba(73, 169, 255, 0.3);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"]::-moz-range-thumb {
+      background: linear-gradient(135deg, var(--accent), #3d8bff);
+      box-shadow: 0 2px 8px rgba(73, 169, 255, 0.4), 
+                  0 0 0 2px rgba(73, 169, 255, 0.1);
+      border: 2px solid var(--bg);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"]::-moz-range-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 4px 16px rgba(73, 169, 255, 0.6),
+                  0 0 0 4px rgba(73, 169, 255, 0.2);
+    }
+
+    .control-row[data-control-id*="eq"] input[type="range"]::-moz-range-thumb:active {
+      transform: scale(1.25);
+      box-shadow: 0 6px 20px rgba(73, 169, 255, 0.8),
+                  0 0 0 6px rgba(73, 169, 255, 0.3);
+    }
+
+    /* EQ section header styling */
+    .control-section h3:contains("EQ") {
+      background: linear-gradient(135deg, var(--accent), #3d8bff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 20px rgba(73, 169, 255, 0.3);
+    }
+
+    .control-section:nth-child(2) { animation-delay: 0.1s; }
+    .control-section:nth-child(3) { animation-delay: 0.2s; }
+    .control-section:nth-child(4) { animation-delay: 0.3s; }
+    .control-section:nth-child(5) { animation-delay: 0.4s; }
+    /* Preset Search */
+    .preset-search {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .search-input, .category-select, .sort-select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+
+    .search-input:focus, .category-select:focus, .sort-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+    }
+
+    /* Preset Gallery */
+    .preset-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .preset-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preset-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 25px rgba(73, 169, 255, 0.15);
+    }
+
+    .preset-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent), #ff49af);
+    }
+
+    .preset-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0 0 0.5rem 0;
+    }
+
+    .preset-author {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin: 0 0 0.75rem 0;
+    }
+
+    .preset-description {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.4;
+      margin: 0 0 1rem 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .preset-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+    }
+
+    .preset-rating {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .star {
+      color: #ffd700;
+      font-size: 0.9rem;
+    }
+
+    .preset-category {
+      background: rgba(73, 169, 255, 0.1);
+      color: var(--accent);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .preset-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .preset-actions .btn {
+      flex: 1;
+      padding: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    /* Preset Upload */
+    .preset-upload {
+      border-top: 1px solid var(--border);
+      padding-top: 2rem;
+    }
+
+    .preset-upload h3 {
+      color: var(--accent);
+      margin: 0 0 1rem 0;
+    }
+
+    .upload-form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .preset-title-input, .preset-description-input, .preset-category-select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+
+    .preset-description-input {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .preset-title-input:focus, .preset-description-input:focus, .preset-category-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+    }
+
+    /* Share Modal */
+    .share-options {
+      display: grid;
+      gap: 2rem;
+    }
+
+    .share-option {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+    }
+
+    .share-option h3 {
+      color: var(--accent);
+      margin: 0 0 0.5rem 0;
+    }
+
+    .share-option p {
+      color: var(--muted);
+      margin: 0 0 1rem 0;
+      font-size: 0.9rem;
+    }
+
+    .share-link-input {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      width: 100%;
+      margin-right: 0.5rem;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .modal-content {
+        width: 95vw;
+        max-height: 95vh;
+      }
+
+      .preset-search {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+      }
+
+      .preset-gallery {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .preset-card {
+        padding: 1rem;
+      }
+
+      .preset-actions {
+        flex-direction: column;
+      }
+
+      .share-options {
+        gap: 1.5rem;
+      }
+
+      .share-option {
+        padding: 1rem;
+      }
+    }
+
+    /* Landscape mobile optimizations */
+    @media (max-width: 768px) and (orientation: landscape) {
+      .app-layout {
+        grid-template-columns: 300px 1fr;
+        gap: 1rem;
+      }
+
+      .sidebar {
+        order: 1;
+      }
+
+      .timeline-card {
+        min-height: 150px;
+      }
+    }
+
+    /* Preset Library Styles */
+    .preset-modal {
+      font-family: "Inter", "Segoe UI", sans-serif;
+    }
+
+    .preset-modal-content {
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .preset-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preset-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .preset-card:hover::before {
+      left: 100%;
+    }
+
+    .preset-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .category-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateX(4px);
+    }
+
+    .preset-search:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+    }
+
+      select {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+        min-height: 36px;
+      }
+
+      /* Mobile EQ display adjustments */
+      #eqDisplay {
+        height: 80px;
+        margin-top: 0.25rem;
+      }
+    }
+
+      .randomize-section {
+        margin-top: 1rem;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+      }
+
+      .randomize-section h3 {
+        font-size: 0.9rem;
+        margin: 0 0 0.75rem 0;
+      }
+
+      .randomize-buttons .btn {
+        padding: 0.5rem 0.7rem;
+        font-size: 0.8rem;
+        min-height: 32px;
+      }
+    .preset-search::placeholder {
+      color: var(--muted);
+    }
+
+    .preset-actions .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .preset-actions .btn:disabled:hover {
+      transform: none;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    /* Mobile optimizations for preset library */
+    @media (max-width: 768px) {
+      .preset-modal-content {
+        width: 95%;
+        max-height: 95vh;
+        margin: 2.5vh auto;
+        transform: none;
+        top: auto;
+        left: auto;
+      }
+
+      .preset-sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      .preset-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+      }
+
+      .preset-footer {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+      }
+
+      .preset-actions {
+        justify-content: center;
+      }
+
+      .preset-actions .btn {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .preset-header {
+        padding: 1rem;
+      }
 
     /* Curve Editor Styles */
     .curve-editor-modal {
@@ -1392,14 +3132,20 @@
       .app-layout {
         grid-template-columns: 300px 1fr;
         gap: 1rem;
+      .preset-header h2 {
+        font-size: 1.2rem;
       }
 
-      .sidebar {
-        order: 1;
+      .preset-card {
+        padding: 1rem;
       }
 
-      .timeline-card {
-        min-height: 150px;
+      .preset-card h3 {
+        font-size: 1rem;
+      }
+
+      .preset-footer {
+        padding: 1rem;
       }
     }
   </style>
@@ -1419,6 +3165,31 @@
       <div class="header-group" aria-label="Presets">
         <button id="savePresetButton" class="btn">Save Preset</button>
         <button id="loadPresetButton" class="btn">Load Preset</button>
+        <button id="communityPresetsButton" class="btn btn-primary">Community</button>
+        <button id="sharePresetButton" class="btn">Share</button>
+        <button id="presetHistoryButton" class="btn">History</button>
+      </div>
+      <div class="header-group" aria-label="Search and Filter">
+        <div class="search-container">
+          <input type="text" id="searchInput" placeholder="Search controls..." class="search-input">
+          <button id="clearSearchButton" class="btn btn-outline" title="Clear search">×</button>
+          <div id="searchResults" class="search-results"></div>
+        </div>
+        <select id="groupFilter" class="filter-select">
+          <option value="">All Groups</option>
+          <option value="Transport">Transport</option>
+          <option value="Bus Levels">Bus Levels</option>
+          <option value="Bass Synth">Bass Synth</option>
+          <option value="Lead Synth">Lead Synth</option>
+          <option value="Drums">Drums</option>
+          <option value="FX">FX</option>
+          <option value="LFO">LFO</option>
+        </select>
+        <select id="typeFilter" class="filter-select">
+          <option value="">All Types</option>
+          <option value="range">Sliders</option>
+          <option value="select">Dropdowns</option>
+        </select>
       </div>
       <div class="header-group" aria-label="Integrations">
         <label class="toggle" for="midiLearnToggle">
@@ -1426,29 +3197,267 @@
           MIDI Learn
         </label>
         <button id="curveEditorButton" class="btn">Curve Editor</button>
+        <button id="triggerVariationButton" class="btn">Trigger Variation</button>
+        <button id="morphToLiftButton" class="btn">Morph to Lift</button>
+        <button id="morphToPeakButton" class="btn">Morph to Peak</button>
+        <button id="morphToBreakButton" class="btn">Morph to Break</button>
         <button id="exportMixButton" class="btn">Export Mix</button>
         <button id="exportStemsButton" class="btn">Export Stems</button>
+        <button id="exportChainButton" class="btn">Export Chain</button>
+        <button id="importChainButton" class="btn">Import Chain</button>
+      </div>
+      <div class="header-group" aria-label="Pattern Variations">
+        <button id="patternAButton" class="btn btn-primary">Pattern A</button>
+        <button id="patternBButton" class="btn">Pattern B</button>
+        <button id="patternCButton" class="btn">Pattern C</button>
+        <button id="randomizePatternButton" class="btn">Randomize</button>
       </div>
     </header>
     <div class="app-layout">
       <aside class="sidebar">
         <h2>Sound Controls</h2>
         <div id="controls"></div>
+        <div class="randomize-section">
+          <h3>Pattern Variations</h3>
+          <div class="randomize-buttons">
+            <button id="randomizeDrums" class="btn btn-outline">🎵 Randomize Drums</button>
+            <button id="randomizeBass" class="btn btn-outline">🎸 Randomize Bass</button>
+            <button id="randomizeLead" class="btn btn-outline">🎹 Randomize Lead</button>
+            <button id="randomizeFx" class="btn btn-outline">🎛️ Randomize FX</button>
+            <button id="randomizeAll" class="btn btn-primary">🎲 Randomize All</button>
+        
+        <!-- Pattern Chaining Controls -->
+        <div class="control-section">
+          <h3>Pattern Chaining</h3>
+          <div class="control-description">
+            Chain multiple patterns together to create longer, evolving sequences. Perfect for extended music generation.
+          </div>
+          
+          <div class="control-row">
+            <label class="label">Enable Chaining</label>
+            <div class="control-input">
+              <label class="toggle">
+                <input type="checkbox" id="patternChainingToggle">
+                <span>Active</span>
+              </label>
+            </div>
+            <div class="control-value" id="chainingStatus">Off</div>
+          </div>
+          
+          <div class="control-row">
+            <label class="label">Chain Length</label>
+            <div class="control-input">
+              <input type="range" id="chainLengthSlider" min="2" max="8" value="4" step="1">
+            </div>
+            <div class="control-value" id="chainLengthValue">4</div>
+          </div>
+          
+          <div class="control-row">
+            <label class="label">Variation Intensity</label>
+            <div class="control-input">
+              <input type="range" id="variationIntensitySlider" min="0" max="1" value="0.3" step="0.1">
+            </div>
+            <div class="control-value" id="variationIntensityValue">30%</div>
+          </div>
+          
+          <div class="control-row">
+            <label class="label">Transition Mode</label>
+            <div class="control-input">
+              <select id="transitionModeSelect">
+                <option value="immediate">Immediate</option>
+                <option value="fade">Fade</option>
+                <option value="crossfade">Crossfade</option>
+                <option value="stutter">Stutter</option>
+              </select>
+            </div>
+            <div class="control-value" id="transitionModeValue">Immediate</div>
+          </div>
+          
+          <div class="control-row">
+            <label class="label">Chain Position</label>
+            <div class="control-input">
+              <input type="range" id="chainPositionSlider" min="0" max="3" value="0" step="1" disabled>
+            </div>
+            <div class="control-value" id="chainPositionValue">1/4</div>
+          </div>
+        </div>
       </aside>
       <main class="main-panel">
         <section class="timeline-card">
           <div class="timeline-header">
             <div id="sectionLabel">Section: Intro</div>
+            <div class="timeline-controls">
+              <div class="zoom-controls">
+                <button id="zoomOut" class="btn btn-outline" title="Zoom Out">−</button>
+                <span id="zoomLevel" class="zoom-level">100%</span>
+                <button id="zoomIn" class="btn btn-outline" title="Zoom In">+</button>
+                <button id="zoomFit" class="btn btn-outline" title="Fit to Window">Fit</button>
+              </div>
+              <div class="pan-controls">
+                <button id="panLeft" class="btn btn-outline" title="Pan Left">←</button>
+                <button id="panRight" class="btn btn-outline" title="Pan Right">→</button>
+                <button id="goToStart" class="btn btn-outline" title="Go to Start">⏮</button>
+                <button id="goToEnd" class="btn btn-outline" title="Go to End">⏭</button>
+              </div>
+              <div class="timeline-options">
+                <label class="toggle" for="snapToGridToggle">
+                  <input type="checkbox" id="snapToGridToggle" checked>
+                  Snap
+                </label>
+                <label class="toggle" for="showRulerToggle">
+                  <input type="checkbox" id="showRulerToggle" checked>
+                  Ruler
+                </label>
+              </div>
+            </div>
             <div id="status">Status: Idle</div>
+            <div id="patternStatus">Pattern: A</div>
+          </div>
+          <div class="led-indicators">
+            <div class="led-group">
+              <div class="led-indicator drums" id="led-drums"></div>
+              <div class="led-label">Drums</div>
+            </div>
+            <div class="led-group">
+              <div class="led-indicator bass" id="led-bass"></div>
+              <div class="led-label">Bass</div>
+            </div>
+            <div class="led-group">
+              <div class="led-indicator lead" id="led-lead"></div>
+              <div class="led-label">Lead</div>
+            </div>
+            <div class="led-group">
+              <div class="led-indicator fx" id="led-fx"></div>
+              <div class="led-label">FX</div>
+            </div>
           </div>
           <div class="timeline-container">
             <canvas id="timeline" width="1200" height="240" aria-label="Arrangement timeline"></canvas>
             <canvas id="waveform" width="1200" height="80" aria-label="Audio waveform visualization"></canvas>
+            <canvas id="eqDisplay" width="1200" height="120" aria-label="EQ frequency response visualization"></canvas>
+            <div class="waveform-container">
+              <div class="waveform-controls">
+                <select id="waveformMode" class="waveform-control">
+                  <option value="bars">Bars</option>
+                  <option value="line">Line</option>
+                  <option value="oscilloscope">Oscilloscope</option>
+                  <option value="spectrum">Spectrum</option>
+                </select>
+                <select id="waveformColor" class="waveform-control">
+                  <option value="gradient">Gradient</option>
+                  <option value="solid">Solid</option>
+                  <option value="rainbow">Rainbow</option>
+                </select>
+                <label class="waveform-toggle">
+                  <input type="checkbox" id="waveformGrid" checked>
+                  Grid
+                </label>
+                <label class="waveform-toggle">
+                  <input type="checkbox" id="waveformPeaks" checked>
+                  Peaks
+                </label>
+              </div>
+              <canvas id="waveform" width="1200" height="120" aria-label="Audio waveform visualization"></canvas>
+            </div>
           </div>
         </section>
       </main>
     </div>
   </div>
+
+  <!-- Community Presets Modal -->
+  <div id="communityPresetsModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Community Presets</h2>
+        <button id="closeCommunityModal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="preset-search">
+          <input type="text" id="presetSearch" placeholder="Search presets..." class="search-input">
+          <select id="presetCategory" class="category-select">
+            <option value="">All Categories</option>
+            <option value="techno">Techno</option>
+            <option value="house">House</option>
+            <option value="ambient">Ambient</option>
+            <option value="experimental">Experimental</option>
+          </select>
+          <select id="presetSort" class="sort-select">
+            <option value="newest">Newest</option>
+            <option value="popular">Most Popular</option>
+            <option value="rating">Highest Rated</option>
+            <option value="name">Name A-Z</option>
+          </select>
+        </div>
+        <div id="presetGallery" class="preset-gallery">
+          <!-- Presets will be loaded here -->
+        </div>
+        <div class="preset-upload">
+          <h3>Share Your Preset</h3>
+          <div class="upload-form">
+            <input type="file" id="presetFileInput" accept=".json" style="display: none;">
+            <button id="selectPresetFile" class="btn">Select Preset File</button>
+            <input type="text" id="presetTitle" placeholder="Preset title..." class="preset-title-input">
+            <textarea id="presetDescription" placeholder="Describe your preset..." class="preset-description-input"></textarea>
+            <select id="presetCategorySelect" class="preset-category-select">
+              <option value="techno">Techno</option>
+              <option value="house">House</option>
+              <option value="ambient">Ambient</option>
+              <option value="experimental">Experimental</option>
+            </select>
+            <button id="uploadPreset" class="btn btn-primary">Upload to Community</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preset Share Modal -->
+  <div id="sharePresetModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Share Preset</h2>
+        <button id="closeShareModal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="share-options">
+          <div class="share-option">
+            <h3>Download Preset</h3>
+            <p>Download your current preset as a JSON file</p>
+            <button id="downloadCurrentPreset" class="btn btn-primary">Download</button>
+          </div>
+          <div class="share-option">
+            <h3>Generate Share Link</h3>
+            <p>Create a shareable link for your preset</p>
+            <button id="generateShareLink" class="btn">Generate Link</button>
+            <div id="shareLinkContainer" style="display: none; margin-top: 1rem;">
+              <input type="text" id="shareLink" readonly class="share-link-input">
+              <button id="copyShareLink" class="btn">Copy</button>
+            </div>
+          </div>
+          <div class="share-option">
+            <h3>Upload to Community</h3>
+            <p>Share your preset with the community</p>
+            <button id="uploadToCommunity" class="btn">Upload</button>
+          </div>
+  <!-- Preset History Modal -->
+  <div id="presetHistoryModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Preset History</h3>
+        <button id="closeHistoryModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="presetHistoryList" class="history-list">
+          <!-- History entries will be populated here -->
+        </div>
+        <div class="modal-actions">
+          <button id="clearHistoryButton" class="btn btn-danger">Clear History</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script type="text/javascript">const preset = JSON.parse(atob("e30="));</script>
   <script type="module" src="app-modular.js"></script>
 </body>
