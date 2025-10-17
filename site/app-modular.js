@@ -436,6 +436,7 @@ function buildPresetPayload(app, name) {
       sections: app.automation.sections.map(section => ({ ...section }))
     },
     midiMappings: { ...app.midi.mappings },
+    probabilitySettings: app.audio.exportProbabilitySettings()
     patternVariations: app.patternVariation ? app.patternVariation.getPatternForPreset() : null
   };
 }
@@ -503,6 +504,8 @@ function applyPreset(app, presetData) {
     app.midi.mappings = { ...presetData.midiMappings };
     app.midi.saveMappings();
   }
+  if (presetData.probabilitySettings) {
+    app.audio.importProbabilitySettings(presetData.probabilitySettings);
   if (presetData.patternVariations && app.patternVariation) {
     app.patternVariation.applyPatternFromPreset(presetData.patternVariations);
   }
@@ -788,6 +791,20 @@ function updateSectionLabel(app, step, sectionOverride) {
 }
 
 function applyAutomationForStep(app, step, time) {
+  // Update audio engine context for probability calculations
+  const section = getSectionForStep(app, step);
+  app.audio.updateStepContext(step, section);
+  
+  // Process probability-based triggers
+  if (time !== undefined) {
+    app.audio.processProbabilityTriggers(time);
+  }
+  
+  // Apply automation curves to audio parameters
+  if (app.automation && app.automation.tracks) {
+    app.automation.tracks.forEach(track => {
+      const value = track.values[step] || 0;
+      applyAutomationValue(app, track.id, value);
   if (!app.automation || !app.automation.tracks) return;
   
   // Apply pattern variation if enabled
@@ -831,6 +848,50 @@ function applyAutomationForStep(app, step, time) {
 }
 
 function applyAutomationValue(app, trackId, value) {
+  const audio = app.audio;
+  
+  switch (trackId) {
+    case 'leadFilter':
+      if (audio.nodes.leadFilter) {
+        audio.nodes.leadFilter.frequency.value = 200 + (value * 2000);
+      }
+      break;
+      
+    case 'fxSend':
+      if (audio.nodes.leadFxSend) {
+        audio.nodes.leadFxSend.gain.value = value;
+      }
+      break;
+      
+    case 'bassFilter':
+      if (audio.nodes.bassFilter) {
+        audio.nodes.bassFilter.frequency.value = 50 + (value * 500);
+      }
+      break;
+      
+    case 'reverbDecay':
+      if (audio.nodes.reverb) {
+        audio.nodes.reverb.decay = 1 + (value * 9);
+      }
+      break;
+      
+    case 'delayFeedback':
+      if (audio.nodes.delay) {
+        audio.nodes.delay.feedback.value = value * 0.9;
+      }
+      break;
+      
+    case 'bassDrive':
+      if (audio.nodes.bassDrive) {
+        audio.nodes.bassDrive.distortion = value;
+      }
+      break;
+      
+    case 'masterVolume':
+      if (audio.master) {
+        audio.master.gain.value = 0.1 + (value * 0.8);
+      }
+      break;
   // Apply automation value to the appropriate audio parameter
   // This would need to be connected to the actual audio engine parameters
   if (app.audio && app.audio.applyAutomation) {

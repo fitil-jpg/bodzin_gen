@@ -254,6 +254,77 @@ export const CONTROL_SCHEMA = [
     ]
   },
   {
+    group: 'Probability Triggers',
+    description: 'Dynamic trigger system with probability-based patterns.',
+    controls: [
+      {
+        id: 'probabilityEnabled',
+        label: 'Enable Probability Triggers',
+        type: 'select',
+        options: [
+          { value: false, label: 'Fixed Patterns' },
+          { value: true, label: 'Probability Based' }
+        ],
+        default: false,
+        apply: (value, app) => {
+          app.audio.setProbabilityTriggersEnabled(value);
+        }
+      },
+      {
+        id: 'probabilityEntropy',
+        label: 'Randomness',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.5,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setEntropy(value);
+        }
+      },
+      {
+        id: 'kickProbability',
+        label: 'Kick Probability',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.8,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setBaseProbability('kick', value);
+        }
+      },
+      {
+        id: 'snareProbability',
+        label: 'Snare Probability',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.6,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setBaseProbability('snare', value);
+        }
+      },
+      {
+        id: 'hatsProbability',
+        label: 'Hats Probability',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.7,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setBaseProbability('hats', value);
+        }
+      },
+      {
+        id: 'bassProbability',
+        label: 'Bass Probability',
     group: 'Bus Levels',
     description: 'Mix bus trims for the core stems.',
     controls: [
@@ -373,6 +444,28 @@ export const CONTROL_SCHEMA = [
         min: 0,
         max: 1,
         step: 0.01,
+        default: 0.6,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setBaseProbability('bass', value);
+        }
+      },
+      {
+        id: 'leadProbability',
+        label: 'Lead Probability',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.5,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setBaseProbability('lead', value);
+        }
+      },
+      {
+        id: 'fxProbability',
+        label: 'FX Probability',
         default: 0.35,
         format: value => `${Math.round(value * 100)}%`,
         apply: (value, app) => {
@@ -455,6 +548,8 @@ export const CONTROL_SCHEMA = [
         step: 0.01,
         default: 0.3,
         format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setBaseProbability('fx', value);
         affectsAutomation: true,
         apply: (value, app) => {
           if (app.audio && app.audio.nodes && app.audio.nodes.leadFxSend) {
@@ -583,6 +678,11 @@ export const CONTROL_SCHEMA = [
         min: -24,
         max: 6,
         step: 0.5,
+        default: -6,
+        format: value => `${Math.round(value)} dB`,
+        apply: (value, app) => {
+          const db = 20 * Math.log10(Math.max(0.001, Math.pow(10, value / 20)));
+          app.audio.buses.bass.gain.value = db;
         default: -2,
         format: value => `${value.toFixed(1)} dB`,
         apply: (value, app) => {
