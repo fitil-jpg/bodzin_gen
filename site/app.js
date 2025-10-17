@@ -1,3 +1,40 @@
+/**
+ * Main Application Module
+ * Orchestrates all other modules and handles application lifecycle
+ */
+
+import { AudioModule } from './audio.js';
+import { UIModule } from './ui.js';
+import { WaveformModule } from './waveform.js';
+
+export class App {
+  constructor() {
+    this.audio = new AudioModule();
+    this.ui = new UIModule(this);
+    this.waveform = new WaveformModule(this);
+    this.isInitialized = false;
+  }
+
+  async init() {
+    try {
+      this.ui.setStatus('Initializing application...');
+      
+      // Initialize audio first
+      await this.audio.init();
+      
+      // Initialize waveform
+      this.waveform.init();
+      
+      this.isInitialized = true;
+      this.ui.setStatus('Application ready');
+      
+      // Set up global error handling
+      window.addEventListener('error', (event) => {
+        this.ui.showError(event.error.message);
+      });
+      
+      window.addEventListener('unhandledrejection', (event) => {
+        this.ui.showError(event.reason);
 'use strict';
 
 const STEP_COUNT = 16;
@@ -3516,106 +3553,16 @@ function normalizeAutomationState(automation, stepCount = STEP_COUNT) {
         color,
         values: normalizeAutomationValues(baseValues, stepCount)
       });
-      seenIds.add(trackData.id);
-    });
-  }
-
-  defaults.tracks.forEach(track => {
-    if (seenIds.has(track.id)) {
-      return;
-    }
-    normalizedTracks.push({
-      id: track.id,
-      label: track.label,
-      color: track.color,
-      values: track.values.slice()
-    });
-    seenIds.add(track.id);
-  });
-
-  normalizedTracks.sort((a, b) => {
-    const orderA = AUTOMATION_TRACK_ORDER.get(a.id);
-    const orderB = AUTOMATION_TRACK_ORDER.get(b.id);
-    if (orderA === undefined && orderB === undefined) {
-      return a.id.localeCompare(b.id);
-    }
-    if (orderA === undefined) return 1;
-    if (orderB === undefined) return -1;
-    return orderA - orderB;
-  });
-
-  let sections = defaults.sections.map(section => ({ ...section }));
-  if (automation && Array.isArray(automation.sections) && automation.sections.length) {
-    const normalizedSections = normalizeSections(automation.sections, stepCount);
-    if (normalizedSections.length) {
-      sections = normalizedSections;
+      
+    } catch (error) {
+      this.ui.showError(`Failed to initialize: ${error.message}`);
+      throw error;
     }
   }
 
-  return { tracks: normalizedTracks, sections };
-}
-
-function normalizeSections(sections, stepCount = STEP_COUNT) {
-  if (!Array.isArray(sections) || sections.length === 0) {
-    return createSectionLayout(stepCount);
+  setStatus(message) {
+    this.ui.setStatus(message);
   }
-
-  const defaultLayout = createSectionLayout(stepCount);
-  const sanitized = sections
-    .map(section => {
-      if (!section) {
-        return null;
-      }
-      const start = Number(section.start);
-      const end = Number(section.end);
-      if (!Number.isFinite(start) || !Number.isFinite(end)) {
-        return null;
-      }
-      return {
-        name: section.name,
-        color: section.color,
-        start,
-        end
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.start - b.start);
-
-  if (!sanitized.length) {
-    return defaultLayout;
-  }
-
-  const maxEnd = sanitized.reduce((max, section) => Math.max(max, section.end), 0);
-  const sourceSpan = Math.max(maxEnd, 1);
-  const targetMax = Math.max(stepCount - 1, 0);
-
-  let lastEnd = -1;
-  const normalized = sanitized.map((section, index) => {
-    const definition = SECTION_DEFINITIONS.find(def => def.name === section.name);
-    const fallback = defaultLayout[index % defaultLayout.length];
-    const color = section.color || definition?.color || fallback.color;
-    const scaledStart = sourceSpan > 0 ? Math.round((section.start / sourceSpan) * targetMax) : 0;
-    const scaledEnd = sourceSpan > 0 ? Math.round((section.end / sourceSpan) * targetMax) : 0;
-    let start = clamp(Number.isFinite(scaledStart) ? scaledStart : 0, 0, targetMax);
-    let end = clamp(Number.isFinite(scaledEnd) ? scaledEnd : start, 0, targetMax);
-    start = Math.min(Math.max(start, lastEnd + 1), targetMax);
-    if (end < start) {
-      end = start;
-    }
-    lastEnd = end;
-    return {
-      name: section.name || definition?.name || fallback.name,
-      color,
-      start,
-      end
-    };
-  });
-
-  if (normalized.length) {
-    normalized[0].start = 0;
-    normalized[normalized.length - 1].end = targetMax;
-  }
-
   return normalized;
 }
 
@@ -3754,44 +3701,20 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-function setupMidi(app) {
-  if (!navigator.requestMIDIAccess) {
-    console.info('WebMIDI not supported in this browser.');
-    return;
+  showError(message) {
+    this.ui.showError(message);
   }
-  navigator.requestMIDIAccess().then(access => {
-    app.midi.access = access;
-    access.inputs.forEach(input => {
-      input.onmidimessage = message => handleMidiMessage(app, message);
-    });
-    access.addEventListener('statechange', () => {
-      access.inputs.forEach(input => {
-        input.onmidimessage = message => handleMidiMessage(app, message);
-      });
-    });
-    setStatus(app, 'MIDI ready');
-  }).catch(error => {
-    console.warn('MIDI access denied', error);
-    setStatus(app, 'MIDI unavailable');
-  });
-}
 
-function setMidiLearn(app, enabled) {
-  app.midi.learning = enabled;
-  if (!enabled) {
-    setMidiPendingControl(app, null);
+  showSuccess(message) {
+    this.ui.showSuccess(message);
   }
-  setStatus(app, enabled ? 'MIDI Learn enabled' : 'MIDI Learn disabled');
-}
 
-function setMidiPendingControl(app, controlId) {
-  app.midi.pendingControl = controlId;
-  app.controls.forEach(entry => {
-    if (controlId && entry.control.id === controlId) {
-      entry.row.classList.add('midi-learning');
-    } else {
-      entry.row.classList.remove('midi-learning');
+  destroy() {
+    if (this.waveform) {
+      this.waveform.destroy();
     }
+    if (this.audio) {
+      this.audio.destroy();
   });
 }
 
@@ -3884,100 +3807,19 @@ function setStatus(app, message) {
   }
 }
 
-function wait(seconds) {
-  return new Promise(resolve => setTimeout(resolve, seconds * 1000));
-}
-
-function formatDb(value) {
-  return `${value.toFixed(1)} dB`;
-}
-
-function formatHz(value) {
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(2)} kHz`;
-  }
-  return `${Math.round(value)} Hz`;
-}
-
-function setBusLevel(bus, db) {
-  if (!bus) return;
-  bus.gain.value = Tone.dbToGain(db);
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function slugify(name) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'preset';
-}
-
-function cloneAutomation(source) {
-  return {
-    tracks: source.tracks.map(track => ({
-      id: track.id,
-      label: track.label,
-      color: track.color,
-      values: [...track.values]
-    })),
-    sections: source.sections.map(section => ({ ...section }))
-  };
-}
-
-function saveControlState(state) {
+// Initialize app when DOM is loaded
+document.addEventListener('DOMContentLoaded', async () => {
+  window.app = new App();
   try {
-    localStorage.setItem(STORAGE_KEYS.controlState, JSON.stringify(state));
-  } catch (err) {
-    console.warn('Unable to persist control state', err);
+    await window.app.init();
+  } catch (error) {
+    console.error('Failed to start application:', error);
   }
-}
+});
 
-function loadControlState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.controlState);
-    return raw ? JSON.parse(raw) : {};
-  } catch (err) {
-    console.warn('Unable to read stored control state', err);
-    return {};
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  if (window.app) {
+    window.app.destroy();
   }
-}
-
-function savePresetState(preset) {
-  try {
-    localStorage.setItem(STORAGE_KEYS.preset, JSON.stringify(preset));
-  } catch (err) {
-    console.warn('Unable to store preset', err);
-  }
-}
-
-function loadPresetState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.preset);
-    return raw ? JSON.parse(raw) : null;
-  } catch (err) {
-    console.warn('Unable to load preset', err);
-    return null;
-  }
-}
-
-function saveMidiMappings(mappings) {
-  try {
-    localStorage.setItem(STORAGE_KEYS.midi, JSON.stringify(mappings));
-  } catch (err) {
-    console.warn('Unable to persist MIDI mappings', err);
-  }
-}
-
-function loadMidiMappings() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.midi);
-    return raw ? JSON.parse(raw) : {};
-  } catch (err) {
-    console.warn('Unable to load MIDI mappings', err);
-    return {};
-  }
-}
-
+});
