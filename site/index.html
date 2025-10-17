@@ -3148,6 +3148,19 @@
         padding: 1rem;
       }
     }
+
+    /* Screen reader only class for accessibility */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.39/Tone.min.js"></script>
 </head>
@@ -3171,10 +3184,12 @@
       </div>
       <div class="header-group" aria-label="Search and Filter">
         <div class="search-container">
+          <label for="searchInput" class="sr-only">Search controls</label>
           <input type="text" id="searchInput" placeholder="Search controls..." class="search-input">
           <button id="clearSearchButton" class="btn btn-outline" title="Clear search">×</button>
           <div id="searchResults" class="search-results"></div>
         </div>
+        <label for="groupFilter" class="sr-only">Filter by group</label>
         <select id="groupFilter" class="filter-select">
           <option value="">All Groups</option>
           <option value="Transport">Transport</option>
@@ -3185,6 +3200,7 @@
           <option value="FX">FX</option>
           <option value="LFO">LFO</option>
         </select>
+        <label for="typeFilter" class="sr-only">Filter by type</label>
         <select id="typeFilter" class="filter-select">
           <option value="">All Types</option>
           <option value="range">Sliders</option>
@@ -3263,6 +3279,7 @@
           <div class="control-row">
             <label class="label">Transition Mode</label>
             <div class="control-input">
+              <label for="transitionModeSelect" class="sr-only">Transition mode</label>
               <select id="transitionModeSelect">
                 <option value="immediate">Immediate</option>
                 <option value="fade">Fade</option>
@@ -3337,12 +3354,14 @@
             <canvas id="eqDisplay" width="1200" height="120" aria-label="EQ frequency response visualization"></canvas>
             <div class="waveform-container">
               <div class="waveform-controls">
+                <label for="waveformMode" class="sr-only">Waveform mode</label>
                 <select id="waveformMode" class="waveform-control">
                   <option value="bars">Bars</option>
                   <option value="line">Line</option>
                   <option value="oscilloscope">Oscilloscope</option>
                   <option value="spectrum">Spectrum</option>
                 </select>
+                <label for="waveformColor" class="sr-only">Waveform color</label>
                 <select id="waveformColor" class="waveform-control">
                   <option value="gradient">Gradient</option>
                   <option value="solid">Solid</option>
@@ -3374,7 +3393,9 @@
       </div>
       <div class="modal-body">
         <div class="preset-search">
+          <label for="presetSearch" class="sr-only">Search presets</label>
           <input type="text" id="presetSearch" placeholder="Search presets..." class="search-input">
+          <label for="presetCategory" class="sr-only">Filter by category</label>
           <select id="presetCategory" class="category-select">
             <option value="">All Categories</option>
             <option value="techno">Techno</option>
@@ -3382,6 +3403,7 @@
             <option value="ambient">Ambient</option>
             <option value="experimental">Experimental</option>
           </select>
+          <label for="presetSort" class="sr-only">Sort presets</label>
           <select id="presetSort" class="sort-select">
             <option value="newest">Newest</option>
             <option value="popular">Most Popular</option>
@@ -3395,10 +3417,14 @@
         <div class="preset-upload">
           <h3>Share Your Preset</h3>
           <div class="upload-form">
+            <label for="presetFileInput" style="display: none;">Select Preset File</label>
             <input type="file" id="presetFileInput" accept=".json" style="display: none;">
             <button id="selectPresetFile" class="btn">Select Preset File</button>
+            <label for="presetTitle" class="sr-only">Preset title</label>
             <input type="text" id="presetTitle" placeholder="Preset title..." class="preset-title-input">
+            <label for="presetDescription" class="sr-only">Preset description</label>
             <textarea id="presetDescription" placeholder="Describe your preset..." class="preset-description-input"></textarea>
+            <label for="presetCategorySelect" class="sr-only">Preset category</label>
             <select id="presetCategorySelect" class="preset-category-select">
               <option value="techno">Techno</option>
               <option value="house">House</option>
@@ -3431,6 +3457,7 @@
             <p>Create a shareable link for your preset</p>
             <button id="generateShareLink" class="btn">Generate Link</button>
             <div id="shareLinkContainer" style="display: none; margin-top: 1rem;">
+              <label for="shareLink" class="sr-only">Share link</label>
               <input type="text" id="shareLink" readonly class="share-link-input">
               <button id="copyShareLink" class="btn">Copy</button>
             </div>
