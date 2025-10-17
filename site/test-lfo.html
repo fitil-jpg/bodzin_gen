@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>LFO Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #1a1a1a;
+      color: white;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 1px solid #333;
+      border-radius: 8px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #49a9ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #3d8bff;
+    }
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      background: #333;
+      border-radius: 4px;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.39/Tone.min.js"></script>
+</head>
+<body>
+  <h1>LFO Implementation Test</h1>
+  
+  <div class="test-section">
+    <h2>Basic LFO Test</h2>
+    <button id="startTest">Start Test</button>
+    <button id="stopTest">Stop Test</button>
+    <div id="status" class="status">Ready to test...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>LFO Values</h2>
+    <div id="lfoValues">LFO values will appear here...</div>
+  </div>
+
+  <script type="module">
+    import { LFOManager } from './modules/lfo-manager.js';
+
+    // Create a mock app object for testing
+    const mockApp = {
+      audio: {
+        nodes: {
+          leadFilter: new Tone.Filter(520, 'lowpass', -12),
+          leadFxSend: new Tone.Gain(0.45),
+          bassFilter: new Tone.Filter(140, 'lowpass', -12),
+          reverb: new Tone.Reverb({ decay: 6, wet: 0.28 }),
+          delay: new Tone.FeedbackDelay('8n', 0.38),
+          bassDrive: new Tone.Distortion(0.35)
+        },
+        master: new Tone.Gain(0.9)
+      }
+    };
+
+    // Initialize LFO manager
+    const lfoManager = new LFOManager(mockApp).initialize();
+
+    // Test controls
+    const startBtn = document.getElementById('startTest');
+    const stopBtn = document.getElementById('stopTest');
+    const status = document.getElementById('status');
+    const lfoValues = document.getElementById('lfoValues');
+
+    let testInterval;
+
+    startBtn.addEventListener('click', async () => {
+      try {
+        await Tone.start();
+        status.textContent = 'Starting test...';
+        
+        // Start LFOs
+        lfoManager.setLFOEnabled('lfo1', true);
+        lfoManager.setLFOEnabled('lfo2', true);
+        
+        // Start monitoring
+        testInterval = setInterval(() => {
+          const states = lfoManager.getAllLFOStates();
+          lfoValues.innerHTML = states.map(state => 
+            `<div>${state.label}: ${state.enabled ? 'ON' : 'OFF'} - Rate: ${state.rate}Hz - Depth: ${(state.depth * 100).toFixed(1)}% - Value: ${state.value.toFixed(3)}</div>`
+          ).join('');
+        }, 100);
+        
+        status.textContent = 'Test running... LFOs are active.';
+      } catch (error) {
+        status.textContent = 'Error: ' + error.message;
+        console.error(error);
+      }
+    });
+
+    stopBtn.addEventListener('click', () => {
+      if (testInterval) {
+        clearInterval(testInterval);
+      }
+      lfoManager.setLFOEnabled('lfo1', false);
+      lfoManager.setLFOEnabled('lfo2', false);
+      status.textContent = 'Test stopped.';
+    });
+  </script>
+</body>
+</html>

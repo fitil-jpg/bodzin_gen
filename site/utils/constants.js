@@ -978,6 +978,358 @@ export const CONTROL_SCHEMA = [
     ]
   },
   {
+    group: 'Effects',
+    description: 'Time-based and spatial effects.',
+    controls: [
+      {
+        id: 'delayTime',
+        label: 'Delay Time',
+        type: 'select',
+        options: [
+          { value: '16n', label: '1/16' },
+          { value: '8n', label: '1/8' },
+          { value: '4n', label: '1/4' }
+        ],
+        default: '8n',
+        apply: (value, app) => {
+          if (app.audio?.nodes?.delay) {
+            app.audio.nodes.delay.delayTime.value = value;
+          }
+        }
+      },
+      {
+        id: 'delayFeedback',
+        label: 'Delay Feedback',
+        type: 'range',
+        min: 0,
+        max: 0.9,
+        step: 0.01,
+        default: 0.38,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.audio?.nodes?.delay) {
+            app.audio.nodes.delay.feedback.value = value;
+          }
+        }
+      },
+      {
+        id: 'delayWet',
+        label: 'Delay Wet',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.3,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.audio?.nodes?.delay) {
+            app.audio.nodes.delay.wet.value = value;
+          }
+        }
+      },
+      {
+        id: 'reverbDecay',
+        label: 'Reverb Decay',
+        type: 'range',
+        min: 1,
+        max: 12,
+        step: 0.1,
+        default: 6,
+        format: value => `${value.toFixed(1)} s`,
+        apply: (value, app) => {
+          if (app.audio?.nodes?.reverb) {
+            app.audio.nodes.reverb.decay = value;
+          }
+        }
+      },
+      {
+        id: 'reverbWet',
+        label: 'Reverb Wet',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.28,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.audio?.nodes?.reverb) {
+            app.audio.nodes.reverb.wet.value = value;
+          }
+        }
+      }
+    ]
+  },
+  {
+    group: 'LFO Modulation',
+    description: 'Low-frequency oscillators for dynamic parameter modulation.',
+    controls: [
+      {
+        id: 'lfo1Rate',
+        label: 'LFO 1 Rate',
+        type: 'range',
+        min: 0.1,
+        max: 8.0,
+        step: 0.1,
+        default: 0.5,
+        format: value => `${value.toFixed(1)} Hz`,
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFORate('lfo1', value);
+          }
+        }
+      },
+      {
+        id: 'lfo1Depth',
+        label: 'LFO 1 Depth',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.3,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFODepth('lfo1', value);
+          }
+        }
+      },
+      {
+        id: 'lfo1Waveform',
+        label: 'LFO 1 Wave',
+        type: 'select',
+        options: [
+          { value: 'sine', label: 'Sine' },
+          { value: 'triangle', label: 'Triangle' },
+          { value: 'square', label: 'Square' },
+          { value: 'sawtooth', label: 'Sawtooth' }
+        ],
+        default: 'sine',
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFOWaveform('lfo1', value);
+          }
+        }
+      },
+      {
+        id: 'lfo1Target',
+        label: 'LFO 1 Target',
+        type: 'select',
+        options: [
+          { value: 'leadFilter', label: 'Lead Filter' },
+          { value: 'fxSend', label: 'FX Send' },
+          { value: 'bassFilter', label: 'Bass Filter' },
+          { value: 'reverbDecay', label: 'Reverb Decay' },
+          { value: 'delayFeedback', label: 'Delay Feedback' },
+          { value: 'bassDrive', label: 'Bass Drive' },
+          { value: 'leadResonance', label: 'Lead Resonance' },
+          { value: 'masterVolume', label: 'Master Volume' }
+        ],
+        default: 'leadFilter',
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFOTarget('lfo1', value);
+          }
+        }
+      },
+      {
+        id: 'lfo1Enabled',
+        label: 'LFO 1 On/Off',
+        type: 'select',
+        options: [
+          { value: true, label: 'On' },
+          { value: false, label: 'Off' }
+        ],
+        default: true,
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFOEnabled('lfo1', value);
+          }
+        }
+      },
+      {
+        id: 'lfo2Rate',
+        label: 'LFO 2 Rate',
+        type: 'range',
+        min: 0.1,
+        max: 8.0,
+        step: 0.1,
+        default: 0.25,
+        format: value => `${value.toFixed(1)} Hz`,
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFORate('lfo2', value);
+          }
+        }
+      },
+      {
+        id: 'lfo2Depth',
+        label: 'LFO 2 Depth',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.2,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFODepth('lfo2', value);
+          }
+        }
+      },
+      {
+        id: 'lfo2Waveform',
+        label: 'LFO 2 Wave',
+        type: 'select',
+        options: [
+          { value: 'sine', label: 'Sine' },
+          { value: 'triangle', label: 'Triangle' },
+          { value: 'square', label: 'Square' },
+          { value: 'sawtooth', label: 'Sawtooth' }
+        ],
+        default: 'triangle',
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFOWaveform('lfo2', value);
+          }
+        }
+      },
+      {
+        id: 'lfo2Target',
+        label: 'LFO 2 Target',
+        type: 'select',
+        options: [
+          { value: 'leadFilter', label: 'Lead Filter' },
+          { value: 'fxSend', label: 'FX Send' },
+          { value: 'bassFilter', label: 'Bass Filter' },
+          { value: 'reverbDecay', label: 'Reverb Decay' },
+          { value: 'delayFeedback', label: 'Delay Feedback' },
+          { value: 'bassDrive', label: 'Bass Drive' },
+          { value: 'leadResonance', label: 'Lead Resonance' },
+          { value: 'masterVolume', label: 'Master Volume' }
+        ],
+        default: 'fxSend',
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFOTarget('lfo2', value);
+          }
+        }
+      },
+      {
+        id: 'lfo2Enabled',
+        label: 'LFO 2 On/Off',
+        type: 'select',
+        options: [
+          { value: true, label: 'On' },
+          { value: false, label: 'Off' }
+        ],
+        default: false,
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFOEnabled('lfo2', value);
+          }
+        }
+      },
+      {
+        id: 'lfo3Rate',
+        label: 'LFO 3 Rate',
+        type: 'range',
+        min: 0.1,
+        max: 8.0,
+        step: 0.1,
+        default: 1.0,
+        format: value => `${value.toFixed(1)} Hz`,
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFORate('lfo3', value);
+          }
+        }
+      },
+      {
+        id: 'lfo3Depth',
+        label: 'LFO 3 Depth',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.15,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFODepth('lfo3', value);
+          }
+        }
+      },
+      {
+        id: 'lfo3Waveform',
+        label: 'LFO 3 Wave',
+        type: 'select',
+        options: [
+          { value: 'sine', label: 'Sine' },
+          { value: 'triangle', label: 'Triangle' },
+          { value: 'square', label: 'Square' },
+          { value: 'sawtooth', label: 'Sawtooth' }
+        ],
+        default: 'square',
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFOWaveform('lfo3', value);
+          }
+        }
+      },
+      {
+        id: 'lfo3Target',
+        label: 'LFO 3 Target',
+        type: 'select',
+        options: [
+          { value: 'leadFilter', label: 'Lead Filter' },
+          { value: 'fxSend', label: 'FX Send' },
+          { value: 'bassFilter', label: 'Bass Filter' },
+          { value: 'reverbDecay', label: 'Reverb Decay' },
+          { value: 'delayFeedback', label: 'Delay Feedback' },
+          { value: 'bassDrive', label: 'Bass Drive' },
+          { value: 'leadResonance', label: 'Lead Resonance' },
+          { value: 'masterVolume', label: 'Master Volume' }
+        ],
+        default: 'bassFilter',
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFOTarget('lfo3', value);
+          }
+        }
+      },
+      {
+        id: 'lfo3Enabled',
+        label: 'LFO 3 On/Off',
+        type: 'select',
+        options: [
+          { value: true, label: 'On' },
+          { value: false, label: 'Off' }
+        ],
+        default: false,
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFOEnabled('lfo3', value);
+          }
+        }
+      },
+      {
+        id: 'lfo4Rate',
+        label: 'LFO 4 Rate',
+        type: 'range',
+        min: 0.1,
+        max: 8.0,
+        step: 0.1,
+        default: 0.125,
+        format: value => `${value.toFixed(1)} Hz`,
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFORate('lfo4', value);
+          }
+        }
+      },
+      {
+        id: 'lfo4Depth',
+        label: 'LFO 4 Depth',
     group: 'Drums',
     description: 'Rhythmic foundation.',
     controls: [
@@ -1332,6 +1684,17 @@ export const CONTROL_SCHEMA = [
         min: 0,
         max: 1,
         step: 0.01,
+        default: 0.25,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFODepth('lfo4', value);
+          }
+        }
+      },
+      {
+        id: 'lfo4Waveform',
+        label: 'LFO 4 Wave',
         default: 0.3,
         format: value => `${Math.round(value * 100)}%`,
         apply: (value, app) => {
@@ -1348,6 +1711,48 @@ export const CONTROL_SCHEMA = [
           { value: 'sine', label: 'Sine' },
           { value: 'triangle', label: 'Triangle' },
           { value: 'square', label: 'Square' },
+          { value: 'sawtooth', label: 'Sawtooth' }
+        ],
+        default: 'sawtooth',
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFOWaveform('lfo4', value);
+          }
+        }
+      },
+      {
+        id: 'lfo4Target',
+        label: 'LFO 4 Target',
+        type: 'select',
+        options: [
+          { value: 'leadFilter', label: 'Lead Filter' },
+          { value: 'fxSend', label: 'FX Send' },
+          { value: 'bassFilter', label: 'Bass Filter' },
+          { value: 'reverbDecay', label: 'Reverb Decay' },
+          { value: 'delayFeedback', label: 'Delay Feedback' },
+          { value: 'bassDrive', label: 'Bass Drive' },
+          { value: 'leadResonance', label: 'Lead Resonance' },
+          { value: 'masterVolume', label: 'Master Volume' }
+        ],
+        default: 'reverbDecay',
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFOTarget('lfo4', value);
+          }
+        }
+      },
+      {
+        id: 'lfo4Enabled',
+        label: 'LFO 4 On/Off',
+        type: 'select',
+        options: [
+          { value: true, label: 'On' },
+          { value: false, label: 'Off' }
+        ],
+        default: false,
+        apply: (value, app) => {
+          if (app.lfo) {
+            app.lfo.setLFOEnabled('lfo4', value);
           { value: 'sawtooth', label: 'Saw' }
         ],
         default: 'sine',
