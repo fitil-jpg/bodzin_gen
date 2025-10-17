@@ -39,14 +39,6 @@ export const CURVE_TYPES = {
   SINE: 'sine'
 };
 
-export const CURVE_TYPES = {
-  LINEAR: 'linear',
-  BEZIER: 'bezier',
-  EXPONENTIAL: 'exponential',
-  LOGARITHMIC: 'logarithmic',
-  SINE: 'sine'
-};
-
 export const AUTOMATION_TRACK_DEFINITIONS = [
   {
     id: 'leadFilter',
