@@ -1,3 +1,40 @@
+/**
+ * Main Application Module
+ * Orchestrates all other modules and handles application lifecycle
+ */
+
+import { AudioModule } from './audio.js';
+import { UIModule } from './ui.js';
+import { WaveformModule } from './waveform.js';
+
+export class App {
+  constructor() {
+    this.audio = new AudioModule();
+    this.ui = new UIModule(this);
+    this.waveform = new WaveformModule(this);
+    this.isInitialized = false;
+  }
+
+  async init() {
+    try {
+      this.ui.setStatus('Initializing application...');
+      
+      // Initialize audio first
+      await this.audio.init();
+      
+      // Initialize waveform
+      this.waveform.init();
+      
+      this.isInitialized = true;
+      this.ui.setStatus('Application ready');
+      
+      // Set up global error handling
+      window.addEventListener('error', (event) => {
+        this.ui.showError(event.error.message);
+      });
+      
+      window.addEventListener('unhandledrejection', (event) => {
+        this.ui.showError(event.reason);
 'use strict';
 
 const STEP_COUNT = 16;
@@ -99,6 +136,92 @@ const AUTOMATION_TRACK_ORDER = new Map(
   AUTOMATION_TRACK_DEFINITIONS.map((definition, index) => [definition.id, index])
 );
 
+// Pattern Variation System
+const PATTERN_VARIATIONS = {
+  kick: {
+    A: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], // Default
+    B: [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0], // Syncopated
+    C: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], // Double time
+    D: [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0]  // Half time
+  },
+  snare: {
+    A: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0], // Default
+    B: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // More hits
+    C: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Sparse
+    D: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0]  // Roll
+  },
+  hats: {
+    A: [0.6, 0, 0.45, 0, 0.7, 0.25, 0.5, 0.25, 0.65, 0, 0.45, 0, 0.75, 0.3, 0.55, 0.35], // Default
+    B: [0.8, 0.4, 0.6, 0.2, 0.8, 0.4, 0.6, 0.2, 0.8, 0.4, 0.6, 0.2, 0.8, 0.4, 0.6, 0.2], // Dense
+    C: [0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0], // Sparse
+    D: [0.7, 0.3, 0.5, 0.3, 0.7, 0.3, 0.5, 0.3, 0.7, 0.3, 0.5, 0.3, 0.7, 0.3, 0.5, 0.3]  // Steady
+  },
+  bass: {
+    A: ['C2', null, 'G1', null, 'C2', 'D2', null, 'G1', 'C2', null, 'A1', null, 'C2', 'D2', null, 'G1'], // Default
+    B: ['C2', 'G1', 'C2', 'G1', 'C2', 'D2', 'G1', 'D2', 'C2', 'G1', 'A1', 'G1', 'C2', 'D2', 'G1', 'D2'], // Dense
+    C: ['C2', null, null, null, 'C2', null, null, null, 'C2', null, null, null, 'C2', null, null, null], // Sparse
+    D: ['C2', 'E2', 'G2', 'A2', 'C2', 'E2', 'G2', 'A2', 'C2', 'E2', 'G2', 'A2', 'C2', 'E2', 'G2', 'A2']  // Arpeggio
+  },
+  lead: {
+    A: [['E4', 'B4'], null, ['G4'], null, ['A4'], null, ['B4', 'D5'], null, ['E5'], null, ['G4'], null, ['A4', 'C5'], null, ['B4'], null], // Default
+    B: [['E4', 'B4', 'G4'], ['A4'], ['G4', 'B4'], ['D5'], ['E5', 'G4'], ['A4'], ['B4', 'D5', 'E5'], ['G4'], ['E4', 'B4'], ['G4'], ['A4', 'C5'], ['B4'], ['E5', 'G4'], ['A4'], ['B4', 'D5'], ['E4']], // Dense
+    C: [['E4'], null, null, null, ['A4'], null, null, null, ['E5'], null, null, null, ['A4'], null, null, null], // Sparse
+    D: [['E4', 'G4', 'B4'], ['A4', 'C5'], ['G4', 'B4', 'D5'], ['E5', 'G4'], ['A4', 'C5', 'E5'], ['B4', 'D5'], ['G4', 'B4', 'E5'], ['A4', 'C5']] // Arpeggio
+  },
+  fx: {
+    A: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0], // Default
+    B: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0], // More hits
+    C: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0], // Sparse
+    D: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]  // Quarter notes
+  }
+};
+
+// Additional pattern variations for more complexity
+const EXTENDED_PATTERN_VARIATIONS = {
+  kick: {
+    E: [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0], // Triplet feel
+    F: [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0]  // Complex
+  },
+  snare: {
+    E: [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Single hit
+    F: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0]  // Roll pattern
+  },
+  hats: {
+    E: [0.4, 0.2, 0.4, 0.2, 0.4, 0.2, 0.4, 0.2, 0.4, 0.2, 0.4, 0.2, 0.4, 0.2, 0.4, 0.2], // Steady 16ths
+    F: [0.8, 0, 0.6, 0, 0.8, 0, 0.6, 0, 0.8, 0, 0.6, 0, 0.8, 0, 0.6, 0]  // Accented 8ths
+  },
+  bass: {
+    E: ['C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2', 'C2'], // Drone
+    F: ['C2', 'E2', 'G2', 'A2', 'C2', 'E2', 'G2', 'A2', 'C2', 'E2', 'G2', 'A2', 'C2', 'E2', 'G2', 'A2']  // Arpeggio
+  },
+  lead: {
+    E: [['C4', 'E4', 'G4'], ['A4', 'C5'], ['G4', 'B4'], ['E5', 'G5'], ['C4', 'E4', 'G4'], ['A4', 'C5'], ['G4', 'B4'], ['E5', 'G5']], // Chord progression
+    F: [['E4'], ['F4'], ['G4'], ['A4'], ['B4'], ['C5'], ['D5'], ['E5'], ['D5'], ['C5'], ['B4'], ['A4'], ['G4'], ['F4'], ['E4'], ['D4']]  // Scale run
+  },
+  fx: {
+    E: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // Silent
+    F: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]  // Constant
+  }
+};
+
+const PATTERN_VARIATION_CONFIG = {
+  enabled: true,
+  randomization: {
+    enabled: true,
+    intensity: 0.3, // 0-1, how much to randomize
+    frequency: 0.1  // 0-1, how often to randomize
+  },
+  abPatterns: {
+    enabled: true,
+    switchProbability: 0.2, // 0-1, probability of switching A/B patterns
+    currentPattern: 'A' // Current active pattern
+  },
+  probabilityTriggers: {
+    enabled: true,
+    skipProbability: 0.1, // 0-1, probability of skipping a step
+    accentProbability: 0.15, // 0-1, probability of accenting a step
+    accentMultiplier: 1.5 // Multiplier for accented steps
+  }
 const LFO_DEFINITIONS = [
   {
     id: 'lfo1',
@@ -426,6 +549,134 @@ const CONTROL_SCHEMA = [
     ]
   },
   {
+    group: 'EQ',
+    description: 'Multi-band equalizer with visual feedback.',
+    controls: [
+      {
+        id: 'eqLowShelf',
+        label: 'Low Shelf',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 0.5,
+        default: 0,
+        format: value => `${value > 0 ? '+' : ''}${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          app.audio.nodes.eq.bands.lowShelf.gain.value = value;
+        }
+      },
+      {
+        id: 'eqLowMid',
+        label: 'Low Mid',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 0.5,
+        default: 0,
+        format: value => `${value > 0 ? '+' : ''}${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          app.audio.nodes.eq.bands.lowMid.gain.value = value;
+        }
+      },
+      {
+        id: 'eqMid',
+        label: 'Mid',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 0.5,
+        default: 0,
+        format: value => `${value > 0 ? '+' : ''}${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          app.audio.nodes.eq.bands.mid.gain.value = value;
+        }
+      },
+      {
+        id: 'eqHighMid',
+        label: 'High Mid',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 0.5,
+        default: 0,
+        format: value => `${value > 0 ? '+' : ''}${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          app.audio.nodes.eq.bands.highMid.gain.value = value;
+        }
+      },
+      {
+        id: 'eqHighShelf',
+        label: 'High Shelf',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 0.5,
+        default: 0,
+        format: value => `${value > 0 ? '+' : ''}${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          app.audio.nodes.eq.bands.highShelf.gain.value = value;
+    group: 'Distortion & Overdrive',
+    description: 'Harmonic saturation and drive effects.',
+    controls: [
+      {
+        id: 'leadDistortion',
+        label: 'Lead Distortion',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.2,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.leadDistortion.distortion = value;
+        }
+      },
+      {
+        id: 'leadOverdrive',
+        label: 'Lead Overdrive',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.3,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.leadOverdrive.drive = value;
+        }
+      },
+      {
+        id: 'drumDistortion',
+        label: 'Drum Distortion',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.15,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.drumDistortion.distortion = value;
+        }
+      },
+      {
+        id: 'masterOverdrive',
+        label: 'Master Overdrive',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.masterOverdrive.drive = value;
+        }
+      }
+    ]
+  },
+  {
     group: 'Ambience',
     description: 'Delay and space design.',
     controls: [
@@ -496,6 +747,332 @@ const CONTROL_SCHEMA = [
         }
       }
     ]
+  },
+  {
+    group: 'Envelope Followers',
+    description: 'Dynamic modulation based on audio signal amplitude.',
+    controls: [
+      {
+        id: 'envFollower1Enabled',
+        label: 'EF1 Enable',
+        type: 'select',
+        options: [
+          { value: false, label: 'Off' },
+          { value: true, label: 'On' }
+        ],
+        default: false,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerEnabled('envFollower1', value);
+        }
+      },
+      {
+        id: 'envFollower1Attack',
+        label: 'EF1 Attack',
+        type: 'range',
+        min: 0.001,
+        max: 0.1,
+        step: 0.001,
+        default: 0.01,
+        format: value => `${(value * 1000).toFixed(1)} ms`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower1', { attackTime: value });
+        }
+      },
+      {
+        id: 'envFollower1Release',
+        label: 'EF1 Release',
+        type: 'range',
+        min: 0.01,
+        max: 1.0,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${(value * 1000).toFixed(0)} ms`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower1', { releaseTime: value });
+        }
+      },
+      {
+        id: 'envFollower1Sensitivity',
+        label: 'EF1 Sensitivity',
+        type: 'range',
+        min: 0.1,
+        max: 5.0,
+        step: 0.1,
+        default: 1.0,
+        format: value => `${value.toFixed(1)}x`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower1', { sensitivity: value });
+        }
+      },
+      {
+        id: 'envFollower2Enabled',
+        label: 'EF2 Enable',
+        type: 'select',
+        options: [
+          { value: false, label: 'Off' },
+          { value: true, label: 'On' }
+        ],
+        default: false,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerEnabled('envFollower2', value);
+        }
+      },
+      {
+        id: 'envFollower2Attack',
+        label: 'EF2 Attack',
+        type: 'range',
+        min: 0.001,
+        max: 0.1,
+        step: 0.001,
+        default: 0.005,
+        format: value => `${(value * 1000).toFixed(1)} ms`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower2', { attackTime: value });
+        }
+      },
+      {
+        id: 'envFollower2Release',
+        label: 'EF2 Release',
+        type: 'range',
+        min: 0.01,
+        max: 1.0,
+        step: 0.01,
+        default: 0.05,
+        format: value => `${(value * 1000).toFixed(0)} ms`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower2', { releaseTime: value });
+        }
+      },
+      {
+        id: 'envFollower2Sensitivity',
+        label: 'EF2 Sensitivity',
+        type: 'range',
+        min: 0.1,
+        max: 5.0,
+        step: 0.1,
+        default: 1.2,
+        format: value => `${value.toFixed(1)}x`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower2', { sensitivity: value });
+        }
+      },
+      {
+        id: 'envFollower2Threshold',
+        label: 'EF2 Threshold',
+        type: 'range',
+        min: 0.0,
+        max: 1.0,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.audio.setEnvelopeFollowerConfig('envFollower2', { threshold: value });
+    group: 'Pattern Variations',
+    description: 'Randomization and pattern switching for dynamic arrangements.',
+    controls: [
+      {
+        id: 'patternVariationsEnabled',
+        label: 'Enable Variations',
+        type: 'select',
+        options: [
+          { value: 'true', label: 'On' },
+          { value: 'false', label: 'Off' }
+        ],
+        default: 'true',
+        apply: (value, app) => {
+          app.patternVariations.enabled = value === 'true';
+        }
+      },
+      {
+        id: 'randomizationIntensity',
+        label: 'Random Intensity',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.3,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.patternVariations.randomization.intensity = value;
+        }
+      },
+      {
+        id: 'randomizationFrequency',
+        label: 'Random Frequency',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.patternVariations.randomization.frequency = value;
+        }
+      },
+      {
+        id: 'abPatternSwitch',
+        label: 'A/B Switch Prob',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.2,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.patternVariations.abPatterns.switchProbability = value;
+        }
+      },
+      {
+        id: 'skipProbability',
+        label: 'Skip Probability',
+        type: 'range',
+        min: 0,
+        max: 0.5,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.patternVariations.probabilityTriggers.skipProbability = value;
+        }
+      },
+      {
+        id: 'accentProbability',
+        label: 'Accent Probability',
+        type: 'range',
+        min: 0,
+        max: 0.5,
+        step: 0.01,
+        default: 0.15,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          app.patternVariations.probabilityTriggers.accentProbability = value;
+        }
+      },
+      {
+        id: 'patternVariationReset',
+        label: 'Reset Patterns',
+        type: 'select',
+        options: [
+          { value: 'reset', label: 'Reset to A' },
+          { value: 'random', label: 'Random All' }
+        ],
+        default: 'reset',
+        apply: (value, app) => {
+          if (value === 'reset') {
+            Object.keys(app.patternVariations.currentPatterns).forEach(instrument => {
+              app.patternVariations.currentPatterns[instrument] = 'A';
+            });
+            app.patternVariations.abPatterns.currentPattern = 'A';
+          } else if (value === 'random') {
+            const patterns = ['A', 'B', 'C', 'D'];
+            Object.keys(app.patternVariations.currentPatterns).forEach(instrument => {
+              app.patternVariations.currentPatterns[instrument] = patterns[Math.floor(Math.random() * patterns.length)];
+            });
+            app.patternVariations.abPatterns.currentPattern = patterns[Math.floor(Math.random() * patterns.length)];
+          }
+          rebuildSequencesWithVariations(app);
+          drawTimeline(app);
+        }
+      },
+      {
+        id: 'accentMultiplier',
+        label: 'Accent Multiplier',
+        type: 'range',
+        min: 1,
+        max: 3,
+        step: 0.1,
+        default: 1.5,
+        format: value => `${value.toFixed(1)}x`,
+        apply: (value, app) => {
+          app.patternVariations.probabilityTriggers.accentMultiplier = value;
+    group: 'Sidechain Compression',
+    description: 'Duck bass and lead when kick hits.',
+    controls: [
+      {
+        id: 'sidechainEnabled',
+        label: 'Enable Sidechain',
+        type: 'select',
+        options: [
+          { value: 'off', label: 'Off' },
+          { value: 'on', label: 'On' }
+        ],
+        default: 'on',
+        apply: (value, app) => {
+          app.audio.sidechainEnabled = value === 'on';
+          app.audio.updateSidechainRouting();
+        }
+      },
+      {
+        id: 'sidechainThreshold',
+        label: 'Threshold',
+        type: 'range',
+        min: -40,
+        max: 0,
+        step: 1,
+        default: -24,
+        format: formatDb,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainCompressor.threshold.value = value;
+        }
+      },
+      {
+        id: 'sidechainRatio',
+        label: 'Ratio',
+        type: 'range',
+        min: 1,
+        max: 20,
+        step: 0.1,
+        default: 4,
+        format: value => `${value.toFixed(1)}:1`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainCompressor.ratio.value = value;
+        }
+      },
+      {
+        id: 'sidechainAttack',
+        label: 'Attack',
+        type: 'range',
+        min: 0.001,
+        max: 0.1,
+        step: 0.001,
+        default: 0.003,
+        format: value => `${(value * 1000).toFixed(1)} ms`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainCompressor.attack.value = value;
+        }
+      },
+      {
+        id: 'sidechainRelease',
+        label: 'Release',
+        type: 'range',
+        min: 0.01,
+        max: 2,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${(value * 1000).toFixed(0)} ms`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainCompressor.release.value = value;
+        }
+      },
+      {
+        id: 'sidechainAmount',
+        label: 'Amount',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.8,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainGain.gain.value = value;
+        }
+      }
+    ]
   }
 ];
 
@@ -561,6 +1138,58 @@ function setupMobileOptimizations(app) {
           setMidiLearn(app, false);
         }
         break;
+      case '=':
+      case '+':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          app.timeline.zoom = Math.min(app.timeline.zoom + app.timeline.zoomStep, app.timeline.maxZoom);
+          updateZoomLevel(app);
+          drawTimeline(app);
+        }
+        break;
+      case '-':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          app.timeline.zoom = Math.max(app.timeline.zoom - app.timeline.zoomStep, app.timeline.minZoom);
+          updateZoomLevel(app);
+          drawTimeline(app);
+        }
+        break;
+      case '0':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          app.timeline.zoom = 1.0;
+          app.timeline.pan = 0;
+          updateZoomLevel(app);
+          drawTimeline(app);
+        }
+        break;
+      case 'Home':
+        event.preventDefault();
+        app.timeline.pan = -getMaxPan(app);
+        drawTimeline(app);
+        break;
+      case 'End':
+        event.preventDefault();
+        app.timeline.pan = 0;
+        drawTimeline(app);
+        break;
+      case 'ArrowLeft':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          const stepWidth = (app.timeline.canvas.clientWidth / STEP_COUNT) * app.timeline.zoom;
+          app.timeline.pan = Math.max(app.timeline.pan - stepWidth * 0.1, -getMaxPan(app));
+          drawTimeline(app);
+        }
+        break;
+      case 'ArrowRight':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          const stepWidth = (app.timeline.canvas.clientWidth / STEP_COUNT) * app.timeline.zoom;
+          app.timeline.pan = Math.min(app.timeline.pan + stepWidth * 0.1, 0);
+          drawTimeline(app);
+        }
+        break;
     }
   });
 
@@ -603,7 +1232,18 @@ function createApp() {
       canvas: document.getElementById('timeline'),
       ctx: null,
       currentStep: 0,
-      deviceRatio: window.devicePixelRatio || 1
+      deviceRatio: window.devicePixelRatio || 1,
+      zoom: 1.0,
+      pan: 0,
+      minZoom: 0.1,
+      maxZoom: 10.0,
+      zoomStep: 0.1,
+      isDragging: false,
+      lastPanX: 0,
+      snapToGrid: true,
+      gridSize: 1,
+      showRuler: true,
+      rulerHeight: 30
     },
     waveform: {
       canvas: document.getElementById('waveform'),
@@ -617,8 +1257,41 @@ function createApp() {
     sectionLabelEl: document.getElementById('sectionLabel'),
     statusTimer: null,
     presetFileInput: null,
+    patternVariations: {
+      enabled: true,
+      randomization: {
+        enabled: true,
+        intensity: 0.3,
+        frequency: 0.1
+      },
+      abPatterns: {
+        enabled: true,
+        switchProbability: 0.2,
+        currentPattern: 'A'
+      },
+      probabilityTriggers: {
+        enabled: true,
+        skipProbability: 0.1,
+        accentProbability: 0.15,
+        accentMultiplier: 1.5
+      },
+      currentPatterns: {
+        kick: 'A',
+        snare: 'A',
+        hats: 'A',
+        bass: 'A',
+        lead: 'A',
+        fx: 'A'
+      },
+      lastVariationStep: 0
     particles: [],
-    lastParticleTime: 0
+    lastParticleTime: 0,
+    leds: {
+      drums: document.getElementById('led-drums'),
+      bass: document.getElementById('led-bass'),
+      lead: document.getElementById('led-lead'),
+      fx: document.getElementById('led-fx')
+    }
   };
 }
 
@@ -646,6 +1319,11 @@ function initializeApp(app) {
 
   app.controlState = Object.assign({}, defaultState, storedControls);
   app.automation = normalizeAutomationState(app.automation, STEP_COUNT);
+  
+  // Initialize pattern variations
+  if (storedPreset && storedPreset.patternVariations) {
+    app.patternVariations = Object.assign({}, app.patternVariations, storedPreset.patternVariations);
+  }
 
   if (externalPreset && externalPreset.controls) {
     Object.assign(app.controlState, externalPreset.controls);
@@ -663,11 +1341,13 @@ function initializeApp(app) {
   renderControlInterface(app);
   setupButtons(app);
   setupTimeline(app);
+  setupTimelineControls(app);
   setupWaveform(app);
   setupAutomationScheduling(app);
   setupMidi(app);
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
+  updateLEDIndicators(app, getSectionForStep(app, 0));
   drawTimeline(app);
   setStatus(app, 'Idle');
 
@@ -759,7 +1439,7 @@ function initializeAudioGraph() {
     volume: -20
   }).connect(buses.fx);
 
-  const sequences = buildSequences({ kick, snare, hats, bass, lead, noiseFx });
+  const sequences = buildSequences({ kick, snare, hats, bass, lead, noiseFx }, appInstance);
 
   return {
     master: masterGain,
@@ -778,77 +1458,188 @@ function initializeAudioGraph() {
   };
 }
 
-function buildSequences(instruments) {
-  const kickPattern = [
-    1, 0, 0, 0,
-    1, 0, 0, 0,
-    1, 0, 0, 0,
-    1, 0, 0, 0
-  ];
-  const snarePattern = [
-    0, 0, 0, 0,
-    0, 0, 1, 0,
-    0, 0, 0, 0,
-    0, 0, 1, 0
-  ];
-  const hatPattern = [
-    0.6, 0, 0.45, 0,
-    0.7, 0.25, 0.5, 0.25,
-    0.65, 0, 0.45, 0,
-    0.75, 0.3, 0.55, 0.35
-  ];
-  const bassPattern = [
-    'C2', null, 'G1', null,
-    'C2', 'D2', null, 'G1',
-    'C2', null, 'A1', null,
-    'C2', 'D2', null, 'G1'
-  ];
-  const leadPattern = [
-    ['E4', 'B4'], null, ['G4'], null,
-    ['A4'], null, ['B4', 'D5'], null,
-    ['E5'], null, ['G4'], null,
-    ['A4', 'C5'], null, ['B4'], null
-  ];
-  const fxPattern = [
-    0, 0, 0, 0,
-    0, 0, 1, 0,
-    0, 0, 0, 0,
-    0, 0, 1, 0
-  ];
+// Pattern Variation Functions
+function applyPatternVariations(value, instrument, app) {
+  if (!app || !app.patternVariations || !app.patternVariations.enabled) {
+    return value;
+  }
+
+  const config = app.patternVariations;
+  let finalValue = value;
+
+  // Apply skip probability
+  if (config.probabilityTriggers.enabled && Math.random() < config.probabilityTriggers.skipProbability) {
+    return 0;
+  }
+
+  // Apply accent probability
+  if (config.probabilityTriggers.enabled && Math.random() < config.probabilityTriggers.accentProbability) {
+    finalValue *= config.probabilityTriggers.accentMultiplier;
+  }
+
+  // Apply randomization
+  if (config.randomization.enabled && Math.random() < config.randomization.frequency) {
+    const intensity = config.randomization.intensity;
+    const randomFactor = 1 + (Math.random() - 0.5) * intensity * 2;
+    finalValue *= randomFactor;
+  }
+
+  return Math.max(0, Math.min(finalValue, 1));
+}
+
+function updatePatternVariations(app) {
+  if (!app.patternVariations || !app.patternVariations.enabled) {
+    return;
+  }
+
+  const config = app.patternVariations;
+  const currentStep = app.timeline.currentStep || 0;
+
+  // Check if we should switch A/B patterns
+  if (config.abPatterns.enabled && Math.random() < config.abPatterns.switchProbability) {
+    const patterns = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const currentPattern = config.abPatterns.currentPattern;
+    const availablePatterns = patterns.filter(p => p !== currentPattern);
+    const newPattern = availablePatterns[Math.floor(Math.random() * availablePatterns.length)];
+    
+    config.abPatterns.currentPattern = newPattern;
+    
+    // Update individual instrument patterns
+    Object.keys(config.currentPatterns).forEach(instrument => {
+      if (Math.random() < 0.5) { // 50% chance to update each instrument
+        config.currentPatterns[instrument] = newPattern;
+      }
+    });
+
+    // Rebuild sequences with new patterns
+    rebuildSequencesWithVariations(app);
+  }
+
+  // Update randomization based on step
+  if (config.randomization.enabled && currentStep !== config.lastVariationStep) {
+    config.lastVariationStep = currentStep;
+  }
+}
+
+function triggerPatternVariation(app, instrument = null) {
+  if (!app.patternVariations || !app.patternVariations.enabled) {
+    return;
+  }
+
+  const patterns = ['A', 'B', 'C', 'D', 'E', 'F'];
+  
+  if (instrument && app.patternVariations.currentPatterns[instrument]) {
+    // Update specific instrument
+    const currentPattern = app.patternVariations.currentPatterns[instrument];
+    const availablePatterns = patterns.filter(p => p !== currentPattern);
+    app.patternVariations.currentPatterns[instrument] = availablePatterns[Math.floor(Math.random() * availablePatterns.length)];
+  } else {
+    // Update all instruments
+    Object.keys(app.patternVariations.currentPatterns).forEach(inst => {
+      app.patternVariations.currentPatterns[inst] = patterns[Math.floor(Math.random() * patterns.length)];
+    });
+    app.patternVariations.abPatterns.currentPattern = patterns[Math.floor(Math.random() * patterns.length)];
+  }
+
+  rebuildSequencesWithVariations(app);
+  drawTimeline(app);
+}
+
+function rebuildSequencesWithVariations(app) {
+  if (!app.audio || !app.audio.sequences) {
+    return;
+  }
+
+  // Stop existing sequences
+  app.audio.sequences.all.forEach(seq => {
+    if (seq.state === 'started') {
+      seq.stop();
+    }
+  });
+
+  // Rebuild sequences with current patterns
+  const newSequences = buildSequences(app.audio.instruments, app);
+  
+  // Update the sequences in the audio object
+  app.audio.sequences = newSequences;
+  
+  // Restart sequences if transport is running
+  if (Tone.Transport.state === 'started') {
+    newSequences.all.forEach(seq => seq.start(0));
+  }
+}
+
+function buildSequences(instruments, app = null) {
+  // Get current patterns or defaults
+  const getPattern = (instrument, variation = 'A') => {
+    if (app && app.patternVariations && app.patternVariations.enabled) {
+      // Check extended patterns first, then fall back to basic patterns
+      if (EXTENDED_PATTERN_VARIATIONS[instrument] && EXTENDED_PATTERN_VARIATIONS[instrument][variation]) {
+        return EXTENDED_PATTERN_VARIATIONS[instrument][variation];
+      }
+      return PATTERN_VARIATIONS[instrument][variation] || PATTERN_VARIATIONS[instrument]['A'];
+    }
+    return PATTERN_VARIATIONS[instrument]['A'];
+  };
+
+  const kickPattern = getPattern('kick', app?.patternVariations?.currentPatterns?.kick);
+  const snarePattern = getPattern('snare', app?.patternVariations?.currentPatterns?.snare);
+  const hatPattern = getPattern('hats', app?.patternVariations?.currentPatterns?.hats);
+  const bassPattern = getPattern('bass', app?.patternVariations?.currentPatterns?.bass);
+  const leadPattern = getPattern('lead', app?.patternVariations?.currentPatterns?.lead);
+  const fxPattern = getPattern('fx', app?.patternVariations?.currentPatterns?.fx);
 
   const kickSeq = new Tone.Sequence((time, velocity) => {
     if (velocity) {
-      instruments.kick.triggerAttackRelease('C1', '8n', time, velocity);
+      const finalVelocity = applyPatternVariations(velocity, 'kick', app);
+      if (finalVelocity > 0) {
+        instruments.kick.triggerAttackRelease('C1', '8n', time, finalVelocity);
+      }
     }
   }, kickPattern, '16n');
 
   const snareSeq = new Tone.Sequence((time, hit) => {
     if (hit) {
-      instruments.snare.triggerAttackRelease('16n', time, 0.8);
+      const finalHit = applyPatternVariations(hit, 'snare', app);
+      if (finalHit > 0) {
+        instruments.snare.triggerAttackRelease('16n', time, 0.8 * finalHit);
+      }
     }
   }, snarePattern, '16n');
 
   const hatSeq = new Tone.Sequence((time, velocity) => {
     if (velocity) {
-      instruments.hats.triggerAttackRelease('32n', time, velocity);
+      const finalVelocity = applyPatternVariations(velocity, 'hats', app);
+      if (finalVelocity > 0) {
+        instruments.hats.triggerAttackRelease('32n', time, finalVelocity);
+      }
     }
   }, hatPattern, '16n');
 
   const bassSeq = new Tone.Sequence((time, note) => {
     if (note) {
-      instruments.bass.triggerAttackRelease(note, '8n', time, 0.9);
+      const shouldPlay = applyPatternVariations(1, 'bass', app);
+      if (shouldPlay > 0) {
+        instruments.bass.triggerAttackRelease(note, '8n', time, 0.9);
+      }
     }
   }, bassPattern, '16n');
 
   const leadSeq = new Tone.Sequence((time, notes) => {
     if (notes && notes.length) {
-      notes.forEach(note => instruments.lead.triggerAttackRelease(note, '16n', time, 0.8));
+      const shouldPlay = applyPatternVariations(1, 'lead', app);
+      if (shouldPlay > 0) {
+        notes.forEach(note => instruments.lead.triggerAttackRelease(note, '16n', time, 0.8));
+      }
     }
   }, leadPattern, '16n');
 
   const fxSeq = new Tone.Sequence((time, trigger) => {
     if (trigger) {
-      instruments.noiseFx.triggerAttackRelease('2n', time, 0.35);
+      const finalTrigger = applyPatternVariations(trigger, 'fx', app);
+      if (finalTrigger > 0) {
+        instruments.noiseFx.triggerAttackRelease('2n', time, 0.35 * finalTrigger);
+      }
     }
   }, fxPattern, '16n');
 
@@ -1087,6 +1878,21 @@ function setControlValue(app, control, value, options = {}) {
     drawTimeline(app);
   }
 
+  // Handle pattern variation controls
+  if (control.id === 'patternVariationsEnabled') {
+    app.patternVariations.enabled = normalizedValue === 'true';
+  } else if (control.id === 'randomizationIntensity') {
+    app.patternVariations.randomization.intensity = normalizedValue;
+  } else if (control.id === 'randomizationFrequency') {
+    app.patternVariations.randomization.frequency = normalizedValue;
+  } else if (control.id === 'abPatternSwitch') {
+    app.patternVariations.abPatterns.switchProbability = normalizedValue;
+  } else if (control.id === 'skipProbability') {
+    app.patternVariations.probabilityTriggers.skipProbability = normalizedValue;
+  } else if (control.id === 'accentProbability') {
+    app.patternVariations.probabilityTriggers.accentProbability = normalizedValue;
+  }
+
   if (!skipSave) {
     saveControlState(app.controlState);
   }
@@ -1158,6 +1964,7 @@ function setupButtons(app) {
   const exportMixBtn = document.getElementById('exportMixButton');
   const exportStemsBtn = document.getElementById('exportStemsButton');
   const midiToggle = document.getElementById('midiLearnToggle');
+  const triggerVariationBtn = document.getElementById('triggerVariationButton');
 
   startBtn?.addEventListener('click', () => startPlayback(app));
   stopBtn?.addEventListener('click', () => stopPlayback(app));
@@ -1185,6 +1992,7 @@ function setupButtons(app) {
   });
   exportMixBtn?.addEventListener('click', () => exportMix(app));
   exportStemsBtn?.addEventListener('click', () => exportStems(app));
+  triggerVariationBtn?.addEventListener('click', () => triggerPatternVariation(app));
   midiToggle?.addEventListener('change', event => {
     const enabled = Boolean(event.target.checked);
     setMidiLearn(app, enabled);
@@ -1251,6 +2059,10 @@ async function startPlayback(app, options = {}) {
   if (!options.silent) {
     setStatus(app, 'Playing');
   }
+  
+  // Update LED indicators when starting playback
+  const currentSection = getSectionForStep(app, app.timeline.currentStep);
+  updateLEDIndicators(app, currentSection);
 }
 
 async function ensureTransportRunning(app) {
@@ -1300,6 +2112,14 @@ function stopPlayback(app) {
   app.automationStep = 0;
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
+  
+  // Clear all LED indicators when stopping
+  if (app.leds) {
+    Object.values(app.leds).forEach(led => {
+      if (led) led.classList.remove('active');
+    });
+  }
+  
   drawTimeline(app);
   setStatus(app, 'Stopped');
 }
@@ -1337,7 +2157,8 @@ function buildPresetPayload(app, name) {
       tracks: app.automation.tracks.map(track => ({ id: track.id, values: [...track.values] })),
       sections: app.automation.sections.map(section => ({ ...section }))
     },
-    midiMappings: { ...app.midi.mappings }
+    midiMappings: { ...app.midi.mappings },
+    patternVariations: { ...app.patternVariations }
   };
 }
 
@@ -1359,6 +2180,9 @@ function applyPreset(app, presetData) {
   if (presetData.midiMappings) {
     app.midi.mappings = { ...presetData.midiMappings };
     saveMidiMappings(app.midi.mappings);
+  }
+  if (presetData.patternVariations) {
+    app.patternVariations = Object.assign({}, app.patternVariations, presetData.patternVariations);
   }
   if (presetData.name) {
     app.presetName = presetData.name;
@@ -1513,6 +2337,243 @@ function setupTimeline(app) {
 
   // Add mobile touch support for timeline
   setupTimelineTouch(app);
+  setupTimelineZoomPan(app);
+}
+
+function setupTimelineControls(app) {
+  const zoomInBtn = document.getElementById('zoomIn');
+  const zoomOutBtn = document.getElementById('zoomOut');
+  const zoomFitBtn = document.getElementById('zoomFit');
+  const zoomLevelEl = document.getElementById('zoomLevel');
+  const panLeftBtn = document.getElementById('panLeft');
+  const panRightBtn = document.getElementById('panRight');
+  const goToStartBtn = document.getElementById('goToStart');
+  const goToEndBtn = document.getElementById('goToEnd');
+  const snapToggle = document.getElementById('snapToGridToggle');
+  const rulerToggle = document.getElementById('showRulerToggle');
+
+  // Zoom controls
+  zoomInBtn?.addEventListener('click', () => {
+    app.timeline.zoom = Math.min(app.timeline.zoom + app.timeline.zoomStep, app.timeline.maxZoom);
+    updateZoomLevel(app);
+    drawTimeline(app);
+  });
+
+  zoomOutBtn?.addEventListener('click', () => {
+    app.timeline.zoom = Math.max(app.timeline.zoom - app.timeline.zoomStep, app.timeline.minZoom);
+    updateZoomLevel(app);
+    drawTimeline(app);
+  });
+
+  zoomFitBtn?.addEventListener('click', () => {
+    app.timeline.zoom = 1.0;
+    app.timeline.pan = 0;
+    updateZoomLevel(app);
+    drawTimeline(app);
+  });
+
+  // Pan controls
+  panLeftBtn?.addEventListener('click', () => {
+    const stepWidth = (app.timeline.canvas.clientWidth / STEP_COUNT) * app.timeline.zoom;
+    app.timeline.pan = Math.max(app.timeline.pan - stepWidth * 0.1, -getMaxPan(app));
+    drawTimeline(app);
+  });
+
+  panRightBtn?.addEventListener('click', () => {
+    const stepWidth = (app.timeline.canvas.clientWidth / STEP_COUNT) * app.timeline.zoom;
+    app.timeline.pan = Math.min(app.timeline.pan + stepWidth * 0.1, 0);
+    drawTimeline(app);
+  });
+
+  goToStartBtn?.addEventListener('click', () => {
+    app.timeline.pan = -getMaxPan(app);
+    drawTimeline(app);
+  });
+
+  goToEndBtn?.addEventListener('click', () => {
+    app.timeline.pan = 0;
+    drawTimeline(app);
+  });
+
+  // Toggle controls
+  snapToggle?.addEventListener('change', (event) => {
+    app.timeline.snapToGrid = event.target.checked;
+  });
+
+  rulerToggle?.addEventListener('change', (event) => {
+    app.timeline.showRuler = event.target.checked;
+    drawTimeline(app);
+  });
+
+  // Initialize zoom level display
+  updateZoomLevel(app);
+}
+
+function setupTimelineZoomPan(app) {
+  const canvas = app.timeline.canvas;
+  let isPanning = false;
+  let lastPanX = 0;
+
+  // Mouse wheel zoom
+  canvas.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -app.timeline.zoomStep : app.timeline.zoomStep;
+    const oldZoom = app.timeline.zoom;
+    app.timeline.zoom = Math.max(app.timeline.minZoom, Math.min(app.timeline.maxZoom, app.timeline.zoom + delta));
+    
+    if (app.timeline.zoom !== oldZoom) {
+      // Zoom towards mouse position
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const zoomFactor = app.timeline.zoom / oldZoom;
+      app.timeline.pan = mouseX - (mouseX - app.timeline.pan) * zoomFactor;
+      
+      updateZoomLevel(app);
+      drawTimeline(app);
+    }
+  });
+
+  // Mouse pan
+  canvas.addEventListener('mousedown', (event) => {
+    if (event.button === 1 || (event.button === 0 && event.ctrlKey)) { // Middle mouse or Ctrl+left
+      isPanning = true;
+      lastPanX = event.clientX;
+      canvas.style.cursor = 'grabbing';
+      event.preventDefault();
+    }
+  });
+
+  canvas.addEventListener('mousemove', (event) => {
+    if (isPanning) {
+      const deltaX = event.clientX - lastPanX;
+      app.timeline.pan = Math.max(-getMaxPan(app), Math.min(0, app.timeline.pan + deltaX));
+      lastPanX = event.clientX;
+      drawTimeline(app);
+    }
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    isPanning = false;
+    canvas.style.cursor = '';
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    isPanning = false;
+    canvas.style.cursor = '';
+  });
+
+  // Touch pan and pinch zoom
+  let lastTouchX = 0;
+  let touchStartX = 0;
+  let lastTouchDistance = 0;
+  let initialZoom = 1.0;
+  let initialPan = 0;
+
+  canvas.addEventListener('touchstart', (event) => {
+    if (event.touches.length === 1) {
+      lastTouchX = event.touches[0].clientX;
+      touchStartX = event.touches[0].clientX;
+    } else if (event.touches.length === 2) {
+      // Pinch zoom
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      lastTouchDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) + 
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      initialZoom = app.timeline.zoom;
+      initialPan = app.timeline.pan;
+    }
+  }, { passive: true });
+
+  canvas.addEventListener('touchmove', (event) => {
+    if (event.touches.length === 1) {
+      const deltaX = event.touches[0].clientX - lastTouchX;
+      const totalDelta = Math.abs(event.touches[0].clientX - touchStartX);
+      
+      // Only pan if we've moved enough (to distinguish from tap)
+      if (totalDelta > 10) {
+        app.timeline.pan = Math.max(-getMaxPan(app), Math.min(0, app.timeline.pan + deltaX));
+        lastTouchX = event.touches[0].clientX;
+        drawTimeline(app);
+        event.preventDefault();
+      }
+    } else if (event.touches.length === 2) {
+      // Pinch zoom
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      const currentDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) + 
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      
+      if (lastTouchDistance > 0) {
+        const scale = currentDistance / lastTouchDistance;
+        const newZoom = Math.max(app.timeline.minZoom, Math.min(app.timeline.maxZoom, initialZoom * scale));
+        
+        // Zoom towards center of pinch
+        const centerX = (touch1.clientX + touch2.clientX) / 2;
+        const rect = canvas.getBoundingClientRect();
+        const relativeX = centerX - rect.left;
+        const zoomFactor = newZoom / app.timeline.zoom;
+        
+        app.timeline.zoom = newZoom;
+        app.timeline.pan = relativeX - (relativeX - app.timeline.pan) * zoomFactor;
+        
+        updateZoomLevel(app);
+        drawTimeline(app);
+        event.preventDefault();
+      }
+    }
+  }, { passive: false });
+}
+
+function updateZoomLevel(app) {
+  const zoomLevelEl = document.getElementById('zoomLevel');
+  if (zoomLevelEl) {
+    zoomLevelEl.textContent = `${Math.round(app.timeline.zoom * 100)}%`;
+    
+    // Add visual feedback
+    zoomLevelEl.style.transform = 'scale(1.1)';
+    zoomLevelEl.style.color = '#49a9ff';
+    setTimeout(() => {
+      zoomLevelEl.style.transform = '';
+      zoomLevelEl.style.color = '';
+    }, 200);
+  }
+  
+  // Update pan button states
+  const panLeftBtn = document.getElementById('panLeft');
+  const panRightBtn = document.getElementById('panRight');
+  const goToStartBtn = document.getElementById('goToStart');
+  const goToEndBtn = document.getElementById('goToEnd');
+  
+  const maxPan = getMaxPan(app);
+  const canPanLeft = app.timeline.pan > -maxPan;
+  const canPanRight = app.timeline.pan < 0;
+  
+  if (panLeftBtn) {
+    panLeftBtn.disabled = !canPanLeft;
+    panLeftBtn.style.opacity = canPanLeft ? '1' : '0.5';
+  }
+  if (panRightBtn) {
+    panRightBtn.disabled = !canPanRight;
+    panRightBtn.style.opacity = canPanRight ? '1' : '0.5';
+  }
+  if (goToStartBtn) {
+    goToStartBtn.disabled = !canPanLeft;
+    goToStartBtn.style.opacity = canPanLeft ? '1' : '0.5';
+  }
+  if (goToEndBtn) {
+    goToEndBtn.disabled = !canPanRight;
+    goToEndBtn.style.opacity = canPanRight ? '1' : '0.5';
+  }
+}
+
+function getMaxPan(app) {
+  const canvasWidth = app.timeline.canvas.clientWidth;
+  const totalWidth = canvasWidth * app.timeline.zoom;
+  return Math.max(0, totalWidth - canvasWidth);
 }
 
 function setupTimelineTouch(app) {
@@ -1523,8 +2584,11 @@ function setupTimelineTouch(app) {
   const getStepFromPosition = (clientX) => {
     const rect = canvas.getBoundingClientRect();
     const x = clientX - rect.left;
-    const stepWidth = rect.width / STEP_COUNT;
-    return Math.floor(x / stepWidth);
+    const stepWidth = (rect.width / STEP_COUNT) * app.timeline.zoom;
+    const offsetX = app.timeline.pan;
+    const adjustedX = x - offsetX;
+    const step = Math.floor(adjustedX / stepWidth);
+    return app.timeline.snapToGrid ? step : Math.round(adjustedX / stepWidth);
   };
 
   const handleTimelineInteraction = (clientX) => {
@@ -1791,9 +2855,11 @@ function drawTimeline(app) {
   requestAnimationFrame(() => {
     ctx.clearRect(0, 0, width, height);
 
+    const rulerHeight = app.timeline.showRuler ? app.timeline.rulerHeight * ratio : 0;
     const padding = 20 * ratio;
-    const areaHeight = height - padding * 2;
-    const stepWidth = width / STEP_COUNT;
+    const areaHeight = height - padding * 2 - rulerHeight;
+    const stepWidth = (width / STEP_COUNT) * app.timeline.zoom;
+    const offsetX = app.timeline.pan;
 
     // Enable anti-aliasing for smoother lines
     ctx.imageSmoothingEnabled = true;
@@ -1805,35 +2871,46 @@ function drawTimeline(app) {
     
     // Draw sections
     sections.forEach(section => {
-      const startX = section.start * stepWidth;
+      const startX = section.start * stepWidth + offsetX;
       const sectionWidth = (section.end - section.start + 1) * stepWidth;
       ctx.fillStyle = section.color || 'rgba(255, 255, 255, 0.04)';
-      ctx.fillRect(startX, padding, sectionWidth, areaHeight);
+      ctx.fillRect(startX, padding + rulerHeight, sectionWidth, areaHeight);
     });
+
+    // Draw ruler if enabled
+    if (app.timeline.showRuler) {
+      drawTimelineRuler(app, ctx, width, rulerHeight, stepWidth, offsetX, ratio);
+    }
 
     // Draw grid lines
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1 * ratio;
     ctx.setLineDash([]);
     for (let i = 0; i <= STEP_COUNT; i += 1) {
-      const x = i * stepWidth;
-      ctx.beginPath();
-      ctx.moveTo(x, padding);
-      ctx.lineTo(x, padding + areaHeight);
-      ctx.stroke();
+      const x = i * stepWidth + offsetX;
+      if (x >= -stepWidth && x <= width + stepWidth) {
+        ctx.beginPath();
+        ctx.moveTo(x, padding + rulerHeight);
+        ctx.lineTo(x, padding + rulerHeight + areaHeight);
+        ctx.stroke();
+      }
     }
 
     // Draw automation tracks
     app.automation.tracks.forEach(track => {
       ctx.beginPath();
       ctx.setLineDash([]);
+      let pathStarted = false;
       track.values.forEach((value, index) => {
-        const x = index * stepWidth + stepWidth / 2;
-        const y = padding + (1 - value) * areaHeight;
-        if (index === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
+        const x = index * stepWidth + stepWidth / 2 + offsetX;
+        if (x >= -stepWidth && x <= width + stepWidth) {
+          const y = padding + rulerHeight + (1 - value) * areaHeight;
+          if (!pathStarted) {
+            ctx.moveTo(x, y);
+            pathStarted = true;
+          } else {
+            ctx.lineTo(x, y);
+          }
         }
       });
       ctx.strokeStyle = track.color;
@@ -1842,9 +2919,11 @@ function drawTimeline(app) {
     });
 
     // Draw active step indicator
-    const activeX = app.timeline.currentStep * stepWidth;
-    ctx.fillStyle = 'rgba(73, 169, 255, 0.18)';
-    ctx.fillRect(activeX, padding, stepWidth, areaHeight);
+    const activeX = app.timeline.currentStep * stepWidth + offsetX;
+    if (activeX >= -stepWidth && activeX <= width + stepWidth) {
+      ctx.fillStyle = 'rgba(73, 169, 255, 0.18)';
+      ctx.fillRect(activeX, padding + rulerHeight, stepWidth, areaHeight);
+    }
 
     // Draw step numbers on mobile for better usability
     if (window.innerWidth <= 768) {
@@ -1853,10 +2932,13 @@ function drawTimeline(app) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       
-      for (let i = 0; i < STEP_COUNT; i += 2) { // Show every other step to avoid clutter
-        const x = i * stepWidth + stepWidth / 2;
-        const y = padding + areaHeight + 5 * ratio;
-        ctx.fillText((i + 1).toString(), x, y);
+      const stepNumberInterval = app.timeline.zoom > 1.0 ? 1 : 2; // Show more numbers when zoomed in
+      for (let i = 0; i < STEP_COUNT; i += stepNumberInterval) {
+        const x = i * stepWidth + stepWidth / 2 + offsetX;
+        if (x >= -stepWidth && x <= width + stepWidth) {
+          const y = padding + rulerHeight + areaHeight + 5 * ratio;
+          ctx.fillText((i + 1).toString(), x, y);
+        }
       }
     }
   });
@@ -1870,6 +2952,41 @@ function drawTimeline(app) {
     ctx.stroke();
   }
 
+  // Draw automation tracks with better visualization
+  const trackHeight = areaHeight / Math.max(app.automation.tracks.length, 1);
+  
+  app.automation.tracks.forEach((track, trackIndex) => {
+    const trackY = padding + rulerHeight + trackIndex * trackHeight;
+    const trackAreaHeight = trackHeight - 4 * ratio; // Small gap between tracks
+    
+    // Draw track background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+    ctx.fillRect(0, trackY, width, trackAreaHeight);
+    
+    // Draw track label
+    ctx.fillStyle = track.color;
+    ctx.font = `${10 * ratio}px Inter, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(track.label, 4 * ratio, trackY + 12 * ratio);
+    
+    // Draw automation curve
+    ctx.beginPath();
+    let pathStarted = false;
+    track.values.forEach((value, index) => {
+      const x = index * stepWidth + stepWidth / 2 + offsetX;
+      if (x >= -stepWidth && x <= width + stepWidth) {
+        const y = trackY + (1 - value) * trackAreaHeight;
+        if (!pathStarted) {
+          ctx.moveTo(x, y);
+          pathStarted = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+    });
+    ctx.strokeStyle = track.color;
+    ctx.lineWidth = 2 * ratio;
+    ctx.stroke();
     // Draw automation tracks with better visualization and smooth curves
     const trackHeight = areaHeight / Math.max(app.automation.tracks.length, 1);
     
@@ -1938,16 +3055,70 @@ function drawTimeline(app) {
     // Draw breakpoints if they exist
     if (track.breakpoints && track.breakpoints.length > 0) {
       track.breakpoints.forEach(bp => {
-        const x = bp.step * stepWidth + stepWidth / 2;
-        const y = trackY + (1 - bp.value) * trackAreaHeight;
-        ctx.fillStyle = track.color;
-        ctx.beginPath();
-        ctx.arc(x, y, 3 * ratio, 0, Math.PI * 2);
-        ctx.fill();
+        const x = bp.step * stepWidth + stepWidth / 2 + offsetX;
+        if (x >= -stepWidth && x <= width + stepWidth) {
+          const y = trackY + (1 - bp.value) * trackAreaHeight;
+          ctx.fillStyle = track.color;
+          ctx.beginPath();
+          ctx.arc(x, y, 3 * ratio, 0, Math.PI * 2);
+          ctx.fill();
+        }
       });
     }
   });
 
+}
+
+function drawTimelineRuler(app, ctx, width, rulerHeight, stepWidth, offsetX, ratio) {
+  const rulerY = 0;
+  const rulerAreaHeight = rulerHeight;
+  
+  // Ruler background
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.fillRect(0, rulerY, width, rulerAreaHeight);
+  
+  // Ruler border
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.lineWidth = 1 * ratio;
+  ctx.strokeRect(0, rulerY, width, rulerAreaHeight);
+  
+  // Time markers
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.font = `${10 * ratio}px Inter, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  
+  const stepDuration = Tone.Time(STEP_DURATION).toSeconds();
+  const totalDuration = stepDuration * STEP_COUNT;
+  
+  // Calculate appropriate time division based on zoom level
+  let timeDivision = 1; // steps
+  if (app.timeline.zoom < 0.5) {
+    timeDivision = 4; // Show every 4th step
+  } else if (app.timeline.zoom < 1.0) {
+    timeDivision = 2; // Show every 2nd step
+  }
+  
+  for (let i = 0; i <= STEP_COUNT; i += timeDivision) {
+    const x = i * stepWidth + offsetX;
+    if (x >= -stepWidth && x <= width + stepWidth) {
+      // Vertical line
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 1 * ratio;
+      ctx.beginPath();
+      ctx.moveTo(x, rulerY);
+      ctx.lineTo(x, rulerY + rulerAreaHeight);
+      ctx.stroke();
+      
+      // Time label
+      const timeInSeconds = i * stepDuration;
+      const minutes = Math.floor(timeInSeconds / 60);
+      const seconds = (timeInSeconds % 60).toFixed(1);
+      const timeLabel = minutes > 0 ? `${minutes}:${seconds.padStart(4, '0')}` : `${seconds}s`;
+      
+      ctx.fillText(timeLabel, x, rulerY + rulerAreaHeight / 2);
+    }
+  }
   // Draw animated playback cursor with enhanced smoothness
   const activeX = app.timeline.currentStep * stepWidth;
   const time = Date.now() * 0.003; // Slow animation
@@ -1962,6 +3133,41 @@ function drawTimeline(app) {
   
   ctx.fillStyle = cursorGradient;
   ctx.fillRect(activeX, padding, stepWidth, areaHeight);
+
+  // Draw pattern variation indicators
+  if (app.patternVariations && app.patternVariations.enabled) {
+    const patternColors = {
+      'A': 'rgba(73, 169, 255, 0.3)',
+      'B': 'rgba(255, 73, 175, 0.3)',
+      'C': 'rgba(148, 255, 73, 0.3)',
+      'D': 'rgba(255, 180, 73, 0.3)',
+      'E': 'rgba(255, 100, 100, 0.3)',
+      'F': 'rgba(100, 255, 255, 0.3)'
+    };
+    
+    // Draw pattern indicators at the top
+    const indicatorHeight = 8 * ratio;
+    const currentPattern = app.patternVariations.abPatterns.currentPattern;
+    ctx.fillStyle = patternColors[currentPattern] || patternColors['A'];
+    ctx.fillRect(0, padding - indicatorHeight - 2, width, indicatorHeight);
+    
+    // Draw individual instrument pattern indicators
+    const instrumentPatterns = app.patternVariations.currentPatterns;
+    const instrumentColors = {
+      kick: 'rgba(255, 100, 100, 0.4)',
+      snare: 'rgba(100, 255, 100, 0.4)',
+      hats: 'rgba(100, 100, 255, 0.4)',
+      bass: 'rgba(255, 255, 100, 0.4)',
+      lead: 'rgba(255, 100, 255, 0.4)',
+      fx: 'rgba(100, 255, 255, 0.4)'
+    };
+    
+    let yOffset = padding - indicatorHeight - 12;
+    Object.entries(instrumentPatterns).forEach(([instrument, pattern]) => {
+      ctx.fillStyle = patternColors[pattern] || patternColors['A'];
+      ctx.fillRect(0, yOffset, width, 4);
+      yOffset -= 6;
+    });
   
   // Animated border with smooth transitions
   ctx.strokeStyle = `rgba(73, 169, 255, ${0.7 + pulseIntensity * 0.3})`;
@@ -1990,8 +3196,27 @@ function drawTimeline(app) {
   ctx.fillStyle = outerGlow;
   ctx.fillRect(activeX - stepWidth, padding - stepWidth, stepWidth * 3, areaHeight + stepWidth * 2);
   
-  // Draw particles for visual flair
-  drawParticles(app, ctx, activeX + stepWidth / 2, padding + areaHeight / 2, ratio);
+  // Current time indicator
+  const currentTimeX = app.timeline.currentStep * stepWidth + offsetX;
+  if (currentTimeX >= -stepWidth && currentTimeX <= width + stepWidth) {
+    ctx.strokeStyle = '#49a9ff';
+    ctx.lineWidth = 2 * ratio;
+    ctx.beginPath();
+    ctx.moveTo(currentTimeX, rulerY);
+    ctx.lineTo(currentTimeX, rulerY + rulerAreaHeight);
+    ctx.stroke();
+    
+    // Current time label
+    const currentTimeInSeconds = app.timeline.currentStep * stepDuration;
+    const minutes = Math.floor(currentTimeInSeconds / 60);
+    const seconds = (currentTimeInSeconds % 60).toFixed(1);
+    const currentTimeLabel = minutes > 0 ? `${minutes}:${seconds.padStart(4, '0')}` : `${seconds}s`;
+    
+    ctx.fillStyle = '#49a9ff';
+    ctx.font = `${9 * ratio}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(currentTimeLabel, currentTimeX, rulerY + rulerAreaHeight - 5 * ratio);
+  }
 }
 
 function setupAutomationScheduling(app) {
@@ -2004,6 +3229,7 @@ function setupAutomationScheduling(app) {
     app.timeline.currentStep = step;
     applyAutomationForStep(app, step, time);
     syncSectionState(app, step);
+    updatePatternVariations(app);
     requestAnimationFrame(() => drawTimeline(app));
     app.automationStep = (step + 1) % STEP_COUNT;
   }, STEP_DURATION);
@@ -2042,12 +3268,16 @@ function updateSectionPlayback(app, section) {
   });
 
   app.activeSection = sectionName;
+  
+  // Update LED indicators based on active sequences
+  updateLEDIndicators(app, section);
 }
 
 function syncSectionState(app, step) {
   const section = getSectionForStep(app, step);
   updateSectionPlayback(app, section);
   updateSectionLabel(app, step, section);
+  updateLEDIndicators(app, section);
 }
 
 function applyAutomationForStep(app, step, time) {
@@ -2070,6 +3300,11 @@ function applyAutomationForStep(app, step, time) {
   const distortionAmountTrack = getAutomationTrack(app, 'distortionAmount');
   const distortionToneTrack = getAutomationTrack(app, 'distortionTone');
   const distortionMixTrack = getAutomationTrack(app, 'distortionMix');
+  // New distortion tracks
+  const leadDistortionTrack = getAutomationTrack(app, 'leadDistortion');
+  const leadOverdriveTrack = getAutomationTrack(app, 'leadOverdrive');
+  const drumDistortionTrack = getAutomationTrack(app, 'drumDistortion');
+  const masterOverdriveTrack = getAutomationTrack(app, 'masterOverdrive');
 
   const leadBase = getControlValue(app, 'leadFilterBase');
   const leadMod = getControlValue(app, 'leadFilterMod');
@@ -2099,8 +3334,23 @@ function applyAutomationForStep(app, step, time) {
     distortionAmount: distortionAmountTrack,
     distortionTone: distortionToneTrack,
     distortionMix: distortionMixTrack
+    leadDistortion: leadDistortionTrack,
+    leadOverdrive: leadOverdriveTrack,
+    drumDistortion: drumDistortionTrack,
+    masterOverdrive: masterOverdriveTrack
   }, step, time);
 
+  // Apply envelope follower modulation
+  const envModulatedTracks = applyEnvelopeFollowerModulation(app, lfoModulatedTracks, step, time);
+
+  const leadValue = clamp(getAutomationValue(envModulatedTracks.leadFilter, step), 0, 1);
+  const fxValue = clamp(getAutomationValue(envModulatedTracks.fxSend, step), 0, 1);
+  const bassValue = clamp(getAutomationValue(envModulatedTracks.bassFilter, step), 0, 1);
+  const reverbValue = clamp(getAutomationValue(envModulatedTracks.reverbDecay, step), 0, 1);
+  const delayValue = clamp(getAutomationValue(envModulatedTracks.delayFeedback, step), 0, 1);
+  const driveValue = clamp(getAutomationValue(envModulatedTracks.bassDrive, step), 0, 1);
+  const resonanceValue = clamp(getAutomationValue(envModulatedTracks.leadResonance, step), 0, 1);
+  const masterValue = clamp(getAutomationValue(envModulatedTracks.masterVolume, step), 0, 1);
   const leadValue = clamp(getAutomationValue(lfoModulatedTracks.leadFilter, step), 0, 1);
   const fxValue = clamp(getAutomationValue(lfoModulatedTracks.fxSend, step), 0, 1);
   const bassValue = clamp(getAutomationValue(lfoModulatedTracks.bassFilter, step), 0, 1);
@@ -2120,6 +3370,11 @@ function applyAutomationForStep(app, step, time) {
   const distortionAmountValue = clamp(getAutomationValue(lfoModulatedTracks.distortionAmount, step), 0, 1);
   const distortionToneValue = clamp(getAutomationValue(lfoModulatedTracks.distortionTone, step), 0, 1);
   const distortionMixValue = clamp(getAutomationValue(lfoModulatedTracks.distortionMix, step), 0, 1);
+  // New distortion values
+  const leadDistortionValue = clamp(getAutomationValue(lfoModulatedTracks.leadDistortion, step), 0, 1);
+  const leadOverdriveValue = clamp(getAutomationValue(lfoModulatedTracks.leadOverdrive, step), 0, 1);
+  const drumDistortionValue = clamp(getAutomationValue(lfoModulatedTracks.drumDistortion, step), 0, 1);
+  const masterOverdriveValue = clamp(getAutomationValue(lfoModulatedTracks.masterOverdrive, step), 0, 1);
 
   const leadFreq = leadBase + leadMod * leadValue;
   const fxAmount = fxValue * fxBase;
@@ -2155,6 +3410,11 @@ function applyAutomationForStep(app, step, time) {
   const distortionNode = app.audio.nodes.distortion;
   const distortionFilterNode = app.audio.nodes.distortionFilter;
   const distortionMixNode = app.audio.nodes.distortionMix;
+  // New distortion nodes
+  const leadDistortionNode = app.audio.nodes.leadDistortion;
+  const leadOverdriveNode = app.audio.nodes.leadOverdrive;
+  const drumDistortionNode = app.audio.nodes.drumDistortion;
+  const masterOverdriveNode = app.audio.nodes.masterOverdrive;
 
   if (typeof time === 'number') {
     leadFrequency.setValueAtTime(leadFrequency.value, time);
@@ -2185,6 +3445,16 @@ function applyAutomationForStep(app, step, time) {
     driveNode.wet.linearRampToValueAtTime(driveAmount, time + 0.1);
     masterNode.gain.setValueAtTime(masterNode.gain.value, time);
     masterNode.gain.linearRampToValueAtTime(masterGain, time + 0.1);
+    
+    // Apply distortion automation
+    leadDistortionNode.distortion.setValueAtTime(leadDistortionNode.distortion.value, time);
+    leadDistortionNode.distortion.linearRampToValueAtTime(leadDistortionValue, time + 0.1);
+    leadOverdriveNode.drive.setValueAtTime(leadOverdriveNode.drive.value, time);
+    leadOverdriveNode.drive.linearRampToValueAtTime(leadOverdriveValue, time + 0.1);
+    drumDistortionNode.distortion.setValueAtTime(drumDistortionNode.distortion.value, time);
+    drumDistortionNode.distortion.linearRampToValueAtTime(drumDistortionValue, time + 0.1);
+    masterOverdriveNode.drive.setValueAtTime(masterOverdriveNode.drive.value, time);
+    masterOverdriveNode.drive.linearRampToValueAtTime(masterOverdriveValue, time + 0.1);
   } else {
     leadFrequency.value = leadFreq;
     leadFxGain.value = fxAmount;
@@ -2202,6 +3472,12 @@ function applyAutomationForStep(app, step, time) {
     distortionMixNode.gain.value = distortionMix;
     driveNode.wet.value = driveAmount;
     masterNode.gain.value = masterGain;
+    
+    // Apply distortion values
+    leadDistortionNode.distortion = leadDistortionValue;
+    leadOverdriveNode.drive = leadOverdriveValue;
+    drumDistortionNode.distortion = drumDistortionValue;
+    masterOverdriveNode.drive = masterOverdriveValue;
   }
 }
 
@@ -2250,6 +3526,45 @@ function applyLFOModulation(app, tracks, step, time) {
     // Apply LFO to the current step
     if (modulatedTracks[lfo.target].values[step] !== undefined) {
       modulatedTracks[lfo.target].values[step] = clamp(modulatedValue, 0, 1);
+    }
+  });
+
+  return modulatedTracks;
+}
+
+function applyEnvelopeFollowerModulation(app, tracks, step, time) {
+  const modulatedTracks = { ...tracks };
+
+  if (!app.audio || !app.audio.envelopeFollowers) {
+    return modulatedTracks;
+  }
+
+  Object.values(app.audio.envelopeFollowers).forEach(follower => {
+    const { node, definition } = follower;
+    if (!node || !definition.enabled) return;
+    
+    const targetTrack = tracks[definition.target];
+    if (!targetTrack) return;
+    
+    // Get current envelope level
+    const envelopeLevel = node.getLevel();
+    const inputLevel = node.getInputLevel();
+    
+    // Apply envelope follower modulation
+    const baseValue = getAutomationValue(targetTrack, step);
+    const modulationAmount = envelopeLevel * 0.3; // Scale down for subtle effect
+    const modulatedValue = baseValue + modulationAmount;
+    
+    // Create a copy of the track with envelope follower modulation
+    modulatedTracks[definition.target] = {
+      ...targetTrack,
+      values: [...targetTrack.values],
+      envModulated: true
+    };
+    
+    // Apply envelope follower to the current step
+    if (modulatedTracks[definition.target].values[step] !== undefined) {
+      modulatedTracks[definition.target].values[step] = clamp(modulatedValue, 0, 1);
     }
   });
 
@@ -2374,106 +3689,16 @@ function normalizeAutomationState(automation, stepCount = STEP_COUNT) {
         color,
         values: normalizeAutomationValues(baseValues, stepCount)
       });
-      seenIds.add(trackData.id);
-    });
-  }
-
-  defaults.tracks.forEach(track => {
-    if (seenIds.has(track.id)) {
-      return;
-    }
-    normalizedTracks.push({
-      id: track.id,
-      label: track.label,
-      color: track.color,
-      values: track.values.slice()
-    });
-    seenIds.add(track.id);
-  });
-
-  normalizedTracks.sort((a, b) => {
-    const orderA = AUTOMATION_TRACK_ORDER.get(a.id);
-    const orderB = AUTOMATION_TRACK_ORDER.get(b.id);
-    if (orderA === undefined && orderB === undefined) {
-      return a.id.localeCompare(b.id);
-    }
-    if (orderA === undefined) return 1;
-    if (orderB === undefined) return -1;
-    return orderA - orderB;
-  });
-
-  let sections = defaults.sections.map(section => ({ ...section }));
-  if (automation && Array.isArray(automation.sections) && automation.sections.length) {
-    const normalizedSections = normalizeSections(automation.sections, stepCount);
-    if (normalizedSections.length) {
-      sections = normalizedSections;
+      
+    } catch (error) {
+      this.ui.showError(`Failed to initialize: ${error.message}`);
+      throw error;
     }
   }
 
-  return { tracks: normalizedTracks, sections };
-}
-
-function normalizeSections(sections, stepCount = STEP_COUNT) {
-  if (!Array.isArray(sections) || sections.length === 0) {
-    return createSectionLayout(stepCount);
+  setStatus(message) {
+    this.ui.setStatus(message);
   }
-
-  const defaultLayout = createSectionLayout(stepCount);
-  const sanitized = sections
-    .map(section => {
-      if (!section) {
-        return null;
-      }
-      const start = Number(section.start);
-      const end = Number(section.end);
-      if (!Number.isFinite(start) || !Number.isFinite(end)) {
-        return null;
-      }
-      return {
-        name: section.name,
-        color: section.color,
-        start,
-        end
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.start - b.start);
-
-  if (!sanitized.length) {
-    return defaultLayout;
-  }
-
-  const maxEnd = sanitized.reduce((max, section) => Math.max(max, section.end), 0);
-  const sourceSpan = Math.max(maxEnd, 1);
-  const targetMax = Math.max(stepCount - 1, 0);
-
-  let lastEnd = -1;
-  const normalized = sanitized.map((section, index) => {
-    const definition = SECTION_DEFINITIONS.find(def => def.name === section.name);
-    const fallback = defaultLayout[index % defaultLayout.length];
-    const color = section.color || definition?.color || fallback.color;
-    const scaledStart = sourceSpan > 0 ? Math.round((section.start / sourceSpan) * targetMax) : 0;
-    const scaledEnd = sourceSpan > 0 ? Math.round((section.end / sourceSpan) * targetMax) : 0;
-    let start = clamp(Number.isFinite(scaledStart) ? scaledStart : 0, 0, targetMax);
-    let end = clamp(Number.isFinite(scaledEnd) ? scaledEnd : start, 0, targetMax);
-    start = Math.min(Math.max(start, lastEnd + 1), targetMax);
-    if (end < start) {
-      end = start;
-    }
-    lastEnd = end;
-    return {
-      name: section.name || definition?.name || fallback.name,
-      color,
-      start,
-      end
-    };
-  });
-
-  if (normalized.length) {
-    normalized[0].start = 0;
-    normalized[normalized.length - 1].end = targetMax;
-  }
-
   return normalized;
 }
 
@@ -2502,6 +3727,60 @@ function updateSectionLabel(app, step, sectionOverride) {
       app.sectionLabelEl.style.color = '';
     }, 1000);
   }
+}
+
+function updateLEDIndicators(app, section) {
+  if (!app.leds) return;
+  
+  const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
+  const defaultState = { drums: true, bass: true, lead: true, fx: true };
+  
+  // Update each LED based on the current section's sequence activity
+  Object.keys(app.leds).forEach(groupName => {
+    const led = app.leds[groupName];
+    if (!led) return;
+    
+    const hasExplicitSetting = arrangement && Object.prototype.hasOwnProperty.call(arrangement, groupName);
+    const shouldEnable = hasExplicitSetting
+      ? Boolean(arrangement[groupName])
+      : defaultState[groupName] !== undefined
+        ? defaultState[groupName]
+        : true;
+    
+    if (shouldEnable) {
+      led.classList.add('active');
+    } else {
+      led.classList.remove('active');
+    }
+  });
+}
+
+function updateLEDIndicators(app, section) {
+  if (!app.leds) return;
+  
+  const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
+  const defaultState = { drums: true, bass: true, lead: true, fx: true };
+  const isPlaying = Tone.Transport.state === 'started';
+  
+  // Update each LED based on the current section's sequence activity
+  Object.keys(app.leds).forEach(groupName => {
+    const led = app.leds[groupName];
+    if (!led) return;
+    
+    const hasExplicitSetting = arrangement && Object.prototype.hasOwnProperty.call(arrangement, groupName);
+    const shouldEnable = hasExplicitSetting
+      ? Boolean(arrangement[groupName])
+      : defaultState[groupName] !== undefined
+        ? defaultState[groupName]
+        : true;
+    
+    // Only show active LEDs when actually playing
+    if (shouldEnable && isPlaying) {
+      led.classList.add('active');
+    } else {
+      led.classList.remove('active');
+    }
+  });
 }
 
 async function exportMix(app) {
@@ -2542,6 +3821,7 @@ async function captureBuses(app, buses) {
     app.timeline.currentStep = 0;
     applyAutomationForStep(app, 0);
     syncSectionState(app, 0);
+    updateLEDIndicators(app, getSectionForStep(app, 0));
     drawTimeline(app);
   }
 }
@@ -2557,44 +3837,20 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-function setupMidi(app) {
-  if (!navigator.requestMIDIAccess) {
-    console.info('WebMIDI not supported in this browser.');
-    return;
+  showError(message) {
+    this.ui.showError(message);
   }
-  navigator.requestMIDIAccess().then(access => {
-    app.midi.access = access;
-    access.inputs.forEach(input => {
-      input.onmidimessage = message => handleMidiMessage(app, message);
-    });
-    access.addEventListener('statechange', () => {
-      access.inputs.forEach(input => {
-        input.onmidimessage = message => handleMidiMessage(app, message);
-      });
-    });
-    setStatus(app, 'MIDI ready');
-  }).catch(error => {
-    console.warn('MIDI access denied', error);
-    setStatus(app, 'MIDI unavailable');
-  });
-}
 
-function setMidiLearn(app, enabled) {
-  app.midi.learning = enabled;
-  if (!enabled) {
-    setMidiPendingControl(app, null);
+  showSuccess(message) {
+    this.ui.showSuccess(message);
   }
-  setStatus(app, enabled ? 'MIDI Learn enabled' : 'MIDI Learn disabled');
-}
 
-function setMidiPendingControl(app, controlId) {
-  app.midi.pendingControl = controlId;
-  app.controls.forEach(entry => {
-    if (controlId && entry.control.id === controlId) {
-      entry.row.classList.add('midi-learning');
-    } else {
-      entry.row.classList.remove('midi-learning');
+  destroy() {
+    if (this.waveform) {
+      this.waveform.destroy();
     }
+    if (this.audio) {
+      this.audio.destroy();
   });
 }
 
@@ -2687,100 +3943,19 @@ function setStatus(app, message) {
   }
 }
 
-function wait(seconds) {
-  return new Promise(resolve => setTimeout(resolve, seconds * 1000));
-}
-
-function formatDb(value) {
-  return `${value.toFixed(1)} dB`;
-}
-
-function formatHz(value) {
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(2)} kHz`;
-  }
-  return `${Math.round(value)} Hz`;
-}
-
-function setBusLevel(bus, db) {
-  if (!bus) return;
-  bus.gain.value = Tone.dbToGain(db);
-}
-
-function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function slugify(name) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'preset';
-}
-
-function cloneAutomation(source) {
-  return {
-    tracks: source.tracks.map(track => ({
-      id: track.id,
-      label: track.label,
-      color: track.color,
-      values: [...track.values]
-    })),
-    sections: source.sections.map(section => ({ ...section }))
-  };
-}
-
-function saveControlState(state) {
+// Initialize app when DOM is loaded
+document.addEventListener('DOMContentLoaded', async () => {
+  window.app = new App();
   try {
-    localStorage.setItem(STORAGE_KEYS.controlState, JSON.stringify(state));
-  } catch (err) {
-    console.warn('Unable to persist control state', err);
+    await window.app.init();
+  } catch (error) {
+    console.error('Failed to start application:', error);
   }
-}
+});
 
-function loadControlState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.controlState);
-    return raw ? JSON.parse(raw) : {};
-  } catch (err) {
-    console.warn('Unable to read stored control state', err);
-    return {};
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  if (window.app) {
+    window.app.destroy();
   }
-}
-
-function savePresetState(preset) {
-  try {
-    localStorage.setItem(STORAGE_KEYS.preset, JSON.stringify(preset));
-  } catch (err) {
-    console.warn('Unable to store preset', err);
-  }
-}
-
-function loadPresetState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.preset);
-    return raw ? JSON.parse(raw) : null;
-  } catch (err) {
-    console.warn('Unable to load preset', err);
-    return null;
-  }
-}
-
-function saveMidiMappings(mappings) {
-  try {
-    localStorage.setItem(STORAGE_KEYS.midi, JSON.stringify(mappings));
-  } catch (err) {
-    console.warn('Unable to persist MIDI mappings', err);
-  }
-}
-
-function loadMidiMappings() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.midi);
-    return raw ? JSON.parse(raw) : {};
-  } catch (err) {
-    console.warn('Unable to load MIDI mappings', err);
-    return {};
-  }
-}
-
+});
