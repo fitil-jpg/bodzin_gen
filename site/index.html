@@ -158,6 +158,133 @@
       border-color: var(--border);
     }
 
+    .btn-danger {
+      background: linear-gradient(135deg, #ff4757, #ff3742);
+      color: white;
+      border-color: rgba(255, 71, 87, 0.45);
+    }
+
+    .btn-danger:hover {
+      background: linear-gradient(135deg, #ff5a6b, #ff4a55);
+      box-shadow: 0 8px 24px rgba(255, 71, 87, 0.35);
+    }
+
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-content {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 80vh;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .close-btn:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .history-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .history-entry:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: var(--accent);
+    }
+
+    .history-info {
+      flex: 1;
+    }
+
+    .history-name {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .history-details {
+      font-size: 0.85rem;
+      color: var(--muted);
+      display: flex;
+      gap: 1rem;
+    }
+
+    .history-version {
+      background: var(--accent);
+      color: var(--bg);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .modal-actions {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
     .search-container {
       display: flex;
       align-items: center;
@@ -1838,6 +1965,7 @@
       <div class="header-group" aria-label="Presets">
         <button id="savePresetButton" class="btn">Save Preset</button>
         <button id="loadPresetButton" class="btn">Load Preset</button>
+        <button id="presetHistoryButton" class="btn">History</button>
       </div>
       <div class="header-group" aria-label="Search and Filter">
         <div class="search-container">
@@ -1999,6 +2127,25 @@
       </main>
     </div>
   </div>
+
+  <!-- Preset History Modal -->
+  <div id="presetHistoryModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Preset History</h3>
+        <button id="closeHistoryModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="presetHistoryList" class="history-list">
+          <!-- History entries will be populated here -->
+        </div>
+        <div class="modal-actions">
+          <button id="clearHistoryButton" class="btn btn-danger">Clear History</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script type="text/javascript">const preset = JSON.parse(atob("e30="));</script>
   <script type="module" src="app-modular.js"></script>
 </body>

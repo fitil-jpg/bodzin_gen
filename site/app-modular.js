@@ -7,6 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { PresetVersioning } from './modules/preset-versioning.js';
 import { SearchFilter } from './modules/search-filter.js';
 import { PatternMorphing } from './modules/pattern-morphing.js';
 import { PatternChainManager } from './modules/pattern-chain-manager.js';
@@ -90,6 +91,7 @@ async function initializeApp(app) {
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
+  app.presetVersioning = new PresetVersioning();
   app.searchFilter = new SearchFilter(app);
   app.patternMorphing = new PatternMorphing(app);
   app.mobileGestures = new MobileGestures(app);
@@ -170,6 +172,7 @@ function setupButtons(app) {
   const stopBtn = document.getElementById('stopButton');
   const savePresetBtn = document.getElementById('savePresetButton');
   const loadPresetBtn = document.getElementById('loadPresetButton');
+  const presetHistoryBtn = document.getElementById('presetHistoryButton');
   const exportMixBtn = document.getElementById('exportMixButton');
   const exportStemsBtn = document.getElementById('exportStemsButton');
   const midiToggle = document.getElementById('midiLearnToggle');
@@ -186,8 +189,9 @@ function setupButtons(app) {
 
   startBtn?.addEventListener('click', () => startPlayback(app));
   stopBtn?.addEventListener('click', () => stopPlayback(app));
-  savePresetBtn?.addEventListener('click', () => app.presetLibraryUI.showSavePresetDialog());
-  loadPresetBtn?.addEventListener('click', () => app.presetLibraryUI.open());
+  savePresetBtn?.addEventListener('click', () => savePreset(app));
+  loadPresetBtn?.addEventListener('click', () => triggerPresetLoad(app));
+  presetHistoryBtn?.addEventListener('click', () => showPresetHistory(app));
   exportMixBtn?.addEventListener('click', () => exportMix(app));
   exportStemsBtn?.addEventListener('click', () => exportStems(app));
   
@@ -243,8 +247,14 @@ function setupButtons(app) {
     reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result);
+        
+        // Check compatibility before applying
+        if (!app.presetVersioning.isCompatible(parsed)) {
+          app.status.set('Preset is incompatible with current version');
+          return;
+        }
+        
         applyPreset(app, parsed);
-        app.status.set(`Preset "${parsed.name || 'Imported'}" loaded`);
       } catch (err) {
         console.error('Preset parse failed', err);
         app.status.set('Preset load failed');
@@ -326,10 +336,75 @@ function triggerPresetLoad(app) {
   }
 }
 
+function showPresetHistory(app) {
+  const modal = document.getElementById('presetHistoryModal');
+  const historyList = document.getElementById('presetHistoryList');
+  const closeBtn = document.getElementById('closeHistoryModal');
+  const clearBtn = document.getElementById('clearHistoryButton');
+  
+  if (!modal) return;
+  
+  // Load and display history
+  const history = app.storage.loadPresetHistory();
+  historyList.innerHTML = '';
+  
+  if (history.length === 0) {
+    historyList.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 2rem;">No preset history found</div>';
+  } else {
+    history.reverse().forEach(entry => {
+      const entryEl = document.createElement('div');
+      entryEl.className = 'history-entry';
+      entryEl.innerHTML = `
+        <div class="history-info">
+          <div class="history-name">${entry.presetName}</div>
+          <div class="history-details">
+            <span>${new Date(entry.timestamp).toLocaleString()}</span>
+            <span>${entry.action}</span>
+            <span class="history-version">v${entry.version}</span>
+          </div>
+        </div>
+      `;
+      historyList.appendChild(entryEl);
+    });
+  }
+  
+  // Show modal
+  modal.style.display = 'flex';
+  
+  // Close modal handlers
+  closeBtn?.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+  
+  // Clear history handler
+  clearBtn?.addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all preset history?')) {
+      app.storage.clearPresetHistory();
+      historyList.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 2rem;">No preset history found</div>';
+      app.status.set('Preset history cleared');
+    }
+  });
+}
+
 function savePreset(app) {
   const name = prompt('Preset name', app.presetName || 'Deep Preset');
   if (!name) return;
-  const payload = buildPresetPayload(app, name);
+  
+  // Get additional preset options
+  const description = prompt('Preset description (optional)', '');
+  const tags = prompt('Preset tags (comma-separated, optional)', '');
+  
+  const options = {};
+  if (description) options.description = description;
+  if (tags) options.tags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+  
+  const payload = buildPresetPayload(app, name, options);
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -339,9 +414,16 @@ function savePreset(app) {
   anchor.click();
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
+  
   app.presetName = name;
   app.storage.savePresetState(payload);
-  app.status.set(`Preset "${name}" saved`);
+  
+  // Save to history
+  const historyEntry = app.presetVersioning.createHistoryEntry(payload, 'save');
+  app.storage.savePresetHistory(historyEntry);
+  
+  const versionInfo = app.presetVersioning.getVersionInfo(payload);
+  app.status.set(`Preset "${name}" saved (v${versionInfo.version})`);
 }
 
 function buildPresetPayload(app, name) {
@@ -360,6 +442,50 @@ function buildPresetPayload(app, name) {
 
 function applyPreset(app, presetData) {
   if (!presetData || typeof presetData !== 'object') return;
+  
+  try {
+    // Validate and migrate preset if needed
+    const migratedPreset = app.presetVersioning.validateAndMigratePreset(presetData);
+    const versionInfo = app.presetVersioning.getVersionInfo(migratedPreset);
+    
+    if (migratedPreset.controls) {
+      Object.entries(migratedPreset.controls).forEach(([id, value]) => {
+        const control = app.uiControls.getControlDefinition(id);
+        if (control) {
+          app.uiControls.setControlValue(control, value, { silent: true });
+        }
+      });
+      app.storage.saveControlState(app.controlState);
+    }
+    if (migratedPreset.automation) {
+      applyAutomationPreset(app, migratedPreset.automation);
+      app.timeline.draw();
+    }
+    if (migratedPreset.midiMappings) {
+      app.midi.mappings = { ...migratedPreset.midiMappings };
+      app.midi.saveMappings();
+    }
+    if (migratedPreset.name) {
+      app.presetName = migratedPreset.name;
+    }
+    
+    // Save the migrated preset
+    app.storage.savePresetState(buildPresetPayload(app, app.presetName));
+    
+    // Save to history
+    const historyEntry = app.presetVersioning.createHistoryEntry(migratedPreset, 'load');
+    app.storage.savePresetHistory(historyEntry);
+    
+    applyAutomationForStep(app, app.timeline.currentStep);
+    syncSectionState(app, app.timeline.currentStep);
+    
+    // Show version info in status
+    const migrationNote = versionInfo.isLegacy ? ' (migrated from legacy)' : '';
+    app.status.set(`Preset "${migratedPreset.name}" loaded (v${versionInfo.version})${migrationNote}`);
+    
+  } catch (error) {
+    console.error('Failed to apply preset:', error);
+    app.status.set(`Preset load failed: ${error.message}`);
   if (presetData.controls) {
     Object.entries(presetData.controls).forEach(([id, value]) => {
       const control = app.uiControls.getControlDefinition(id);
@@ -383,9 +509,6 @@ function applyPreset(app, presetData) {
   if (presetData.name) {
     app.presetName = presetData.name;
   }
-  app.storage.savePresetState(buildPresetPayload(app, app.presetName));
-  applyAutomationForStep(app, app.timeline.currentStep);
-  syncSectionState(app, app.timeline.currentStep);
 }
 
 function applyAutomationPreset(app, automationData) {
