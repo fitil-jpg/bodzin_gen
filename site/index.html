@@ -431,6 +431,80 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .timeline-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .zoom-controls, .pan-controls, .timeline-options {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .zoom-level {
+      font-size: 0.9rem;
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    .timeline-options .toggle {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+      min-height: 32px;
+    }
+
+    .timeline-controls .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .timeline-controls .btn:disabled:hover {
+      transform: none;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .zoom-level {
+      transition: all 0.2s ease;
+    }
+
+    @media (max-width: 768px) {
+      .timeline-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+      }
+
+      .timeline-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+      }
+
+      .zoom-controls, .pan-controls, .timeline-options {
+        gap: 0.25rem;
+      }
+
+      .timeline-controls .btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+        min-height: 36px;
+        min-width: 36px;
+      }
+
+      .zoom-level {
+        font-size: 0.8rem;
+        min-width: 40px;
+      }
     }
 
     #sectionLabel {
@@ -1196,6 +1270,30 @@
         <section class="timeline-card">
           <div class="timeline-header">
             <div id="sectionLabel">Section: Intro</div>
+            <div class="timeline-controls">
+              <div class="zoom-controls">
+                <button id="zoomOut" class="btn btn-outline" title="Zoom Out">−</button>
+                <span id="zoomLevel" class="zoom-level">100%</span>
+                <button id="zoomIn" class="btn btn-outline" title="Zoom In">+</button>
+                <button id="zoomFit" class="btn btn-outline" title="Fit to Window">Fit</button>
+              </div>
+              <div class="pan-controls">
+                <button id="panLeft" class="btn btn-outline" title="Pan Left">←</button>
+                <button id="panRight" class="btn btn-outline" title="Pan Right">→</button>
+                <button id="goToStart" class="btn btn-outline" title="Go to Start">⏮</button>
+                <button id="goToEnd" class="btn btn-outline" title="Go to End">⏭</button>
+              </div>
+              <div class="timeline-options">
+                <label class="toggle" for="snapToGridToggle">
+                  <input type="checkbox" id="snapToGridToggle" checked>
+                  Snap
+                </label>
+                <label class="toggle" for="showRulerToggle">
+                  <input type="checkbox" id="showRulerToggle" checked>
+                  Ruler
+                </label>
+              </div>
+            </div>
             <div id="status">Status: Idle</div>
             <div id="patternStatus">Pattern: A</div>
           </div>
