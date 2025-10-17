@@ -6,7 +6,20 @@ export const LOOP_DURATION = Tone.Ticks(Tone.Time(STEP_DURATION).toTicks() * STE
 export const STORAGE_KEYS = {
   controlState: 'bodzin.controlState',
   preset: 'bodzin.preset',
-  midi: 'bodzin.midiMappings'
+  midi: 'bodzin.midiMappings',
+  presetHistory: 'bodzin.presetHistory'
+};
+
+// Preset versioning
+export const PRESET_VERSION = '1.0.0';
+export const PRESET_SCHEMA_VERSION = 1;
+
+export const PRESET_VERSIONS = {
+  '1.0.0': {
+    schemaVersion: 1,
+    description: 'Initial preset format with controls, automation, and MIDI mappings',
+    migration: null // No migration needed for initial version
+  }
 };
 
 export const SECTION_DEFINITIONS = [
