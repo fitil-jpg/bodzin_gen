@@ -7,6 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { PatternChainManager } from './modules/pattern-chain-manager.js';
 import { MobileGestures } from './modules/mobile-gestures.js';
 import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
@@ -44,6 +45,7 @@ function createApp() {
     midi: null,
     storage: null,
     status: null,
+    patternChain: null,
     mobileGestures: null,
     presetManager: null,
     presetLibraryUI: null,
@@ -79,6 +81,7 @@ async function initializeApp(app) {
   app.storage = new StorageManager();
   app.status = new StatusManager();
   app.audio = new AudioEngine().initialize();
+  app.patternChain = new PatternChainManager(app.audio);
   app.patternVariation = new PatternVariationManager(app);
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
@@ -177,6 +180,17 @@ function setupButtons(app) {
   loadPresetBtn?.addEventListener('click', () => app.presetLibraryUI.open());
   exportMixBtn?.addEventListener('click', () => exportMix(app));
   exportStemsBtn?.addEventListener('click', () => exportStems(app));
+  
+  // Add pattern chain export/import buttons
+  const exportChainBtn = document.getElementById('exportChainButton');
+  const importChainBtn = document.getElementById('importChainButton');
+  
+  if (exportChainBtn) {
+    exportChainBtn.addEventListener('click', () => exportPatternChain(app));
+  }
+  if (importChainBtn) {
+    importChainBtn.addEventListener('click', () => triggerChainImport(app));
+  }
   midiToggle?.addEventListener('change', event => {
     const enabled = Boolean(event.target.checked);
     app.midi.setLearning(enabled);
@@ -580,6 +594,15 @@ function setupAutomationScheduling(app) {
     app.timeline.currentStep = step;
     applyAutomationForStep(app, step, time);
     syncSectionState(app, step);
+    
+    // Handle pattern chaining
+    if (app.patternChain && app.patternChain.isChaining) {
+      // Advance chain every 16 steps (one complete pattern)
+      if (step === 0 && app.automationStep > 0) {
+        app.patternChain.advanceChain();
+      }
+    }
+    
     requestAnimationFrame(() => app.timeline.draw());
     app.automationStep = (step + 1) % STEP_COUNT;
   }, STEP_DURATION);
@@ -714,6 +737,97 @@ function downloadBlob(blob, filename) {
   anchor.click();
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
+}
+
+function exportPatternChain(app) {
+  if (!app.patternChain) {
+    app.status.set('Pattern chaining not available');
+    return;
+  }
+  
+  const chainConfig = app.patternChain.exportChainConfiguration();
+  const name = prompt('Pattern chain name', 'My Pattern Chain');
+  if (!name) return;
+  
+  const payload = {
+    name,
+    type: 'pattern-chain',
+    createdAt: new Date().toISOString(),
+    chainConfig
+  };
+  
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = slugify(name) + '-chain.json';
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+  
+  app.status.set(`Pattern chain "${name}" exported`);
+}
+
+function triggerChainImport(app) {
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'application/json';
+  fileInput.style.display = 'none';
+  fileInput.addEventListener('change', event => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (parsed.type === 'pattern-chain' && parsed.chainConfig) {
+          importPatternChain(app, parsed);
+          app.status.set(`Pattern chain "${parsed.name || 'Imported'}" loaded`);
+        } else {
+          app.status.set('Invalid pattern chain file');
+        }
+      } catch (err) {
+        console.error('Pattern chain parse failed', err);
+        app.status.set('Pattern chain load failed');
+      } finally {
+        fileInput.value = '';
+      }
+    };
+    reader.readAsText(file);
+  });
+  document.body.appendChild(fileInput);
+  fileInput.click();
+  document.body.removeChild(fileInput);
+}
+
+function importPatternChain(app, chainData) {
+  if (!app.patternChain) {
+    app.status.set('Pattern chaining not available');
+    return;
+  }
+  
+  app.patternChain.importChainConfiguration(chainData.chainConfig);
+  
+  // Update UI controls
+  const chainLengthSlider = document.getElementById('chainLengthSlider');
+  const variationIntensitySlider = document.getElementById('variationIntensitySlider');
+  const transitionModeSelect = document.getElementById('transitionModeSelect');
+  
+  if (chainLengthSlider) {
+    chainLengthSlider.value = chainData.chainConfig.chainLength;
+    chainLengthSlider.dispatchEvent(new Event('input'));
+  }
+  
+  if (variationIntensitySlider) {
+    variationIntensitySlider.value = chainData.chainConfig.variationIntensity;
+    variationIntensitySlider.dispatchEvent(new Event('input'));
+  }
+  
+  if (transitionModeSelect) {
+    transitionModeSelect.value = chainData.chainConfig.transitionMode;
+    transitionModeSelect.dispatchEvent(new Event('change'));
+  }
 }
 
 function slugify(name) {
