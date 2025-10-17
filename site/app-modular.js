@@ -7,6 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { MobileGestures } from './modules/mobile-gestures.js';
 import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
 import { PresetManager } from './modules/preset-manager.js';
@@ -43,6 +44,7 @@ function createApp() {
     midi: null,
     storage: null,
     status: null,
+    mobileGestures: null,
     presetManager: null,
     presetLibraryUI: null,
     presetManager: null,
@@ -81,6 +83,7 @@ async function initializeApp(app) {
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
+  app.mobileGestures = new MobileGestures(app);
   app.presetManager = new PresetManager(app);
   app.presetLibraryUI = new PresetLibraryUI(app);
   app.presetManager = new PresetManager(app);
@@ -123,6 +126,19 @@ async function initializeApp(app) {
   // Initialize MIDI
   await app.midi.initialize();
   
+  // Initialize mobile gestures
+  app.mobileGestures.initialize();
+  
+  // Register service worker for offline functionality
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('Service Worker registered:', registration);
+      })
+      .catch(error => {
+        console.log('Service Worker registration failed:', error);
+      });
+  }
   // Initialize preset manager
   app.presetManager.initialize();
   // Setup keyboard shortcuts
