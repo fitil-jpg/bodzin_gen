@@ -1,0 +1,17 @@
+{
+  "name": "bodzin-generator-toolkit",
+  "version": "1.0.0",
+  "description": "A web-based music generator inspired by Stephan Bodzin's style",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "keywords": ["music", "generator", "bodzin", "web-audio"],
+  "author": "Bodzin Generator Toolkit",
+  "license": "MIT"
+}
