@@ -114,6 +114,9 @@ export class TimelineRenderer {
       this.ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
       this.ctx.fillRect(0, trackY, this.canvas.width, trackAreaHeight);
       
+      // Draw pattern variation indicator if available
+      this.drawPatternVariationIndicator(track, trackY, ratio);
+      
       // Draw track label
       this.ctx.fillStyle = track.color;
       this.ctx.font = `${10 * ratio}px Inter, sans-serif`;
@@ -170,17 +173,49 @@ export class TimelineRenderer {
     }
   }
 
+  drawPatternVariationIndicator(track, trackY, ratio) {
+    if (!this.app.patternVariation) return;
+    
+    const currentPattern = this.app.patternVariation.getCurrentPattern();
+    if (!currentPattern) return;
+    
+    // Draw pattern indicator in top-right corner of track
+    const indicatorX = this.canvas.width - 60 * ratio;
+    const indicatorY = trackY + 2 * ratio;
+    
+    // Pattern background
+    this.ctx.fillStyle = `rgba(73, 169, 255, 0.2)`;
+    this.ctx.fillRect(indicatorX, indicatorY, 50 * ratio, 16 * ratio);
+    
+    // Pattern text
+    this.ctx.fillStyle = '#49a9ff';
+    this.ctx.font = `${8 * ratio}px Inter, sans-serif`;
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText(`P${currentPattern.id}`, indicatorX + 25 * ratio, indicatorY + 12 * ratio);
+    
+    // Variation intensity indicator
+    if (this.app.patternVariation.variationIntensity > 0) {
+      const intensity = this.app.patternVariation.variationIntensity;
+      const barWidth = 40 * ratio * intensity;
+      this.ctx.fillStyle = `rgba(255, 73, 175, ${0.3 + intensity * 0.7})`;
+      this.ctx.fillRect(indicatorX + 5 * ratio, indicatorY + 18 * ratio, barWidth, 2 * ratio);
+    }
+  }
+
   drawPlaybackCursor(padding, areaHeight, stepWidth, ratio) {
     const activeX = this.currentStep * stepWidth;
     const time = Date.now() * 0.003;
     const pulseIntensity = 0.3 + 0.2 * Math.sin(time);
     
+    // Get pattern-specific colors
+    const patternColors = this.getPatternColors();
+    
     // Main cursor
-    this.ctx.fillStyle = `rgba(73, 169, 255, ${0.18 + pulseIntensity * 0.1})`;
+    this.ctx.fillStyle = `rgba(${patternColors.r}, ${patternColors.g}, ${patternColors.b}, ${0.18 + pulseIntensity * 0.1})`;
     this.ctx.fillRect(activeX, padding, stepWidth, areaHeight);
     
     // Animated border
-    this.ctx.strokeStyle = `rgba(73, 169, 255, ${0.6 + pulseIntensity * 0.4})`;
+    this.ctx.strokeStyle = `rgba(${patternColors.r}, ${patternColors.g}, ${patternColors.b}, ${0.6 + pulseIntensity * 0.4})`;
     this.ctx.lineWidth = 2 * ratio;
     this.ctx.setLineDash([5 * ratio, 3 * ratio]);
     this.ctx.strokeRect(activeX, padding, stepWidth, areaHeight);
@@ -188,15 +223,38 @@ export class TimelineRenderer {
     
     // Glow effect
     const glowGradient = this.ctx.createLinearGradient(activeX, 0, activeX + stepWidth, 0);
-    glowGradient.addColorStop(0, `rgba(73, 169, 255, ${0.1 + pulseIntensity * 0.05})`);
-    glowGradient.addColorStop(0.5, `rgba(73, 169, 255, ${0.2 + pulseIntensity * 0.1})`);
-    glowGradient.addColorStop(1, `rgba(73, 169, 255, ${0.1 + pulseIntensity * 0.05})`);
+    glowGradient.addColorStop(0, `rgba(${patternColors.r}, ${patternColors.g}, ${patternColors.b}, ${0.1 + pulseIntensity * 0.05})`);
+    glowGradient.addColorStop(0.5, `rgba(${patternColors.r}, ${patternColors.g}, ${patternColors.b}, ${0.2 + pulseIntensity * 0.1})`);
+    glowGradient.addColorStop(1, `rgba(${patternColors.r}, ${patternColors.g}, ${patternColors.b}, ${0.1 + pulseIntensity * 0.05})`);
     
     this.ctx.fillStyle = glowGradient;
     this.ctx.fillRect(activeX - 10 * ratio, padding, stepWidth + 20 * ratio, areaHeight);
     
     // Draw particles
     this.drawParticles(activeX + stepWidth / 2, padding + areaHeight / 2, ratio);
+  }
+
+  getPatternColors() {
+    if (!this.app.patternVariation) {
+      return { r: 73, g: 169, b: 255 }; // Default blue
+    }
+    
+    const currentPattern = this.app.patternVariation.getCurrentPattern();
+    if (!currentPattern) {
+      return { r: 73, g: 169, b: 255 };
+    }
+    
+    // Pattern-specific colors
+    const patternColors = {
+      'A': { r: 73, g: 169, b: 255 },   // Blue
+      'B': { r: 255, g: 73, b: 175 },   // Pink
+      'C': { r: 148, g: 255, b: 73 },   // Green
+      'A→B': { r: 164, g: 121, b: 214 }, // Purple (morph)
+      'A→C': { r: 110, g: 212, b: 164 }, // Teal (morph)
+      'B→C': { r: 201, g: 164, b: 124 }  // Orange (morph)
+    };
+    
+    return patternColors[currentPattern.id] || patternColors['A'];
   }
 
   drawParticles(x, y, ratio) {

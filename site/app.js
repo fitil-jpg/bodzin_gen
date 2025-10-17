@@ -426,6 +426,68 @@ const CONTROL_SCHEMA = [
     ]
   },
   {
+    group: 'Distortion & Overdrive',
+    description: 'Harmonic saturation and drive effects.',
+    controls: [
+      {
+        id: 'leadDistortion',
+        label: 'Lead Distortion',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.2,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.leadDistortion.distortion = value;
+        }
+      },
+      {
+        id: 'leadOverdrive',
+        label: 'Lead Overdrive',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.3,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.leadOverdrive.drive = value;
+        }
+      },
+      {
+        id: 'drumDistortion',
+        label: 'Drum Distortion',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.15,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.drumDistortion.distortion = value;
+        }
+      },
+      {
+        id: 'masterOverdrive',
+        label: 'Master Overdrive',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.masterOverdrive.drive = value;
+        }
+      }
+    ]
+  },
+  {
     group: 'Ambience',
     description: 'Delay and space design.',
     controls: [
@@ -561,6 +623,58 @@ function setupMobileOptimizations(app) {
           setMidiLearn(app, false);
         }
         break;
+      case '=':
+      case '+':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          app.timeline.zoom = Math.min(app.timeline.zoom + app.timeline.zoomStep, app.timeline.maxZoom);
+          updateZoomLevel(app);
+          drawTimeline(app);
+        }
+        break;
+      case '-':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          app.timeline.zoom = Math.max(app.timeline.zoom - app.timeline.zoomStep, app.timeline.minZoom);
+          updateZoomLevel(app);
+          drawTimeline(app);
+        }
+        break;
+      case '0':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          app.timeline.zoom = 1.0;
+          app.timeline.pan = 0;
+          updateZoomLevel(app);
+          drawTimeline(app);
+        }
+        break;
+      case 'Home':
+        event.preventDefault();
+        app.timeline.pan = -getMaxPan(app);
+        drawTimeline(app);
+        break;
+      case 'End':
+        event.preventDefault();
+        app.timeline.pan = 0;
+        drawTimeline(app);
+        break;
+      case 'ArrowLeft':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          const stepWidth = (app.timeline.canvas.clientWidth / STEP_COUNT) * app.timeline.zoom;
+          app.timeline.pan = Math.max(app.timeline.pan - stepWidth * 0.1, -getMaxPan(app));
+          drawTimeline(app);
+        }
+        break;
+      case 'ArrowRight':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          const stepWidth = (app.timeline.canvas.clientWidth / STEP_COUNT) * app.timeline.zoom;
+          app.timeline.pan = Math.min(app.timeline.pan + stepWidth * 0.1, 0);
+          drawTimeline(app);
+        }
+        break;
     }
   });
 
@@ -603,7 +717,18 @@ function createApp() {
       canvas: document.getElementById('timeline'),
       ctx: null,
       currentStep: 0,
-      deviceRatio: window.devicePixelRatio || 1
+      deviceRatio: window.devicePixelRatio || 1,
+      zoom: 1.0,
+      pan: 0,
+      minZoom: 0.1,
+      maxZoom: 10.0,
+      zoomStep: 0.1,
+      isDragging: false,
+      lastPanX: 0,
+      snapToGrid: true,
+      gridSize: 1,
+      showRuler: true,
+      rulerHeight: 30
     },
     waveform: {
       canvas: document.getElementById('waveform'),
@@ -618,7 +743,13 @@ function createApp() {
     statusTimer: null,
     presetFileInput: null,
     particles: [],
-    lastParticleTime: 0
+    lastParticleTime: 0,
+    leds: {
+      drums: document.getElementById('led-drums'),
+      bass: document.getElementById('led-bass'),
+      lead: document.getElementById('led-lead'),
+      fx: document.getElementById('led-fx')
+    }
   };
 }
 
@@ -663,16 +794,17 @@ function initializeApp(app) {
   renderControlInterface(app);
   setupButtons(app);
   setupTimeline(app);
+  setupTimelineControls(app);
   setupWaveform(app);
   setupAutomationScheduling(app);
   setupMidi(app);
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
+  updateLEDIndicators(app, getSectionForStep(app, 0));
   drawTimeline(app);
   setStatus(app, 'Idle');
 
   // Hide mobile loading indicator
-  const mobileLoading = document.getElementById('mobile-loading');
   if (mobileLoading) {
     setTimeout(() => {
       mobileLoading.style.display = 'none';
@@ -1252,6 +1384,10 @@ async function startPlayback(app, options = {}) {
   if (!options.silent) {
     setStatus(app, 'Playing');
   }
+  
+  // Update LED indicators when starting playback
+  const currentSection = getSectionForStep(app, app.timeline.currentStep);
+  updateLEDIndicators(app, currentSection);
 }
 
 async function ensureTransportRunning(app) {
@@ -1301,6 +1437,14 @@ function stopPlayback(app) {
   app.automationStep = 0;
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
+  
+  // Clear all LED indicators when stopping
+  if (app.leds) {
+    Object.values(app.leds).forEach(led => {
+      if (led) led.classList.remove('active');
+    });
+  }
+  
   drawTimeline(app);
   setStatus(app, 'Stopped');
 }
@@ -1514,6 +1658,243 @@ function setupTimeline(app) {
 
   // Add mobile touch support for timeline
   setupTimelineTouch(app);
+  setupTimelineZoomPan(app);
+}
+
+function setupTimelineControls(app) {
+  const zoomInBtn = document.getElementById('zoomIn');
+  const zoomOutBtn = document.getElementById('zoomOut');
+  const zoomFitBtn = document.getElementById('zoomFit');
+  const zoomLevelEl = document.getElementById('zoomLevel');
+  const panLeftBtn = document.getElementById('panLeft');
+  const panRightBtn = document.getElementById('panRight');
+  const goToStartBtn = document.getElementById('goToStart');
+  const goToEndBtn = document.getElementById('goToEnd');
+  const snapToggle = document.getElementById('snapToGridToggle');
+  const rulerToggle = document.getElementById('showRulerToggle');
+
+  // Zoom controls
+  zoomInBtn?.addEventListener('click', () => {
+    app.timeline.zoom = Math.min(app.timeline.zoom + app.timeline.zoomStep, app.timeline.maxZoom);
+    updateZoomLevel(app);
+    drawTimeline(app);
+  });
+
+  zoomOutBtn?.addEventListener('click', () => {
+    app.timeline.zoom = Math.max(app.timeline.zoom - app.timeline.zoomStep, app.timeline.minZoom);
+    updateZoomLevel(app);
+    drawTimeline(app);
+  });
+
+  zoomFitBtn?.addEventListener('click', () => {
+    app.timeline.zoom = 1.0;
+    app.timeline.pan = 0;
+    updateZoomLevel(app);
+    drawTimeline(app);
+  });
+
+  // Pan controls
+  panLeftBtn?.addEventListener('click', () => {
+    const stepWidth = (app.timeline.canvas.clientWidth / STEP_COUNT) * app.timeline.zoom;
+    app.timeline.pan = Math.max(app.timeline.pan - stepWidth * 0.1, -getMaxPan(app));
+    drawTimeline(app);
+  });
+
+  panRightBtn?.addEventListener('click', () => {
+    const stepWidth = (app.timeline.canvas.clientWidth / STEP_COUNT) * app.timeline.zoom;
+    app.timeline.pan = Math.min(app.timeline.pan + stepWidth * 0.1, 0);
+    drawTimeline(app);
+  });
+
+  goToStartBtn?.addEventListener('click', () => {
+    app.timeline.pan = -getMaxPan(app);
+    drawTimeline(app);
+  });
+
+  goToEndBtn?.addEventListener('click', () => {
+    app.timeline.pan = 0;
+    drawTimeline(app);
+  });
+
+  // Toggle controls
+  snapToggle?.addEventListener('change', (event) => {
+    app.timeline.snapToGrid = event.target.checked;
+  });
+
+  rulerToggle?.addEventListener('change', (event) => {
+    app.timeline.showRuler = event.target.checked;
+    drawTimeline(app);
+  });
+
+  // Initialize zoom level display
+  updateZoomLevel(app);
+}
+
+function setupTimelineZoomPan(app) {
+  const canvas = app.timeline.canvas;
+  let isPanning = false;
+  let lastPanX = 0;
+
+  // Mouse wheel zoom
+  canvas.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -app.timeline.zoomStep : app.timeline.zoomStep;
+    const oldZoom = app.timeline.zoom;
+    app.timeline.zoom = Math.max(app.timeline.minZoom, Math.min(app.timeline.maxZoom, app.timeline.zoom + delta));
+    
+    if (app.timeline.zoom !== oldZoom) {
+      // Zoom towards mouse position
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const zoomFactor = app.timeline.zoom / oldZoom;
+      app.timeline.pan = mouseX - (mouseX - app.timeline.pan) * zoomFactor;
+      
+      updateZoomLevel(app);
+      drawTimeline(app);
+    }
+  });
+
+  // Mouse pan
+  canvas.addEventListener('mousedown', (event) => {
+    if (event.button === 1 || (event.button === 0 && event.ctrlKey)) { // Middle mouse or Ctrl+left
+      isPanning = true;
+      lastPanX = event.clientX;
+      canvas.style.cursor = 'grabbing';
+      event.preventDefault();
+    }
+  });
+
+  canvas.addEventListener('mousemove', (event) => {
+    if (isPanning) {
+      const deltaX = event.clientX - lastPanX;
+      app.timeline.pan = Math.max(-getMaxPan(app), Math.min(0, app.timeline.pan + deltaX));
+      lastPanX = event.clientX;
+      drawTimeline(app);
+    }
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    isPanning = false;
+    canvas.style.cursor = '';
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    isPanning = false;
+    canvas.style.cursor = '';
+  });
+
+  // Touch pan and pinch zoom
+  let lastTouchX = 0;
+  let touchStartX = 0;
+  let lastTouchDistance = 0;
+  let initialZoom = 1.0;
+  let initialPan = 0;
+
+  canvas.addEventListener('touchstart', (event) => {
+    if (event.touches.length === 1) {
+      lastTouchX = event.touches[0].clientX;
+      touchStartX = event.touches[0].clientX;
+    } else if (event.touches.length === 2) {
+      // Pinch zoom
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      lastTouchDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) + 
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      initialZoom = app.timeline.zoom;
+      initialPan = app.timeline.pan;
+    }
+  }, { passive: true });
+
+  canvas.addEventListener('touchmove', (event) => {
+    if (event.touches.length === 1) {
+      const deltaX = event.touches[0].clientX - lastTouchX;
+      const totalDelta = Math.abs(event.touches[0].clientX - touchStartX);
+      
+      // Only pan if we've moved enough (to distinguish from tap)
+      if (totalDelta > 10) {
+        app.timeline.pan = Math.max(-getMaxPan(app), Math.min(0, app.timeline.pan + deltaX));
+        lastTouchX = event.touches[0].clientX;
+        drawTimeline(app);
+        event.preventDefault();
+      }
+    } else if (event.touches.length === 2) {
+      // Pinch zoom
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      const currentDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) + 
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      
+      if (lastTouchDistance > 0) {
+        const scale = currentDistance / lastTouchDistance;
+        const newZoom = Math.max(app.timeline.minZoom, Math.min(app.timeline.maxZoom, initialZoom * scale));
+        
+        // Zoom towards center of pinch
+        const centerX = (touch1.clientX + touch2.clientX) / 2;
+        const rect = canvas.getBoundingClientRect();
+        const relativeX = centerX - rect.left;
+        const zoomFactor = newZoom / app.timeline.zoom;
+        
+        app.timeline.zoom = newZoom;
+        app.timeline.pan = relativeX - (relativeX - app.timeline.pan) * zoomFactor;
+        
+        updateZoomLevel(app);
+        drawTimeline(app);
+        event.preventDefault();
+      }
+    }
+  }, { passive: false });
+}
+
+function updateZoomLevel(app) {
+  const zoomLevelEl = document.getElementById('zoomLevel');
+  if (zoomLevelEl) {
+    zoomLevelEl.textContent = `${Math.round(app.timeline.zoom * 100)}%`;
+    
+    // Add visual feedback
+    zoomLevelEl.style.transform = 'scale(1.1)';
+    zoomLevelEl.style.color = '#49a9ff';
+    setTimeout(() => {
+      zoomLevelEl.style.transform = '';
+      zoomLevelEl.style.color = '';
+    }, 200);
+  }
+  
+  // Update pan button states
+  const panLeftBtn = document.getElementById('panLeft');
+  const panRightBtn = document.getElementById('panRight');
+  const goToStartBtn = document.getElementById('goToStart');
+  const goToEndBtn = document.getElementById('goToEnd');
+  
+  const maxPan = getMaxPan(app);
+  const canPanLeft = app.timeline.pan > -maxPan;
+  const canPanRight = app.timeline.pan < 0;
+  
+  if (panLeftBtn) {
+    panLeftBtn.disabled = !canPanLeft;
+    panLeftBtn.style.opacity = canPanLeft ? '1' : '0.5';
+  }
+  if (panRightBtn) {
+    panRightBtn.disabled = !canPanRight;
+    panRightBtn.style.opacity = canPanRight ? '1' : '0.5';
+  }
+  if (goToStartBtn) {
+    goToStartBtn.disabled = !canPanLeft;
+    goToStartBtn.style.opacity = canPanLeft ? '1' : '0.5';
+  }
+  if (goToEndBtn) {
+    goToEndBtn.disabled = !canPanRight;
+    goToEndBtn.style.opacity = canPanRight ? '1' : '0.5';
+  }
+}
+
+function getMaxPan(app) {
+  const canvasWidth = app.timeline.canvas.clientWidth;
+  const totalWidth = canvasWidth * app.timeline.zoom;
+  return Math.max(0, totalWidth - canvasWidth);
 }
 
 function setupTimelineTouch(app) {
@@ -1524,8 +1905,11 @@ function setupTimelineTouch(app) {
   const getStepFromPosition = (clientX) => {
     const rect = canvas.getBoundingClientRect();
     const x = clientX - rect.left;
-    const stepWidth = rect.width / STEP_COUNT;
-    return Math.floor(x / stepWidth);
+    const stepWidth = (rect.width / STEP_COUNT) * app.timeline.zoom;
+    const offsetX = app.timeline.pan;
+    const adjustedX = x - offsetX;
+    const step = Math.floor(adjustedX / stepWidth);
+    return app.timeline.snapToGrid ? step : Math.round(adjustedX / stepWidth);
   };
 
   const handleTimelineInteraction = (clientX) => {
@@ -1792,9 +2176,11 @@ function drawTimeline(app) {
   requestAnimationFrame(() => {
     ctx.clearRect(0, 0, width, height);
 
+    const rulerHeight = app.timeline.showRuler ? app.timeline.rulerHeight * ratio : 0;
     const padding = 20 * ratio;
-    const areaHeight = height - padding * 2;
-    const stepWidth = width / STEP_COUNT;
+    const areaHeight = height - padding * 2 - rulerHeight;
+    const stepWidth = (width / STEP_COUNT) * app.timeline.zoom;
+    const offsetX = app.timeline.pan;
 
     // Enable anti-aliasing for smoother lines
     ctx.imageSmoothingEnabled = true;
@@ -1806,35 +2192,46 @@ function drawTimeline(app) {
     
     // Draw sections
     sections.forEach(section => {
-      const startX = section.start * stepWidth;
+      const startX = section.start * stepWidth + offsetX;
       const sectionWidth = (section.end - section.start + 1) * stepWidth;
       ctx.fillStyle = section.color || 'rgba(255, 255, 255, 0.04)';
-      ctx.fillRect(startX, padding, sectionWidth, areaHeight);
+      ctx.fillRect(startX, padding + rulerHeight, sectionWidth, areaHeight);
     });
+
+    // Draw ruler if enabled
+    if (app.timeline.showRuler) {
+      drawTimelineRuler(app, ctx, width, rulerHeight, stepWidth, offsetX, ratio);
+    }
 
     // Draw grid lines
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1 * ratio;
     ctx.setLineDash([]);
     for (let i = 0; i <= STEP_COUNT; i += 1) {
-      const x = i * stepWidth;
-      ctx.beginPath();
-      ctx.moveTo(x, padding);
-      ctx.lineTo(x, padding + areaHeight);
-      ctx.stroke();
+      const x = i * stepWidth + offsetX;
+      if (x >= -stepWidth && x <= width + stepWidth) {
+        ctx.beginPath();
+        ctx.moveTo(x, padding + rulerHeight);
+        ctx.lineTo(x, padding + rulerHeight + areaHeight);
+        ctx.stroke();
+      }
     }
 
     // Draw automation tracks
     app.automation.tracks.forEach(track => {
       ctx.beginPath();
       ctx.setLineDash([]);
+      let pathStarted = false;
       track.values.forEach((value, index) => {
-        const x = index * stepWidth + stepWidth / 2;
-        const y = padding + (1 - value) * areaHeight;
-        if (index === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
+        const x = index * stepWidth + stepWidth / 2 + offsetX;
+        if (x >= -stepWidth && x <= width + stepWidth) {
+          const y = padding + rulerHeight + (1 - value) * areaHeight;
+          if (!pathStarted) {
+            ctx.moveTo(x, y);
+            pathStarted = true;
+          } else {
+            ctx.lineTo(x, y);
+          }
         }
       });
       ctx.strokeStyle = track.color;
@@ -1843,9 +2240,11 @@ function drawTimeline(app) {
     });
 
     // Draw active step indicator
-    const activeX = app.timeline.currentStep * stepWidth;
-    ctx.fillStyle = 'rgba(73, 169, 255, 0.18)';
-    ctx.fillRect(activeX, padding, stepWidth, areaHeight);
+    const activeX = app.timeline.currentStep * stepWidth + offsetX;
+    if (activeX >= -stepWidth && activeX <= width + stepWidth) {
+      ctx.fillStyle = 'rgba(73, 169, 255, 0.18)';
+      ctx.fillRect(activeX, padding + rulerHeight, stepWidth, areaHeight);
+    }
 
     // Draw step numbers on mobile for better usability
     if (window.innerWidth <= 768) {
@@ -1854,10 +2253,13 @@ function drawTimeline(app) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       
-      for (let i = 0; i < STEP_COUNT; i += 2) { // Show every other step to avoid clutter
-        const x = i * stepWidth + stepWidth / 2;
-        const y = padding + areaHeight + 5 * ratio;
-        ctx.fillText((i + 1).toString(), x, y);
+      const stepNumberInterval = app.timeline.zoom > 1.0 ? 1 : 2; // Show more numbers when zoomed in
+      for (let i = 0; i < STEP_COUNT; i += stepNumberInterval) {
+        const x = i * stepWidth + stepWidth / 2 + offsetX;
+        if (x >= -stepWidth && x <= width + stepWidth) {
+          const y = padding + rulerHeight + areaHeight + 5 * ratio;
+          ctx.fillText((i + 1).toString(), x, y);
+        }
       }
     }
   });
@@ -1871,6 +2273,41 @@ function drawTimeline(app) {
     ctx.stroke();
   }
 
+  // Draw automation tracks with better visualization
+  const trackHeight = areaHeight / Math.max(app.automation.tracks.length, 1);
+  
+  app.automation.tracks.forEach((track, trackIndex) => {
+    const trackY = padding + rulerHeight + trackIndex * trackHeight;
+    const trackAreaHeight = trackHeight - 4 * ratio; // Small gap between tracks
+    
+    // Draw track background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+    ctx.fillRect(0, trackY, width, trackAreaHeight);
+    
+    // Draw track label
+    ctx.fillStyle = track.color;
+    ctx.font = `${10 * ratio}px Inter, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(track.label, 4 * ratio, trackY + 12 * ratio);
+    
+    // Draw automation curve
+    ctx.beginPath();
+    let pathStarted = false;
+    track.values.forEach((value, index) => {
+      const x = index * stepWidth + stepWidth / 2 + offsetX;
+      if (x >= -stepWidth && x <= width + stepWidth) {
+        const y = trackY + (1 - value) * trackAreaHeight;
+        if (!pathStarted) {
+          ctx.moveTo(x, y);
+          pathStarted = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+    });
+    ctx.strokeStyle = track.color;
+    ctx.lineWidth = 2 * ratio;
+    ctx.stroke();
     // Draw automation tracks with better visualization and smooth curves
     const trackHeight = areaHeight / Math.max(app.automation.tracks.length, 1);
     
@@ -1939,16 +2376,70 @@ function drawTimeline(app) {
     // Draw breakpoints if they exist
     if (track.breakpoints && track.breakpoints.length > 0) {
       track.breakpoints.forEach(bp => {
-        const x = bp.step * stepWidth + stepWidth / 2;
-        const y = trackY + (1 - bp.value) * trackAreaHeight;
-        ctx.fillStyle = track.color;
-        ctx.beginPath();
-        ctx.arc(x, y, 3 * ratio, 0, Math.PI * 2);
-        ctx.fill();
+        const x = bp.step * stepWidth + stepWidth / 2 + offsetX;
+        if (x >= -stepWidth && x <= width + stepWidth) {
+          const y = trackY + (1 - bp.value) * trackAreaHeight;
+          ctx.fillStyle = track.color;
+          ctx.beginPath();
+          ctx.arc(x, y, 3 * ratio, 0, Math.PI * 2);
+          ctx.fill();
+        }
       });
     }
   });
 
+}
+
+function drawTimelineRuler(app, ctx, width, rulerHeight, stepWidth, offsetX, ratio) {
+  const rulerY = 0;
+  const rulerAreaHeight = rulerHeight;
+  
+  // Ruler background
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.fillRect(0, rulerY, width, rulerAreaHeight);
+  
+  // Ruler border
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.lineWidth = 1 * ratio;
+  ctx.strokeRect(0, rulerY, width, rulerAreaHeight);
+  
+  // Time markers
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.font = `${10 * ratio}px Inter, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  
+  const stepDuration = Tone.Time(STEP_DURATION).toSeconds();
+  const totalDuration = stepDuration * STEP_COUNT;
+  
+  // Calculate appropriate time division based on zoom level
+  let timeDivision = 1; // steps
+  if (app.timeline.zoom < 0.5) {
+    timeDivision = 4; // Show every 4th step
+  } else if (app.timeline.zoom < 1.0) {
+    timeDivision = 2; // Show every 2nd step
+  }
+  
+  for (let i = 0; i <= STEP_COUNT; i += timeDivision) {
+    const x = i * stepWidth + offsetX;
+    if (x >= -stepWidth && x <= width + stepWidth) {
+      // Vertical line
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 1 * ratio;
+      ctx.beginPath();
+      ctx.moveTo(x, rulerY);
+      ctx.lineTo(x, rulerY + rulerAreaHeight);
+      ctx.stroke();
+      
+      // Time label
+      const timeInSeconds = i * stepDuration;
+      const minutes = Math.floor(timeInSeconds / 60);
+      const seconds = (timeInSeconds % 60).toFixed(1);
+      const timeLabel = minutes > 0 ? `${minutes}:${seconds.padStart(4, '0')}` : `${seconds}s`;
+      
+      ctx.fillText(timeLabel, x, rulerY + rulerAreaHeight / 2);
+    }
+  }
   // Draw animated playback cursor with enhanced smoothness
   const activeX = app.timeline.currentStep * stepWidth;
   const time = Date.now() * 0.003; // Slow animation
@@ -1991,8 +2482,27 @@ function drawTimeline(app) {
   ctx.fillStyle = outerGlow;
   ctx.fillRect(activeX - stepWidth, padding - stepWidth, stepWidth * 3, areaHeight + stepWidth * 2);
   
-  // Draw particles for visual flair
-  drawParticles(app, ctx, activeX + stepWidth / 2, padding + areaHeight / 2, ratio);
+  // Current time indicator
+  const currentTimeX = app.timeline.currentStep * stepWidth + offsetX;
+  if (currentTimeX >= -stepWidth && currentTimeX <= width + stepWidth) {
+    ctx.strokeStyle = '#49a9ff';
+    ctx.lineWidth = 2 * ratio;
+    ctx.beginPath();
+    ctx.moveTo(currentTimeX, rulerY);
+    ctx.lineTo(currentTimeX, rulerY + rulerAreaHeight);
+    ctx.stroke();
+    
+    // Current time label
+    const currentTimeInSeconds = app.timeline.currentStep * stepDuration;
+    const minutes = Math.floor(currentTimeInSeconds / 60);
+    const seconds = (currentTimeInSeconds % 60).toFixed(1);
+    const currentTimeLabel = minutes > 0 ? `${minutes}:${seconds.padStart(4, '0')}` : `${seconds}s`;
+    
+    ctx.fillStyle = '#49a9ff';
+    ctx.font = `${9 * ratio}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(currentTimeLabel, currentTimeX, rulerY + rulerAreaHeight - 5 * ratio);
+  }
 }
 
 function setupAutomationScheduling(app) {
@@ -2043,12 +2553,16 @@ function updateSectionPlayback(app, section) {
   });
 
   app.activeSection = sectionName;
+  
+  // Update LED indicators based on active sequences
+  updateLEDIndicators(app, section);
 }
 
 function syncSectionState(app, step) {
   const section = getSectionForStep(app, step);
   updateSectionPlayback(app, section);
   updateSectionLabel(app, step, section);
+  updateLEDIndicators(app, section);
 }
 
 function applyAutomationForStep(app, step, time) {
@@ -2060,6 +2574,12 @@ function applyAutomationForStep(app, step, time) {
   const driveTrack = getAutomationTrack(app, 'bassDrive');
   const resonanceTrack = getAutomationTrack(app, 'leadResonance');
   const masterTrack = getAutomationTrack(app, 'masterVolume');
+  
+  // New distortion tracks
+  const leadDistortionTrack = getAutomationTrack(app, 'leadDistortion');
+  const leadOverdriveTrack = getAutomationTrack(app, 'leadOverdrive');
+  const drumDistortionTrack = getAutomationTrack(app, 'drumDistortion');
+  const masterOverdriveTrack = getAutomationTrack(app, 'masterOverdrive');
 
   const leadBase = getControlValue(app, 'leadFilterBase');
   const leadMod = getControlValue(app, 'leadFilterMod');
@@ -2079,7 +2599,11 @@ function applyAutomationForStep(app, step, time) {
     delayFeedback: delayTrack,
     bassDrive: driveTrack,
     leadResonance: resonanceTrack,
-    masterVolume: masterTrack
+    masterVolume: masterTrack,
+    leadDistortion: leadDistortionTrack,
+    leadOverdrive: leadOverdriveTrack,
+    drumDistortion: drumDistortionTrack,
+    masterOverdrive: masterOverdriveTrack
   }, step, time);
 
   const leadValue = clamp(getAutomationValue(lfoModulatedTracks.leadFilter, step), 0, 1);
@@ -2090,6 +2614,12 @@ function applyAutomationForStep(app, step, time) {
   const driveValue = clamp(getAutomationValue(lfoModulatedTracks.bassDrive, step), 0, 1);
   const resonanceValue = clamp(getAutomationValue(lfoModulatedTracks.leadResonance, step), 0, 1);
   const masterValue = clamp(getAutomationValue(lfoModulatedTracks.masterVolume, step), 0, 1);
+  
+  // New distortion values
+  const leadDistortionValue = clamp(getAutomationValue(lfoModulatedTracks.leadDistortion, step), 0, 1);
+  const leadOverdriveValue = clamp(getAutomationValue(lfoModulatedTracks.leadOverdrive, step), 0, 1);
+  const drumDistortionValue = clamp(getAutomationValue(lfoModulatedTracks.drumDistortion, step), 0, 1);
+  const masterOverdriveValue = clamp(getAutomationValue(lfoModulatedTracks.masterOverdrive, step), 0, 1);
 
   const leadFreq = leadBase + leadMod * leadValue;
   const fxAmount = fxValue * fxBase;
@@ -2107,6 +2637,12 @@ function applyAutomationForStep(app, step, time) {
   const delayNode = app.audio.nodes.delay;
   const driveNode = app.audio.nodes.bassDrive;
   const masterNode = app.audio.master;
+  
+  // New distortion nodes
+  const leadDistortionNode = app.audio.nodes.leadDistortion;
+  const leadOverdriveNode = app.audio.nodes.leadOverdrive;
+  const drumDistortionNode = app.audio.nodes.drumDistortion;
+  const masterOverdriveNode = app.audio.nodes.masterOverdrive;
 
   if (typeof time === 'number') {
     leadFrequency.setValueAtTime(leadFrequency.value, time);
@@ -2122,6 +2658,16 @@ function applyAutomationForStep(app, step, time) {
     driveNode.wet.linearRampToValueAtTime(driveAmount, time + 0.1);
     masterNode.gain.setValueAtTime(masterNode.gain.value, time);
     masterNode.gain.linearRampToValueAtTime(masterGain, time + 0.1);
+    
+    // Apply distortion automation
+    leadDistortionNode.distortion.setValueAtTime(leadDistortionNode.distortion.value, time);
+    leadDistortionNode.distortion.linearRampToValueAtTime(leadDistortionValue, time + 0.1);
+    leadOverdriveNode.drive.setValueAtTime(leadOverdriveNode.drive.value, time);
+    leadOverdriveNode.drive.linearRampToValueAtTime(leadOverdriveValue, time + 0.1);
+    drumDistortionNode.distortion.setValueAtTime(drumDistortionNode.distortion.value, time);
+    drumDistortionNode.distortion.linearRampToValueAtTime(drumDistortionValue, time + 0.1);
+    masterOverdriveNode.drive.setValueAtTime(masterOverdriveNode.drive.value, time);
+    masterOverdriveNode.drive.linearRampToValueAtTime(masterOverdriveValue, time + 0.1);
   } else {
     leadFrequency.value = leadFreq;
     leadFxGain.value = fxAmount;
@@ -2130,6 +2676,12 @@ function applyAutomationForStep(app, step, time) {
     delayNode.feedback.value = delayFeedback;
     driveNode.wet.value = driveAmount;
     masterNode.gain.value = masterGain;
+    
+    // Apply distortion values
+    leadDistortionNode.distortion = leadDistortionValue;
+    leadOverdriveNode.drive = leadOverdriveValue;
+    drumDistortionNode.distortion = drumDistortionValue;
+    masterOverdriveNode.drive = masterOverdriveValue;
   }
 }
 
@@ -2432,6 +2984,60 @@ function updateSectionLabel(app, step, sectionOverride) {
   }
 }
 
+function updateLEDIndicators(app, section) {
+  if (!app.leds) return;
+  
+  const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
+  const defaultState = { drums: true, bass: true, lead: true, fx: true };
+  
+  // Update each LED based on the current section's sequence activity
+  Object.keys(app.leds).forEach(groupName => {
+    const led = app.leds[groupName];
+    if (!led) return;
+    
+    const hasExplicitSetting = arrangement && Object.prototype.hasOwnProperty.call(arrangement, groupName);
+    const shouldEnable = hasExplicitSetting
+      ? Boolean(arrangement[groupName])
+      : defaultState[groupName] !== undefined
+        ? defaultState[groupName]
+        : true;
+    
+    if (shouldEnable) {
+      led.classList.add('active');
+    } else {
+      led.classList.remove('active');
+    }
+  });
+}
+
+function updateLEDIndicators(app, section) {
+  if (!app.leds) return;
+  
+  const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
+  const defaultState = { drums: true, bass: true, lead: true, fx: true };
+  const isPlaying = Tone.Transport.state === 'started';
+  
+  // Update each LED based on the current section's sequence activity
+  Object.keys(app.leds).forEach(groupName => {
+    const led = app.leds[groupName];
+    if (!led) return;
+    
+    const hasExplicitSetting = arrangement && Object.prototype.hasOwnProperty.call(arrangement, groupName);
+    const shouldEnable = hasExplicitSetting
+      ? Boolean(arrangement[groupName])
+      : defaultState[groupName] !== undefined
+        ? defaultState[groupName]
+        : true;
+    
+    // Only show active LEDs when actually playing
+    if (shouldEnable && isPlaying) {
+      led.classList.add('active');
+    } else {
+      led.classList.remove('active');
+    }
+  });
+}
+
 async function exportMix(app) {
   await captureBuses(app, [
     { node: app.audio.master, label: 'mix' }
@@ -2470,6 +3076,7 @@ async function captureBuses(app, buses) {
     app.timeline.currentStep = 0;
     applyAutomationForStep(app, 0);
     syncSectionState(app, 0);
+    updateLEDIndicators(app, getSectionForStep(app, 0));
     drawTimeline(app);
   }
 }
