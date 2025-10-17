@@ -23,7 +23,8 @@ import {
   STEP_DURATION, 
   AUTOMATION_TRACK_DEFINITIONS,
   LFO_DEFINITIONS,
-  CURVE_TYPES 
+  CURVE_TYPES,
+  CONTROL_SCHEMA
 } from './utils/constants.js';
 import { 
   createDefaultAutomation, 
@@ -133,6 +134,9 @@ async function initializeApp(app) {
   setupButtons(app);
   setupWaveform(app);
   setupAutomationScheduling(app);
+  
+  // Start gain reduction meter animation
+  app.uiControls.startGainReductionAnimation();
   
   // Initialize MIDI
   await app.midi.initialize();

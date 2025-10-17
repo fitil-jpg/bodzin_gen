@@ -1453,6 +1453,112 @@
     .control-section:nth-child(3) { animation-delay: 0.2s; }
     .control-section:nth-child(4) { animation-delay: 0.3s; }
     .control-section:nth-child(5) { animation-delay: 0.4s; }
+    .control-section:nth-child(6) { animation-delay: 0.5s; }
+
+    /* Compressor/Limiter specific styling */
+    .control-section[data-group="Compressor/Limiter"] {
+      background: linear-gradient(135deg, rgba(255, 73, 175, 0.05), rgba(73, 169, 255, 0.05));
+      border: 1px solid rgba(255, 73, 175, 0.2);
+    }
+
+    .control-section[data-group="Compressor/Limiter"] h3 {
+      background: linear-gradient(135deg, #ff49af, #49a9ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .control-section[data-group="Compressor/Limiter"] .control-row {
+      border-left: 3px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .control-section[data-group="Compressor/Limiter"] .control-row:hover {
+      border-left-color: #ff49af;
+      background: rgba(255, 73, 175, 0.05);
+    }
+
+    /* Gain reduction meter styling */
+    .gain-reduction-meter {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 0.25rem;
+    }
+
+    .gain-reduction-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #26de81, #f7b731, #ff6b6b);
+      width: 0%;
+      transition: width 0.1s ease;
+    }
+
+    /* Compressor status indicator */
+    .compressor-status {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #26de81;
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+
+    .compressor-status.active {
+      opacity: 1;
+      background: #ff6b6b;
+      box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+    }
+
+    .compressor-status.compressing {
+      background: #f7b731;
+      animation: pulse 0.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.7; }
+    }
+
+    /* Compressor ratio display */
+    .compressor-ratio-display {
+      position: absolute;
+      bottom: 0.5rem;
+      right: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    /* Enhanced compressor controls */
+    .control-section[data-group="Compressor/Limiter"] .control-row {
+      position: relative;
+    }
+
+    .control-section[data-group="Compressor/Limiter"] .control-row:hover {
+      transform: translateX(4px);
+    }
+
+    /* Compressor threshold indicator */
+    .threshold-indicator {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 2px;
+      height: 20px;
+      background: var(--accent);
+      transform: translateY(-50%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .control-section[data-group="Compressor/Limiter"] .control-row:hover .threshold-indicator {
+      opacity: 1;
+    }
 
     .timeline-card {
       animation: slideInRight 0.8s ease-out;
