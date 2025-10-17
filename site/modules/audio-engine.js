@@ -4,9 +4,12 @@ import {
   LOOP_DURATION, 
   SECTION_DEFINITIONS,
   LFO_DEFINITIONS,
+  ENVELOPE_FOLLOWER_DEFINITIONS,
   SECTION_SEQUENCE_ACTIVITY 
 } from '../utils/constants.js';
 import { setBusLevel, clamp } from '../utils/helpers.js';
+import { createToneEnvelopeFollower } from './envelope-follower.js';
+import { ProbabilityManager } from './probability-manager.js';
 
 export class AudioEngine {
   constructor() {
@@ -16,27 +19,71 @@ export class AudioEngine {
     this.instruments = null;
     this.sequences = null;
     this.sequencesStarted = false;
+    this.envelopeFollowers = null;
+    this.lfos = null;
+    this.probabilityManager = new ProbabilityManager();
+    this.useProbabilityTriggers = false;
+    this.currentStep = 0;
+    this.currentSection = null;
   }
 
   initialize() {
     this.master = new Tone.Gain(0.9);
-    const limiter = new Tone.Limiter(-1);
-    this.master.connect(limiter);
-    limiter.toDestination();
+    
+    // Create compressor/limiter chain with enhanced settings
+    this.compressor = new Tone.Compressor({
+      threshold: -12,
+      ratio: 4,
+      attack: 0.003,
+      release: 0.25,
+      knee: 30
+    });
+    
+    // Add lookahead for better transient handling
+    this.lookahead = new Tone.Gain(1);
+    
+    this.compressorMakeup = new Tone.Gain(1);
+    this.limiter = new Tone.Limiter(-1);
+    
+    // Connect master chain: master -> lookahead -> compressor -> makeup -> limiter -> destination
+    this.master.connect(this.lookahead);
+    this.lookahead.connect(this.compressor);
+    this.compressor.connect(this.compressorMakeup);
+    this.compressorMakeup.connect(this.limiter);
+    this.limiter.toDestination();
 
+    const limiter = new Tone.Limiter(-1);
+    
     this.buses = {
       drums: new Tone.Gain(0.8),
       bass: new Tone.Gain(0.8),
       lead: new Tone.Gain(0.8),
       fx: new Tone.Gain(0.5)
     };
-    Object.values(this.buses).forEach(bus => bus.connect(this.master));
 
     this.nodes = this.createEffects();
+    
+    // Connect master chain with overdrive
+    this.master.chain(this.nodes.masterOverdrive, limiter);
+    limiter.toDestination();
+    
+    // Connect buses to master (except drums which go through distortion)
+    this.buses.bass.connect(this.master);
+    this.buses.lead.connect(this.master);
+    this.buses.fx.connect(this.master);
+
     this.instruments = this.createInstruments();
     this.sequences = this.buildSequences(this.instruments);
+    this.envelopeFollowers = this.createEnvelopeFollowers();
+    this.lfos = this.createLFOs();
 
     this.connectEffects();
+    this.connectEnvelopeFollowers();
+    this.connectLFOs();
+    this.probabilityManager.initializeProbabilityTracks();
+
+    this.connectEffects();
+    this.connectBuses();
     return this;
   }
 
@@ -47,6 +94,35 @@ export class AudioEngine {
     const leadFxSend = new Tone.Gain(0.45);
     const bassFilter = new Tone.Filter(140, 'lowpass', -12);
     const bassDrive = new Tone.Distortion(0.35);
+    
+    // New distortion and overdrive effects
+    const leadDistortion = new Tone.Distortion({
+      distortion: 0.2,
+      oversample: '2x'
+    });
+    const leadOverdrive = new Tone.Overdrive({
+      drive: 0.3,
+      output: 0.8
+    });
+    const drumDistortion = new Tone.Distortion({
+      distortion: 0.15,
+      oversample: '4x'
+    });
+    const masterOverdrive = new Tone.Overdrive({
+      drive: 0.1,
+      output: 0.9
+    });
+
+    // Sidechain compression
+    const sidechainCompressor = new Tone.Compressor({
+      threshold: -24,
+      ratio: 4,
+      attack: 0.003,
+      release: 0.1,
+      knee: 30
+    });
+
+    const sidechainGain = new Tone.Gain(1);
 
     return {
       delay,
@@ -54,7 +130,13 @@ export class AudioEngine {
       leadFilter,
       leadFxSend,
       bassFilter,
-      bassDrive
+      bassDrive,
+      sidechainCompressor,
+      sidechainGain
+      leadDistortion,
+      leadOverdrive,
+      drumDistortion,
+      masterOverdrive
     };
   }
 
@@ -63,6 +145,142 @@ export class AudioEngine {
     this.buses.fx.connect(this.nodes.reverb);
     this.nodes.delay.connect(this.master);
     this.nodes.reverb.connect(this.master);
+    
+    // Initialize sidechain state
+    this.sidechainEnabled = true;
+  }
+
+  connectBuses() {
+    // Connect buses with sidechain compression
+    this.buses.drums.connect(this.master);
+    this.buses.fx.connect(this.master);
+    
+    // Connect sidechain compressor to master
+    this.nodes.sidechainCompressor.connect(this.nodes.sidechainGain);
+    this.nodes.sidechainGain.connect(this.master);
+    
+    // Initial routing
+    this.updateSidechainRouting();
+    // Connect drum distortion
+    this.buses.drums.connect(this.nodes.drumDistortion);
+    this.nodes.drumDistortion.connect(this.master);
+    
+    // Note: Master overdrive is connected in initialize
+  }
+
+  createEnvelopeFollowers() {
+    const followers = {};
+    
+    ENVELOPE_FOLLOWER_DEFINITIONS.forEach(def => {
+      if (def.enabled) {
+        const follower = createToneEnvelopeFollower({
+          attackTime: def.attackTime,
+          releaseTime: def.releaseTime,
+          sensitivity: def.sensitivity,
+          threshold: def.threshold,
+          gate: def.gate
+        });
+        
+        followers[def.id] = {
+          node: follower,
+          definition: def,
+          target: null
+        };
+      }
+    });
+    
+    return followers;
+  }
+
+  createLFOs() {
+    const lfos = {};
+    
+    LFO_DEFINITIONS.forEach(def => {
+      if (def.enabled) {
+        const lfo = new Tone.LFO({
+          frequency: def.rate,
+          type: def.waveform,
+          amplitude: def.depth
+        });
+        
+        lfo.start();
+        
+        lfos[def.id] = {
+          node: lfo,
+          definition: def,
+          target: null
+        };
+      }
+    });
+    
+    return lfos;
+  }
+
+  connectEnvelopeFollowers() {
+    Object.values(this.envelopeFollowers).forEach(follower => {
+      const { node, definition } = follower;
+      const source = this.getAudioSource(definition.source);
+      const target = this.getParameterTarget(definition.target);
+      
+      if (source && target) {
+        // Connect source to envelope follower
+        source.connect(node);
+        
+        // Store target for later modulation
+        follower.target = target;
+      }
+    });
+  }
+
+  connectLFOs() {
+    Object.values(this.lfos).forEach(lfo => {
+      const { node, definition } = lfo;
+      const target = this.getParameterTarget(definition.target);
+      
+      if (target) {
+        // Connect LFO to target parameter
+        node.connect(target);
+        lfo.target = target;
+      }
+    });
+  }
+
+  getAudioSource(sourceName) {
+    switch (sourceName) {
+      case 'lead':
+        return this.instruments?.lead;
+      case 'bass':
+        return this.instruments?.bass;
+      case 'drums':
+        return this.buses?.drums;
+      case 'fx':
+        return this.buses?.fx;
+      default:
+        return null;
+    }
+  }
+
+  getParameterTarget(targetName) {
+    switch (targetName) {
+      case 'leadFilter':
+        return this.nodes?.leadFilter?.frequency;
+      case 'bassFilter':
+        return this.nodes?.bassFilter?.frequency;
+      case 'fxSend':
+        return this.nodes?.leadFxSend?.gain;
+      case 'reverbDecay':
+        return this.nodes?.reverb?.decay;
+      case 'delayFeedback':
+        return this.nodes?.delay?.feedback;
+      case 'bassDrive':
+        return this.nodes?.bassDrive?.distortion;
+      case 'leadResonance':
+        return this.nodes?.leadFilter?.Q;
+      case 'masterVolume':
+        return this.master?.gain;
+      default:
+        return null;
+    }
   }
 
   createInstruments() {
@@ -100,8 +318,12 @@ export class AudioEngine {
       oscillator: { type: 'sawtooth' },
       envelope: { attack: 0.02, decay: 0.35, sustain: 0.4, release: 0.7 }
     });
-    lead.connect(this.nodes.leadFilter);
-    this.nodes.leadFilter.connect(this.buses.lead);
+    lead.chain(
+      this.nodes.leadDistortion,
+      this.nodes.leadOverdrive,
+      this.nodes.leadFilter,
+      this.buses.lead
+    );
     this.nodes.leadFilter.connect(this.nodes.leadFxSend);
     this.nodes.leadFxSend.connect(this.buses.fx);
 
@@ -155,6 +377,8 @@ export class AudioEngine {
     const kickSeq = new Tone.Sequence((time, velocity) => {
       if (velocity) {
         instruments.kick.triggerAttackRelease('C1', '8n', time, velocity);
+        // Trigger sidechain compression
+        this.triggerSidechain();
       }
     }, kickPattern, '16n');
 
@@ -258,4 +482,470 @@ export class AudioEngine {
       setBusLevel(bus, db);
     }
   }
+
+  // Envelope Follower Controls
+  setEnvelopeFollowerEnabled(followerId, enabled) {
+    const follower = this.envelopeFollowers[followerId];
+    if (follower) {
+      if (enabled && !follower.node.context) {
+        // Recreate follower if it was disabled
+        const def = follower.definition;
+        follower.node = createToneEnvelopeFollower({
+          attackTime: def.attackTime,
+          releaseTime: def.releaseTime,
+          sensitivity: def.sensitivity,
+          threshold: def.threshold,
+          gate: def.gate
+        });
+        
+        const source = this.getAudioSource(def.source);
+        const target = this.getParameterTarget(def.target);
+        
+        if (source && target) {
+          source.connect(follower.node);
+          follower.target = target;
+        }
+      } else if (!enabled && follower.node.context) {
+        // Disconnect and dispose
+        follower.node.disconnect();
+        follower.target = null;
+      }
+    }
+  }
+
+  setEnvelopeFollowerConfig(followerId, config) {
+    const follower = this.envelopeFollowers[followerId];
+    if (follower && follower.node) {
+      follower.node.setConfig(config);
+    }
+  }
+
+  getEnvelopeFollowerLevel(followerId) {
+    const follower = this.envelopeFollowers[followerId];
+    return follower?.node?.getLevel() || 0;
+  }
+
+  getEnvelopeFollowerInputLevel(followerId) {
+    const follower = this.envelopeFollowers[followerId];
+    return follower?.node?.getInputLevel() || 0;
+  }
+
+  isEnvelopeFollowerActive(followerId) {
+    const follower = this.envelopeFollowers[followerId];
+    return follower?.node?.isEnvelopeActive() || false;
+  }
+
+  // LFO Controls
+  setLFOEnabled(lfoId, enabled) {
+    const lfo = this.lfos[lfoId];
+    if (lfo) {
+      if (enabled) {
+        lfo.node.start();
+      } else {
+        lfo.node.stop();
+      }
+    }
+  }
+
+  setLFOConfig(lfoId, config) {
+    const lfo = this.lfos[lfoId];
+    if (lfo && lfo.node) {
+      if (config.frequency !== undefined) {
+        lfo.node.frequency.value = config.frequency;
+      }
+      if (config.amplitude !== undefined) {
+        lfo.node.amplitude.value = config.amplitude;
+      }
+      if (config.type !== undefined) {
+        lfo.node.type = config.type;
+      }
+    }
+  }
+
+  getLFOValue(lfoId) {
+    const lfo = this.lfos[lfoId];
+    return lfo?.node?.value || 0;
+  }
+
+  // Get all envelope follower levels for visualization
+  getAllEnvelopeFollowerLevels() {
+    const levels = {};
+    Object.keys(this.envelopeFollowers).forEach(id => {
+      levels[id] = this.getEnvelopeFollowerLevel(id);
+    });
+    return levels;
+  }
+
+  // Get all LFO values for visualization
+  getAllLFOValues() {
+    const values = {};
+    Object.keys(this.lfos).forEach(id => {
+      values[id] = this.getLFOValue(id);
+    });
+    return values;
+  }
 }
+  // Compressor/Limiter control methods
+  setCompressorThreshold(db) {
+    if (this.compressor) {
+      this.compressor.threshold.value = db;
+    }
+  }
+
+  setCompressorRatio(ratio) {
+    if (this.compressor) {
+      this.compressor.ratio.value = ratio;
+    }
+  }
+
+  setCompressorAttack(seconds) {
+    if (this.compressor) {
+      this.compressor.attack.value = seconds;
+    }
+  }
+
+  setCompressorRelease(seconds) {
+    if (this.compressor) {
+      this.compressor.release.value = seconds;
+    }
+  }
+
+  setCompressorKnee(db) {
+    if (this.compressor) {
+      this.compressor.knee.value = db;
+    }
+  }
+
+  setLimiterThreshold(db) {
+    if (this.limiter) {
+      this.limiter.threshold.value = db;
+    }
+  }
+
+  setCompressorMakeupGain(db) {
+    if (this.compressorMakeup) {
+      this.compressorMakeup.gain.value = Tone.dbToGain(db);
+    }
+  }
+
+  // Get current compressor/limiter values for UI display
+  getCompressorValues() {
+    if (!this.compressor) return null;
+    return {
+      threshold: this.compressor.threshold.value,
+      ratio: this.compressor.ratio.value,
+      attack: this.compressor.attack.value,
+      release: this.compressor.release.value,
+      knee: this.compressor.knee.value,
+      makeup: Tone.gainToDb(this.compressorMakeup.gain.value),
+      limiterThreshold: this.limiter.threshold.value
+    };
+  }
+
+  // Advanced compressor methods
+  setSidechainSource(source) {
+    // Disconnect existing sidechain
+    if (this.sidechainGain) {
+      this.sidechainGain.disconnect();
+    }
+    
+    if (source !== 'none' && this.buses[source]) {
+      // Create sidechain gain control
+      this.sidechainGain = new Tone.Gain(0.3);
+      this.buses[source].connect(this.sidechainGain);
+      this.sidechainGain.connect(this.compressor);
+    }
+  }
+
+  // Auto-makeup gain calculation
+  calculateAutoMakeup() {
+    if (!this.compressor) return 0;
+    
+    const threshold = this.compressor.threshold.value;
+    const ratio = this.compressor.ratio.value;
+    
+    // Calculate expected gain reduction at threshold
+    const expectedReduction = threshold / ratio;
+    const makeupGain = Math.abs(expectedReduction) * 0.5; // Conservative makeup
+    
+    return Math.min(makeupGain, 12); // Cap at 12dB
+  }
+
+  // Apply auto-makeup gain
+  applyAutoMakeup() {
+    const makeupGain = this.calculateAutoMakeup();
+    if (this.compressorMakeup) {
+      this.compressorMakeup.gain.value = Tone.dbToGain(makeupGain);
+    }
+    return makeupGain;
+  }
+
+  // Get compressor gain reduction for visualization
+  getGainReduction() {
+    if (!this.compressor) return 0;
+    return this.compressor.reduction;
+  }
+
+  // Reset compressor to default values
+  resetCompressor() {
+    if (this.compressor) {
+      this.compressor.threshold.value = -12;
+      this.compressor.ratio.value = 4;
+      this.compressor.attack.value = 0.003;
+      this.compressor.release.value = 0.25;
+      this.compressor.knee.value = 30;
+    }
+    if (this.compressorMakeup) {
+      this.compressorMakeup.gain.value = 1;
+    }
+    if (this.limiter) {
+      this.limiter.threshold.value = -1;
+    }
+  }
+
+  // Apply compressor presets
+  applyCompressorPreset(preset) {
+    if (!this.compressor) return;
+    
+    const presets = {
+      'gentle': {
+        threshold: -8,
+        ratio: 2,
+        attack: 0.01,
+        release: 0.1,
+        knee: 20,
+        makeup: 2
+      },
+      'aggressive': {
+        threshold: -18,
+        ratio: 8,
+        attack: 0.001,
+        release: 0.5,
+        knee: 40,
+        makeup: 6
+      },
+      'mastering': {
+        threshold: -3,
+        ratio: 1.5,
+        attack: 0.003,
+        release: 0.1,
+        knee: 10,
+        makeup: 1
+      },
+      'sidechain': {
+        threshold: -15,
+        ratio: 6,
+        attack: 0.001,
+        release: 0.2,
+        knee: 30,
+        makeup: 4
+      }
+    };
+    
+    const settings = presets[preset];
+    if (settings) {
+      this.compressor.threshold.value = settings.threshold;
+      this.compressor.ratio.value = settings.ratio;
+      this.compressor.attack.value = settings.attack;
+      this.compressor.release.value = settings.release;
+      this.compressor.knee.value = settings.knee;
+      this.compressorMakeup.gain.value = Tone.dbToGain(settings.makeup);
+    }
+  }
+}
+  /**
+   * Enable or disable probability-based triggers
+   */
+  setProbabilityTriggersEnabled(enabled) {
+    this.useProbabilityTriggers = enabled;
+  }
+
+  /**
+   * Update current step and section for probability calculations
+   */
+  updateStepContext(step, section = null) {
+    this.currentStep = step;
+    this.currentSection = section;
+  }
+
+  /**
+   * Process probability-based triggers for all instruments
+   */
+  processProbabilityTriggers(time) {
+    if (!this.useProbabilityTriggers) return;
+
+    const context = {
+      step: this.currentStep,
+      section: this.currentSection
+    };
+
+    // Process each instrument
+    const instruments = ['kick', 'snare', 'hats', 'bass', 'lead', 'fx'];
+    
+    instruments.forEach(instrument => {
+      if (this.probabilityManager.shouldTrigger(instrument, this.currentStep, context)) {
+        const triggerInfo = this.probabilityManager.getTriggerInfo(instrument, this.currentStep, context);
+        this.triggerInstrument(instrument, time, triggerInfo);
+      }
+    });
+  }
+
+  /**
+   * Trigger a specific instrument with probability-based parameters
+   */
+  triggerInstrument(instrument, time, triggerInfo) {
+    const { velocity, isAccent, isGhost } = triggerInfo;
+    
+    switch (instrument) {
+      case 'kick':
+        this.instruments.kick.triggerAttackRelease('C1', '8n', time, velocity);
+        break;
+        
+      case 'snare':
+        this.instruments.snare.triggerAttackRelease('16n', time, velocity);
+        break;
+        
+      case 'hats':
+        this.instruments.hats.triggerAttackRelease('32n', time, velocity);
+        break;
+        
+      case 'bass':
+        // Use a simple bass pattern for probability triggers
+        const bassNotes = ['C2', 'G1', 'A1', 'D2'];
+        const noteIndex = this.currentStep % bassNotes.length;
+        const note = bassNotes[noteIndex];
+        if (note) {
+          this.instruments.bass.triggerAttackRelease(note, '8n', time, velocity);
+        }
+        break;
+        
+      case 'lead':
+        // Use a simple lead pattern for probability triggers
+        const leadNotes = [['E4', 'B4'], ['G4'], ['A4'], ['B4', 'D5']];
+        const leadIndex = this.currentStep % leadNotes.length;
+        const notes = leadNotes[leadIndex];
+        if (notes && notes.length) {
+          notes.forEach(note => {
+            this.instruments.lead.triggerAttackRelease(note, '16n', time, velocity);
+          });
+        }
+        break;
+        
+      case 'fx':
+        this.instruments.noiseFx.triggerAttackRelease('2n', time, velocity);
+        break;
+    }
+  }
+
+  /**
+   * Get probability manager for external configuration
+   */
+  getProbabilityManager() {
+    return this.probabilityManager;
+  }
+
+  /**
+   * Set probability curve for an instrument
+   */
+  setProbabilityCurve(instrument, curve, curveType) {
+    this.probabilityManager.setProbabilityCurve(instrument, curve, curveType);
+  }
+
+  /**
+   * Set base probability for an instrument
+   */
+  setBaseProbability(instrument, probability) {
+    this.probabilityManager.setBaseProbability(instrument, probability);
+  }
+
+  /**
+   * Set humanization for an instrument
+   */
+  setHumanization(instrument, amount) {
+    this.probabilityManager.setHumanization(instrument, amount);
+  }
+
+  /**
+   * Set accent settings for an instrument
+   */
+  setAccentSettings(instrument, probability, multiplier) {
+    this.probabilityManager.setAccentSettings(instrument, probability, multiplier);
+  }
+
+  /**
+   * Set ghost note settings for an instrument
+   */
+  setGhostNoteSettings(instrument, probability, multiplier) {
+    this.probabilityManager.setGhostNoteSettings(instrument, probability, multiplier);
+  }
+
+  /**
+   * Set pattern lock for an instrument
+   */
+  setPatternLock(instrument, enabled, steps) {
+    this.probabilityManager.setPatternLock(instrument, enabled, steps);
+  }
+
+  /**
+   * Set global entropy
+   */
+  setEntropy(entropy) {
+    this.probabilityManager.setEntropy(entropy);
+  }
+
+  /**
+   * Set quantization
+   */
+  setQuantization(quantization) {
+    this.probabilityManager.setQuantization(quantization);
+  }
+
+  /**
+   * Export probability settings
+   */
+  exportProbabilitySettings() {
+    return this.probabilityManager.exportSettings();
+  }
+
+  /**
+   * Import probability settings
+   */
+  importProbabilitySettings(data) {
+    this.probabilityManager.importSettings(data);
+  }
+
+  /**
+   * Reset probability settings to defaults
+   */
+  resetProbabilitySettings() {
+    this.probabilityManager.resetToDefaults();
+  }
+}
+  // Sidechain compression methods
+  triggerSidechain() {
+    if (!this.sidechainEnabled) return;
+    
+    // Create a quick ducking effect by temporarily reducing the sidechain gain
+    const originalGain = this.nodes.sidechainGain.gain.value;
+    this.nodes.sidechainGain.gain.rampTo(0.1, 0.01);
+    this.nodes.sidechainGain.gain.rampTo(originalGain, 0.2);
+  }
+
+  updateSidechainRouting() {
+    // Disconnect all buses from their current destinations
+    this.buses.bass.disconnect();
+    this.buses.lead.disconnect();
+    
+    if (this.sidechainEnabled) {
+      // Route through sidechain compression
+      this.buses.bass.connect(this.nodes.sidechainCompressor);
+      this.buses.lead.connect(this.nodes.sidechainCompressor);
+    } else {
+      // Route directly to master
+      this.buses.bass.connect(this.master);
+      this.buses.lead.connect(this.master);
+    }
+  }
+}
+
+export { AudioEngine };

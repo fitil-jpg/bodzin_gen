@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distortion Effects Test</title>
+    <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+        }
+        .control {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 200px;
+        }
+        button {
+            background: #49a9ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #3d8bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Distortion & Overdrive Effects Test</h1>
+    
+    <div class="control">
+        <label for="leadDistortion">Lead Distortion: <span id="leadDistortionValue">20%</span></label>
+        <input type="range" id="leadDistortion" min="0" max="1" step="0.01" value="0.2">
+    </div>
+    
+    <div class="control">
+        <label for="leadOverdrive">Lead Overdrive: <span id="leadOverdriveValue">30%</span></label>
+        <input type="range" id="leadOverdrive" min="0" max="1" step="0.01" value="0.3">
+    </div>
+    
+    <div class="control">
+        <label for="drumDistortion">Drum Distortion: <span id="drumDistortionValue">15%</span></label>
+        <input type="range" id="drumDistortion" min="0" max="1" step="0.01" value="0.15">
+    </div>
+    
+    <div class="control">
+        <label for="masterOverdrive">Master Overdrive: <span id="masterOverdriveValue">10%</span></label>
+        <input type="range" id="masterOverdrive" min="0" max="1" step="0.01" value="0.1">
+    </div>
+    
+    <button id="playButton">Play Test</button>
+    <button id="stopButton">Stop</button>
+    
+    <script>
+        // Initialize Tone.js
+        let audioContext;
+        let isPlaying = false;
+        
+        // Create effects
+        const leadDistortion = new Tone.Distortion({
+            distortion: 0.2,
+            oversample: '2x'
+        });
+        const leadOverdrive = new Tone.Overdrive({
+            drive: 0.3,
+            output: 0.8
+        });
+        const drumDistortion = new Tone.Distortion({
+            distortion: 0.15,
+            oversample: '4x'
+        });
+        const masterOverdrive = new Tone.Overdrive({
+            drive: 0.1,
+            output: 0.9
+        });
+        
+        // Create test instruments
+        const leadSynth = new Tone.Synth({
+            oscillator: { type: 'sawtooth' },
+            envelope: { attack: 0.02, decay: 0.35, sustain: 0.4, release: 0.7 }
+        });
+        
+        const kick = new Tone.MembraneSynth({
+            pitchDecay: 0.05,
+            octaves: 4,
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.001, decay: 0.28, sustain: 0.0001, release: 0.2 }
+        });
+        
+        // Connect instruments through effects
+        leadSynth.chain(leadDistortion, leadOverdrive, Tone.Destination);
+        kick.chain(drumDistortion, masterOverdrive, Tone.Destination);
+        
+        // Set up controls
+        const controls = {
+            leadDistortion: document.getElementById('leadDistortion'),
+            leadOverdrive: document.getElementById('leadOverdrive'),
+            drumDistortion: document.getElementById('drumDistortion'),
+            masterOverdrive: document.getElementById('masterOverdrive')
+        };
+        
+        const valueDisplays = {
+            leadDistortion: document.getElementById('leadDistortionValue'),
+            leadOverdrive: document.getElementById('leadOverdriveValue'),
+            drumDistortion: document.getElementById('drumDistortionValue'),
+            masterOverdrive: document.getElementById('masterOverdriveValue')
+        };
+        
+        // Update effect parameters
+        controls.leadDistortion.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            leadDistortion.distortion = value;
+            valueDisplays.leadDistortion.textContent = Math.round(value * 100) + '%';
+        });
+        
+        controls.leadOverdrive.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            leadOverdrive.drive = value;
+            valueDisplays.leadOverdrive.textContent = Math.round(value * 100) + '%';
+        });
+        
+        controls.drumDistortion.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            drumDistortion.distortion = value;
+            valueDisplays.drumDistortion.textContent = Math.round(value * 100) + '%';
+        });
+        
+        controls.masterOverdrive.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            masterOverdrive.drive = value;
+            valueDisplays.masterOverdrive.textContent = Math.round(value * 100) + '%';
+        });
+        
+        // Play/Stop buttons
+        document.getElementById('playButton').addEventListener('click', async () => {
+            if (!isPlaying) {
+                await Tone.start();
+                isPlaying = true;
+                
+                // Play a test sequence
+                const sequence = new Tone.Sequence((time) => {
+                    // Play lead note
+                    leadSynth.triggerAttackRelease('C4', '8n', time);
+                    
+                    // Play kick on every beat
+                    kick.triggerAttackRelease('C1', '8n', time);
+                }, [1, 0, 1, 0], '4n');
+                
+                sequence.start(0);
+                Tone.Transport.start();
+                
+                document.getElementById('playButton').textContent = 'Playing...';
+                document.getElementById('playButton').disabled = true;
+            }
+        });
+        
+        document.getElementById('stopButton').addEventListener('click', () => {
+            if (isPlaying) {
+                Tone.Transport.stop();
+                isPlaying = false;
+                document.getElementById('playButton').textContent = 'Play Test';
+                document.getElementById('playButton').disabled = false;
+            }
+        });
+        
+        // Initialize display values
+        valueDisplays.leadDistortion.textContent = '20%';
+        valueDisplays.leadOverdrive.textContent = '30%';
+        valueDisplays.drumDistortion.textContent = '15%';
+        valueDisplays.masterOverdrive.textContent = '10%';
+    </script>
+</body>
+</html>

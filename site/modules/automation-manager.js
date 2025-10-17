@@ -2,6 +2,7 @@ import {
   STEP_COUNT, 
   AUTOMATION_TRACK_DEFINITIONS,
   LFO_DEFINITIONS,
+  ENVELOPE_FOLLOWER_DEFINITIONS,
   CURVE_TYPES,
   SECTION_DEFINITIONS 
 } from '../utils/constants.js';
@@ -10,7 +11,9 @@ import { clamp } from '../utils/helpers.js';
 export function createDefaultAutomation(stepCount = STEP_COUNT) {
   return {
     tracks: AUTOMATION_TRACK_DEFINITIONS.map(definition => createAutomationTrack(definition, stepCount)),
-    sections: createSectionLayout(stepCount)
+    sections: createSectionLayout(stepCount),
+    envelopeFollowers: ENVELOPE_FOLLOWER_DEFINITIONS.map(definition => createEnvelopeFollowerTrack(definition)),
+    lfos: LFO_DEFINITIONS.map(definition => createLFOTrack(definition))
   };
 }
 
@@ -23,6 +26,35 @@ export function createAutomationTrack(definition, stepCount = STEP_COUNT) {
     curveType: definition.curveType || CURVE_TYPES.LINEAR,
     lfo: definition.lfo || null,
     breakpoints: definition.breakpoints || []
+  };
+}
+
+export function createEnvelopeFollowerTrack(definition) {
+  return {
+    id: definition.id,
+    label: definition.label,
+    color: definition.color,
+    source: definition.source,
+    target: definition.target,
+    attackTime: definition.attackTime,
+    releaseTime: definition.releaseTime,
+    sensitivity: definition.sensitivity,
+    threshold: definition.threshold,
+    gate: definition.gate,
+    enabled: definition.enabled
+  };
+}
+
+export function createLFOTrack(definition) {
+  return {
+    id: definition.id,
+    label: definition.label,
+    color: definition.color,
+    rate: definition.rate,
+    depth: definition.depth,
+    waveform: definition.waveform,
+    target: definition.target,
+    enabled: definition.enabled
   };
 }
 
@@ -201,7 +233,24 @@ export function normalizeAutomationState(automation, stepCount = STEP_COUNT) {
     }
   }
 
-  return { tracks: normalizedTracks, sections };
+  // Normalize envelope followers
+  let envelopeFollowers = defaults.envelopeFollowers.map(follower => ({ ...follower }));
+  if (automation && Array.isArray(automation.envelopeFollowers)) {
+    envelopeFollowers = normalizeEnvelopeFollowers(automation.envelopeFollowers);
+  }
+
+  // Normalize LFOs
+  let lfos = defaults.lfos.map(lfo => ({ ...lfo }));
+  if (automation && Array.isArray(automation.lfos)) {
+    lfos = normalizeLFOs(automation.lfos);
+  }
+
+  return { 
+    tracks: normalizedTracks, 
+    sections, 
+    envelopeFollowers, 
+    lfos 
+  };
 }
 
 export function normalizeSections(sections, stepCount = STEP_COUNT) {
@@ -264,6 +313,87 @@ export function normalizeSections(sections, stepCount = STEP_COUNT) {
     normalized[0].start = 0;
     normalized[normalized.length - 1].end = targetMax;
   }
+
+  return normalized;
+}
+
+export function normalizeEnvelopeFollowers(envelopeFollowers) {
+  if (!Array.isArray(envelopeFollowers)) {
+    return ENVELOPE_FOLLOWER_DEFINITIONS.map(definition => createEnvelopeFollowerTrack(definition));
+  }
+
+  const normalized = [];
+  const seenIds = new Set();
+
+  envelopeFollowers.forEach(followerData => {
+    if (!followerData || !followerData.id) {
+      return;
+    }
+    
+    const definition = ENVELOPE_FOLLOWER_DEFINITIONS.find(def => def.id === followerData.id);
+    const normalizedFollower = {
+      id: followerData.id,
+      label: followerData.label || definition?.label || followerData.id,
+      color: followerData.color || definition?.color || '#ff9f43',
+      source: followerData.source || definition?.source || 'lead',
+      target: followerData.target || definition?.target || 'leadFilter',
+      attackTime: clamp(followerData.attackTime || definition?.attackTime || 0.01, 0.001, 1.0),
+      releaseTime: clamp(followerData.releaseTime || definition?.releaseTime || 0.1, 0.001, 2.0),
+      sensitivity: clamp(followerData.sensitivity || definition?.sensitivity || 1.0, 0.1, 10.0),
+      threshold: clamp(followerData.threshold || definition?.threshold || 0.0, 0.0, 1.0),
+      gate: Boolean(followerData.gate !== undefined ? followerData.gate : definition?.gate || false),
+      enabled: Boolean(followerData.enabled !== undefined ? followerData.enabled : definition?.enabled || false)
+    };
+    
+    normalized.push(normalizedFollower);
+    seenIds.add(normalizedFollower.id);
+  });
+
+  // Add any missing default envelope followers
+  ENVELOPE_FOLLOWER_DEFINITIONS.forEach(definition => {
+    if (!seenIds.has(definition.id)) {
+      normalized.push(createEnvelopeFollowerTrack(definition));
+    }
+  });
+
+  return normalized;
+}
+
+export function normalizeLFOs(lfos) {
+  if (!Array.isArray(lfos)) {
+    return LFO_DEFINITIONS.map(definition => createLFOTrack(definition));
+  }
+
+  const normalized = [];
+  const seenIds = new Set();
+
+  lfos.forEach(lfoData => {
+    if (!lfoData || !lfoData.id) {
+      return;
+    }
+    
+    const definition = LFO_DEFINITIONS.find(def => def.id === lfoData.id);
+    const normalizedLFO = {
+      id: lfoData.id,
+      label: lfoData.label || definition?.label || lfoData.id,
+      color: lfoData.color || definition?.color || '#ff6b6b',
+      rate: clamp(lfoData.rate || definition?.rate || 0.5, 0.01, 20.0),
+      depth: clamp(lfoData.depth || definition?.depth || 0.3, 0.0, 1.0),
+      waveform: lfoData.waveform || definition?.waveform || 'sine',
+      target: lfoData.target || definition?.target || 'leadFilter',
+      enabled: Boolean(lfoData.enabled !== undefined ? lfoData.enabled : definition?.enabled || false)
+    };
+    
+    normalized.push(normalizedLFO);
+    seenIds.add(normalizedLFO.id);
+  });
+
+  // Add any missing default LFOs
+  LFO_DEFINITIONS.forEach(definition => {
+    if (!seenIds.has(definition.id)) {
+      normalized.push(createLFOTrack(definition));
+    }
+  });
 
   return normalized;
 }
