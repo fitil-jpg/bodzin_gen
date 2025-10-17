@@ -7,6 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { SearchFilter } from './modules/search-filter.js';
 import { PatternMorphing } from './modules/pattern-morphing.js';
 import { PatternChainManager } from './modules/pattern-chain-manager.js';
 import { MobileGestures } from './modules/mobile-gestures.js';
@@ -46,6 +47,7 @@ function createApp() {
     midi: null,
     storage: null,
     status: null,
+    searchFilter: null,
     patternMorphing: null,
     patternChain: null,
     mobileGestures: null,
@@ -88,6 +90,7 @@ async function initializeApp(app) {
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
+  app.searchFilter = new SearchFilter(app);
   app.patternMorphing = new PatternMorphing(app);
   app.mobileGestures = new MobileGestures(app);
   app.presetManager = new PresetManager(app);
