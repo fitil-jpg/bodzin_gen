@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>LED Test</title>
+  <style>
+    body {
+      background: #0f0f12;
+      color: #f1f1f4;
+      font-family: "Inter", "Segoe UI", sans-serif;
+      padding: 20px;
+    }
+    
+    .led-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .led-indicator.active {
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(73, 169, 255, 0.6);
+      border-color: rgba(73, 169, 255, 0.8);
+      animation: ledPulse 1.5s ease-in-out infinite;
+    }
+
+    .led-indicator.active::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      animation: ledGlow 2s ease-in-out infinite;
+    }
+
+    .led-indicator.drums.active {
+      background: #ff6b6b;
+      box-shadow: 0 0 8px rgba(255, 107, 107, 0.6);
+      border-color: rgba(255, 107, 107, 0.8);
+    }
+
+    .led-indicator.bass.active {
+      background: #4ecdc4;
+      box-shadow: 0 0 8px rgba(78, 205, 196, 0.6);
+      border-color: rgba(78, 205, 196, 0.8);
+    }
+
+    .led-indicator.lead.active {
+      background: #45b7d1;
+      box-shadow: 0 0 8px rgba(69, 183, 209, 0.6);
+      border-color: rgba(69, 183, 209, 0.8);
+    }
+
+    .led-indicator.fx.active {
+      background: #96ceb4;
+      box-shadow: 0 0 8px rgba(150, 206, 180, 0.6);
+      border-color: rgba(150, 206, 180, 0.8);
+    }
+
+    @keyframes ledPulse {
+      0%, 100% { 
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% { 
+        transform: scale(1.1);
+        opacity: 0.8;
+      }
+    }
+
+    @keyframes ledGlow {
+      0%, 100% { 
+        opacity: 0.8;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      50% { 
+        opacity: 0.4;
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+    }
+
+    .led-indicators {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      margin: 20px 0;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .led-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .led-label {
+      font-size: 12px;
+      color: #9a9aac;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    button {
+      background: #49a9ff;
+      color: #020205;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>LED Indicator Test</h1>
+  
+  <div class="led-indicators">
+    <div class="led-group">
+      <div class="led-indicator drums" id="led-drums"></div>
+      <div class="led-label">Drums</div>
+    </div>
+    <div class="led-group">
+      <div class="led-indicator bass" id="led-bass"></div>
+      <div class="led-label">Bass</div>
+    </div>
+    <div class="led-group">
+      <div class="led-indicator lead" id="led-lead"></div>
+      <div class="led-label">Lead</div>
+    </div>
+    <div class="led-group">
+      <div class="led-indicator fx" id="led-fx"></div>
+      <div class="led-label">FX</div>
+    </div>
+  </div>
+
+  <div>
+    <button onclick="toggleLED('led-drums')">Toggle Drums</button>
+    <button onclick="toggleLED('led-bass')">Toggle Bass</button>
+    <button onclick="toggleLED('led-lead')">Toggle Lead</button>
+    <button onclick="toggleLED('led-fx')">Toggle FX</button>
+  </div>
+
+  <div>
+    <button onclick="setSection('Intro')">Intro Section</button>
+    <button onclick="setSection('Lift')">Lift Section</button>
+    <button onclick="setSection('Peak')">Peak Section</button>
+    <button onclick="setSection('Break')">Break Section</button>
+  </div>
+
+  <script>
+    const SECTION_SEQUENCE_ACTIVITY = {
+      Intro: { drums: true, bass: false, lead: false, fx: false },
+      Lift: { drums: true, bass: true, lead: false, fx: true },
+      Peak: { drums: true, bass: true, lead: true, fx: true },
+      Break: { drums: true, bass: false, lead: false, fx: true }
+    };
+
+    function toggleLED(ledId) {
+      const led = document.getElementById(ledId);
+      led.classList.toggle('active');
+    }
+
+    function setSection(sectionName) {
+      const arrangement = SECTION_SEQUENCE_ACTIVITY[sectionName];
+      const defaultState = { drums: true, bass: true, lead: true, fx: true };
+      
+      Object.keys(arrangement).forEach(groupName => {
+        const led = document.getElementById(`led-${groupName}`);
+        if (led) {
+          const shouldEnable = arrangement[groupName];
+          if (shouldEnable) {
+            led.classList.add('active');
+          } else {
+            led.classList.remove('active');
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

@@ -11,6 +11,7 @@ import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
 import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
+import { PatternVariationManager } from './modules/pattern-variation-manager.js';
 
 import { 
   STEP_COUNT, 
@@ -46,6 +47,7 @@ function createApp() {
     presetLibraryUI: null,
     presetManager: null,
     presetLibraryUI: null,
+    patternVariation: null,
     
     // State
     controlState: {},
@@ -75,6 +77,7 @@ async function initializeApp(app) {
   app.storage = new StorageManager();
   app.status = new StatusManager();
   app.audio = new AudioEngine().initialize();
+  app.patternVariation = new PatternVariationManager(app);
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
@@ -122,12 +125,19 @@ async function initializeApp(app) {
   
   // Initialize preset manager
   app.presetManager.initialize();
+  // Setup keyboard shortcuts
+  setupKeyboardShortcuts(app);
   
   // Apply initial state
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
   app.timeline.draw();
   app.status.set('Idle');
+  
+  // Initialize pattern variation status
+  if (app.patternVariation) {
+    updatePatternStatus(app, app.patternVariation.currentPattern);
+  }
 }
 
 function setupButtons(app) {
@@ -138,6 +148,12 @@ function setupButtons(app) {
   const exportMixBtn = document.getElementById('exportMixButton');
   const exportStemsBtn = document.getElementById('exportStemsButton');
   const midiToggle = document.getElementById('midiLearnToggle');
+  
+  // Pattern variation buttons
+  const patternABtn = document.getElementById('patternAButton');
+  const patternBBtn = document.getElementById('patternBButton');
+  const patternCBtn = document.getElementById('patternCButton');
+  const randomizeBtn = document.getElementById('randomizePatternButton');
 
   startBtn?.addEventListener('click', () => startPlayback(app));
   stopBtn?.addEventListener('click', () => stopPlayback(app));
@@ -149,6 +165,17 @@ function setupButtons(app) {
     const enabled = Boolean(event.target.checked);
     app.midi.setLearning(enabled);
   });
+  
+  // Pattern variation button handlers
+  patternABtn?.addEventListener('click', () => switchPattern(app, 'A'));
+  patternBBtn?.addEventListener('click', () => switchPattern(app, 'B'));
+  patternCBtn?.addEventListener('click', () => switchPattern(app, 'C'));
+  randomizeBtn?.addEventListener('click', () => randomizeCurrentPattern(app));
+  
+  // Add double-click handlers for pattern morphing
+  patternABtn?.addEventListener('dblclick', () => morphToPattern(app, 'A'));
+  patternBBtn?.addEventListener('dblclick', () => morphToPattern(app, 'B'));
+  patternCBtn?.addEventListener('dblclick', () => morphToPattern(app, 'C'));
 
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
@@ -271,7 +298,8 @@ function buildPresetPayload(app, name) {
       tracks: app.automation.tracks.map(track => ({ id: track.id, values: [...track.values] })),
       sections: app.automation.sections.map(section => ({ ...section }))
     },
-    midiMappings: { ...app.midi.mappings }
+    midiMappings: { ...app.midi.mappings },
+    patternVariations: app.patternVariation ? app.patternVariation.getPatternForPreset() : null
   };
 }
 
@@ -293,6 +321,9 @@ function applyPreset(app, presetData) {
   if (presetData.midiMappings) {
     app.midi.mappings = { ...presetData.midiMappings };
     app.midi.saveMappings();
+  }
+  if (presetData.patternVariations && app.patternVariation) {
+    app.patternVariation.applyPatternFromPreset(presetData.patternVariations);
   }
   if (presetData.name) {
     app.presetName = presetData.name;
@@ -562,9 +593,54 @@ function updateSectionLabel(app, step, sectionOverride) {
 }
 
 function applyAutomationForStep(app, step, time) {
-  // This would contain the automation logic
-  // For now, it's a placeholder
-  console.log(`Applying automation for step ${step}`);
+  if (!app.automation || !app.automation.tracks) return;
+  
+  // Apply pattern variation if enabled
+  if (app.patternVariation) {
+    const currentPattern = app.patternVariation.getCurrentPattern();
+    if (currentPattern) {
+      // Apply pattern-specific automation values
+      currentPattern.tracks.forEach(patternTrack => {
+        const automationTrack = app.automation.tracks.find(track => track.id === patternTrack.id);
+        if (automationTrack && patternTrack.values[step] !== undefined) {
+          // Apply the pattern value with any morphing or randomization
+          let value = patternTrack.values[step];
+          
+          // Apply morphing if enabled
+          if (app.patternVariation.morphingEnabled) {
+            // This could be enhanced with actual morphing logic
+            const morphProgress = (step / STEP_COUNT) % 1;
+            // Simple morphing example - could be more sophisticated
+            value = value * (1 + Math.sin(morphProgress * Math.PI * 2) * 0.1);
+          }
+          
+          // Apply randomization if enabled
+          if (app.patternVariation.randomizationEnabled) {
+            const randomFactor = (Math.random() - 0.5) * app.patternVariation.randomizationAmount;
+            value = clamp(value + randomFactor, 0, 1);
+          }
+          
+          // Apply the value to the audio engine
+          applyAutomationValue(app, patternTrack.id, value);
+        }
+      });
+    }
+  } else {
+    // Fallback to original automation logic
+    app.automation.tracks.forEach(track => {
+      if (track.values[step] !== undefined) {
+        applyAutomationValue(app, track.id, track.values[step]);
+      }
+    });
+  }
+}
+
+function applyAutomationValue(app, trackId, value) {
+  // Apply automation value to the appropriate audio parameter
+  // This would need to be connected to the actual audio engine parameters
+  if (app.audio && app.audio.applyAutomation) {
+    app.audio.applyAutomation(trackId, value);
+  }
 }
 
 async function exportMix(app) {
@@ -633,4 +709,172 @@ function slugify(name) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function switchPattern(app, patternId) {
+  if (!app.patternVariation) return;
+  
+  const success = app.patternVariation.switchPattern(patternId);
+  if (success) {
+    updatePatternButtons(app, patternId);
+    updatePatternStatus(app, patternId);
+    app.status.set(`Switched to Pattern ${patternId}`);
+    
+    // Update automation for current step
+    applyAutomationForStep(app, app.timeline.currentStep);
+    syncSectionState(app, app.timeline.currentStep);
+    app.timeline.draw();
+  }
+}
+
+function updatePatternStatus(app, patternId) {
+  const patternStatusEl = document.getElementById('patternStatus');
+  if (patternStatusEl) {
+    patternStatusEl.textContent = `Pattern: ${patternId}`;
+    
+    // Add visual feedback
+    patternStatusEl.style.color = '#49a9ff';
+    patternStatusEl.style.transform = 'scale(1.1)';
+    setTimeout(() => {
+      patternStatusEl.style.color = '';
+      patternStatusEl.style.transform = '';
+    }, 300);
+  }
+}
+
+function updatePatternButtons(app, activePatternId) {
+  const patternButtons = {
+    'A': document.getElementById('patternAButton'),
+    'B': document.getElementById('patternBButton'),
+    'C': document.getElementById('patternCButton')
+  };
+  
+  Object.entries(patternButtons).forEach(([patternId, button]) => {
+    if (button) {
+      if (patternId === activePatternId) {
+        button.classList.add('btn-primary');
+        button.classList.remove('btn-outline');
+      } else {
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-outline');
+      }
+    }
+  });
+}
+
+function randomizeCurrentPattern(app) {
+  if (!app.patternVariation) return;
+  
+  const currentPattern = app.patternVariation.getCurrentPattern();
+  if (currentPattern) {
+    app.patternVariation.randomizePattern(currentPattern.id, 0.3);
+    app.status.set(`Randomized Pattern ${currentPattern.id}`);
+    
+    // Update automation for current step
+    applyAutomationForStep(app, app.timeline.currentStep);
+    syncSectionState(app, app.timeline.currentStep);
+    app.timeline.draw();
+  }
+}
+
+function setupKeyboardShortcuts(app) {
+  document.addEventListener('keydown', (event) => {
+    // Only handle shortcuts when not typing in input fields
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+      return;
+    }
+    
+    switch (event.key.toLowerCase()) {
+      case '1':
+        switchPattern(app, 'A');
+        break;
+      case '2':
+        switchPattern(app, 'B');
+        break;
+      case '3':
+        switchPattern(app, 'C');
+        break;
+      case 'r':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          randomizeCurrentPattern(app);
+        }
+        break;
+      case 'm':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          toggleMorphing(app);
+        }
+        break;
+      case 'shift':
+        // Hold shift for morphing mode
+        if (app.patternVariation) {
+          app.patternVariation.setMorphingEnabled(true);
+        }
+        break;
+    }
+  });
+  
+  document.addEventListener('keyup', (event) => {
+    if (event.key === 'Shift' && app.patternVariation) {
+      app.patternVariation.setMorphingEnabled(false);
+    }
+  });
+}
+
+function toggleMorphing(app) {
+  if (!app.patternVariation) return;
+  
+  const currentMorphing = app.patternVariation.morphingEnabled;
+  app.patternVariation.setMorphingEnabled(!currentMorphing);
+  app.status.set(`Pattern morphing ${!currentMorphing ? 'enabled' : 'disabled'}`);
+}
+
+function morphToPattern(app, targetPatternId) {
+  if (!app.patternVariation) return;
+  
+  const currentPattern = app.patternVariation.getCurrentPattern();
+  if (!currentPattern || currentPattern.id === targetPatternId) return;
+  
+  app.status.set(`Morphing from Pattern ${currentPattern.id} to Pattern ${targetPatternId}`);
+  
+  // Start morphing animation
+  let morphProgress = 0;
+  const morphDuration = 2000; // 2 seconds
+  const startTime = Date.now();
+  
+  function morphStep() {
+    const elapsed = Date.now() - startTime;
+    morphProgress = Math.min(elapsed / morphDuration, 1);
+    
+    // Create morphed pattern
+    const morphedPattern = app.patternVariation.morphBetweenPatterns(
+      currentPattern.id, 
+      targetPatternId, 
+      morphProgress
+    );
+    
+    if (morphedPattern) {
+      // Apply morphed pattern to automation
+      morphedPattern.tracks.forEach(patternTrack => {
+        const automationTrack = app.automation.tracks.find(track => track.id === patternTrack.id);
+        if (automationTrack) {
+          automationTrack.values = [...patternTrack.values];
+        }
+      });
+      
+      // Update timeline
+      app.timeline.draw();
+    }
+    
+    if (morphProgress < 1) {
+      requestAnimationFrame(morphStep);
+    } else {
+      // Complete morphing by switching to target pattern
+      switchPattern(app, targetPatternId);
+      app.status.set(`Morphing complete - now using Pattern ${targetPatternId}`);
+    }
+  }
+  
+  morphStep();
 }
