@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sidechain Compression Test</title>
+    <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f0f12;
+            color: #f1f1f4;
+            padding: 20px;
+        }
+        .control {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin: 5px 0;
+        }
+        input[type="range"] {
+            width: 200px;
+        }
+        button {
+            background: #49a9ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #3a8bcc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sidechain Compression Test</h1>
+    
+    <div class="control">
+        <label for="sidechainEnabled">Enable Sidechain:</label>
+        <select id="sidechainEnabled">
+            <option value="on">On</option>
+            <option value="off">Off</option>
+        </select>
+    </div>
+    
+    <div class="control">
+        <label for="sidechainAmount">Sidechain Amount: <span id="amountValue">80%</span></label>
+        <input type="range" id="sidechainAmount" min="0" max="1" step="0.01" value="0.8">
+    </div>
+    
+    <div class="control">
+        <label for="sidechainThreshold">Threshold: <span id="thresholdValue">-24 dB</span></label>
+        <input type="range" id="sidechainThreshold" min="-40" max="0" step="1" value="-24">
+    </div>
+    
+    <div class="control">
+        <label for="sidechainRatio">Ratio: <span id="ratioValue">4:1</span></label>
+        <input type="range" id="sidechainRatio" min="1" max="20" step="0.1" value="4">
+    </div>
+    
+    <button id="playButton">Play Test</button>
+    <button id="stopButton">Stop</button>
+    
+    <script>
+        // Initialize Tone.js
+        const audioContext = new Tone.Context();
+        
+        // Create sidechain compression setup
+        const master = new Tone.Gain(0.9);
+        const limiter = new Tone.Limiter(-1);
+        master.connect(limiter);
+        limiter.toDestination();
+        
+        // Create buses
+        const kickBus = new Tone.Gain(0.8);
+        const bassBus = new Tone.Gain(0.8);
+        const leadBus = new Tone.Gain(0.8);
+        
+        // Create sidechain compressor
+        const sidechainCompressor = new Tone.Compressor({
+            threshold: -24,
+            ratio: 4,
+            attack: 0.003,
+            release: 0.1,
+            knee: 30
+        });
+        
+        const sidechainGain = new Tone.Gain(1);
+        
+        // Create instruments
+        const kick = new Tone.MembraneSynth({
+            pitchDecay: 0.05,
+            octaves: 4,
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.001, decay: 0.28, sustain: 0.0001, release: 0.2 }
+        }).connect(kickBus);
+        
+        const bass = new Tone.MonoSynth({
+            oscillator: { type: 'square' },
+            filter: { type: 'lowpass', rolloff: -12 },
+            filterEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.4, release: 0.6 },
+            envelope: { attack: 0.005, decay: 0.25, sustain: 0.6, release: 0.4 }
+        }).connect(bassBus);
+        
+        const lead = new Tone.PolySynth(Tone.Synth, {
+            maxPolyphony: 4,
+            oscillator: { type: 'sawtooth' },
+            envelope: { attack: 0.02, decay: 0.35, sustain: 0.4, release: 0.7 }
+        }).connect(leadBus);
+        
+        // Connect buses
+        kickBus.connect(master);
+        bassBus.connect(sidechainCompressor);
+        leadBus.connect(sidechainCompressor);
+        sidechainCompressor.connect(sidechainGain);
+        sidechainGain.connect(master);
+        
+        // Sidechain state
+        let sidechainEnabled = true;
+        
+        // Control handlers
+        document.getElementById('sidechainEnabled').addEventListener('change', (e) => {
+            sidechainEnabled = e.target.value === 'on';
+            updateSidechainRouting();
+        });
+        
+        document.getElementById('sidechainAmount').addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            sidechainGain.gain.value = value;
+            document.getElementById('amountValue').textContent = Math.round(value * 100) + '%';
+        });
+        
+        document.getElementById('sidechainThreshold').addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            sidechainCompressor.threshold.value = value;
+            document.getElementById('thresholdValue').textContent = value + ' dB';
+        });
+        
+        document.getElementById('sidechainRatio').addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            sidechainCompressor.ratio.value = value;
+            document.getElementById('ratioValue').textContent = value.toFixed(1) + ':1';
+        });
+        
+        function updateSidechainRouting() {
+            bassBus.disconnect();
+            leadBus.disconnect();
+            
+            if (sidechainEnabled) {
+                bassBus.connect(sidechainCompressor);
+                leadBus.connect(sidechainCompressor);
+            } else {
+                bassBus.connect(master);
+                leadBus.connect(master);
+            }
+        }
+        
+        function triggerSidechain() {
+            if (!sidechainEnabled) return;
+            
+            const originalGain = sidechainGain.gain.value;
+            sidechainGain.gain.rampTo(0.1, 0.01);
+            sidechainGain.gain.rampTo(originalGain, 0.2);
+        }
+        
+        // Create sequences
+        const kickPattern = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0];
+        const bassPattern = ['C2', null, 'G1', null, 'C2', 'D2', null, 'G1', 'C2', null, 'A1', null, 'C2', 'D2', null, 'G1'];
+        const leadPattern = [['E4', 'B4'], null, ['G4'], null, ['A4'], null, ['B4', 'D5'], null, ['E5'], null, ['G4'], null, ['A4', 'C5'], null, ['B4'], null];
+        
+        const kickSeq = new Tone.Sequence((time, velocity) => {
+            if (velocity) {
+                kick.triggerAttackRelease('C1', '8n', time, velocity);
+                triggerSidechain();
+            }
+        }, kickPattern, '16n');
+        
+        const bassSeq = new Tone.Sequence((time, note) => {
+            if (note) {
+                bass.triggerAttackRelease(note, '8n', time, 0.9);
+            }
+        }, bassPattern, '16n');
+        
+        const leadSeq = new Tone.Sequence((time, notes) => {
+            if (notes && notes.length) {
+                notes.forEach(note => lead.triggerAttackRelease(note, '16n', time, 0.8));
+            }
+        }, leadPattern, '16n');
+        
+        // Transport setup
+        Tone.Transport.bpm.value = 124;
+        Tone.Transport.loop = true;
+        Tone.Transport.loopStart = 0;
+        Tone.Transport.loopEnd = '1m';
+        Tone.Transport.swing = 0.08;
+        Tone.Transport.swingSubdivision = '8n';
+        
+        // Play/Stop buttons
+        document.getElementById('playButton').addEventListener('click', async () => {
+            await Tone.start();
+            Tone.Transport.start();
+            kickSeq.start(0);
+            bassSeq.start(0);
+            leadSeq.start(0);
+        });
+        
+        document.getElementById('stopButton').addEventListener('click', () => {
+            Tone.Transport.stop();
+            kickSeq.stop();
+            bassSeq.stop();
+            leadSeq.stop();
+        });
+        
+        console.log('Sidechain compression test ready!');
+    </script>
+</body>
+</html>

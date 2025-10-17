@@ -44,6 +44,7 @@ export class AudioEngine {
     this.sequences = this.buildSequences(this.instruments);
 
     this.connectEffects();
+    this.connectBuses();
     return this;
   }
 
@@ -73,6 +74,17 @@ export class AudioEngine {
       output: 0.9
     });
 
+    // Sidechain compression
+    const sidechainCompressor = new Tone.Compressor({
+      threshold: -24,
+      ratio: 4,
+      attack: 0.003,
+      release: 0.1,
+      knee: 30
+    });
+
+    const sidechainGain = new Tone.Gain(1);
+
     return {
       delay,
       reverb,
@@ -80,6 +92,8 @@ export class AudioEngine {
       leadFxSend,
       bassFilter,
       bassDrive,
+      sidechainCompressor,
+      sidechainGain
       leadDistortion,
       leadOverdrive,
       drumDistortion,
@@ -93,6 +107,21 @@ export class AudioEngine {
     this.nodes.delay.connect(this.master);
     this.nodes.reverb.connect(this.master);
     
+    // Initialize sidechain state
+    this.sidechainEnabled = true;
+  }
+
+  connectBuses() {
+    // Connect buses with sidechain compression
+    this.buses.drums.connect(this.master);
+    this.buses.fx.connect(this.master);
+    
+    // Connect sidechain compressor to master
+    this.nodes.sidechainCompressor.connect(this.nodes.sidechainGain);
+    this.nodes.sidechainGain.connect(this.master);
+    
+    // Initial routing
+    this.updateSidechainRouting();
     // Connect drum distortion
     this.buses.drums.connect(this.nodes.drumDistortion);
     this.nodes.drumDistortion.connect(this.master);
@@ -194,6 +223,8 @@ export class AudioEngine {
     const kickSeq = new Tone.Sequence((time, velocity) => {
       if (velocity) {
         instruments.kick.triggerAttackRelease('C1', '8n', time, velocity);
+        // Trigger sidechain compression
+        this.triggerSidechain();
       }
     }, kickPattern, '16n');
 
@@ -297,4 +328,32 @@ export class AudioEngine {
       setBusLevel(bus, db);
     }
   }
+
+  // Sidechain compression methods
+  triggerSidechain() {
+    if (!this.sidechainEnabled) return;
+    
+    // Create a quick ducking effect by temporarily reducing the sidechain gain
+    const originalGain = this.nodes.sidechainGain.gain.value;
+    this.nodes.sidechainGain.gain.rampTo(0.1, 0.01);
+    this.nodes.sidechainGain.gain.rampTo(originalGain, 0.2);
+  }
+
+  updateSidechainRouting() {
+    // Disconnect all buses from their current destinations
+    this.buses.bass.disconnect();
+    this.buses.lead.disconnect();
+    
+    if (this.sidechainEnabled) {
+      // Route through sidechain compression
+      this.buses.bass.connect(this.nodes.sidechainCompressor);
+      this.buses.lead.connect(this.nodes.sidechainCompressor);
+    } else {
+      // Route directly to master
+      this.buses.bass.connect(this.master);
+      this.buses.lead.connect(this.master);
+    }
+  }
 }
+
+export { AudioEngine };

@@ -106,6 +106,21 @@ export const AUTOMATION_TRACK_DEFINITIONS = [
     ]
   },
   {
+    id: 'sidechainAmount',
+    label: 'Sidechain Amount',
+    color: '#ff4757',
+    curve: [
+      0.8, 0.6, 0.4, 0.2, 0.1, 0.3, 0.5, 0.7,
+      0.9, 0.7, 0.5, 0.3, 0.1, 0.2, 0.4, 0.6
+    ]
+  },
+  {
+    id: 'sidechainThreshold',
+    label: 'Sidechain Threshold',
+    color: '#ff6b35',
+    curve: [
+      -24, -22, -20, -18, -16, -18, -20, -22,
+      -24, -26, -28, -26, -24, -22, -20, -18
     id: 'leadDistortion',
     label: 'Lead Distortion',
     color: '#ff4757',

@@ -558,6 +558,96 @@ const CONTROL_SCHEMA = [
         }
       }
     ]
+  },
+  {
+    group: 'Sidechain Compression',
+    description: 'Duck bass and lead when kick hits.',
+    controls: [
+      {
+        id: 'sidechainEnabled',
+        label: 'Enable Sidechain',
+        type: 'select',
+        options: [
+          { value: 'off', label: 'Off' },
+          { value: 'on', label: 'On' }
+        ],
+        default: 'on',
+        apply: (value, app) => {
+          app.audio.sidechainEnabled = value === 'on';
+          app.audio.updateSidechainRouting();
+        }
+      },
+      {
+        id: 'sidechainThreshold',
+        label: 'Threshold',
+        type: 'range',
+        min: -40,
+        max: 0,
+        step: 1,
+        default: -24,
+        format: formatDb,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainCompressor.threshold.value = value;
+        }
+      },
+      {
+        id: 'sidechainRatio',
+        label: 'Ratio',
+        type: 'range',
+        min: 1,
+        max: 20,
+        step: 0.1,
+        default: 4,
+        format: value => `${value.toFixed(1)}:1`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainCompressor.ratio.value = value;
+        }
+      },
+      {
+        id: 'sidechainAttack',
+        label: 'Attack',
+        type: 'range',
+        min: 0.001,
+        max: 0.1,
+        step: 0.001,
+        default: 0.003,
+        format: value => `${(value * 1000).toFixed(1)} ms`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainCompressor.attack.value = value;
+        }
+      },
+      {
+        id: 'sidechainRelease',
+        label: 'Release',
+        type: 'range',
+        min: 0.01,
+        max: 2,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${(value * 1000).toFixed(0)} ms`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainCompressor.release.value = value;
+        }
+      },
+      {
+        id: 'sidechainAmount',
+        label: 'Amount',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.8,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainGain.gain.value = value;
+        }
+      }
+    ]
   }
 ];
 
