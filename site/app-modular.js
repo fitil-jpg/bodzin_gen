@@ -32,6 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeApp(appInstance);
   window.bodzinApp = appInstance;
   window.communityPresetManager = appInstance.communityPresets;
+  
+  // Add user interaction handler to enable audio context
+  setupUserInteractionHandler(appInstance);
 });
 
 function createApp() {
@@ -63,6 +66,7 @@ function createApp() {
     automationStep: 0,
     activeSection: null,
     presetName: 'Deep Default',
+    audioContextStarted: false,
     
     // UI elements
     presetFileInput: null,
@@ -80,6 +84,39 @@ function createApp() {
     // EQ Visualizer
     eqVisualizer: null
   };
+}
+
+function setupUserInteractionHandler(app) {
+  // Function to handle first user interaction
+  const handleFirstInteraction = async () => {
+    if (app.audioContextStarted) return;
+    
+    try {
+      // Start the audio context
+      if (Tone.context.state !== 'running') {
+        await Tone.start();
+        app.audioContextStarted = true;
+        console.log('Audio context started successfully');
+        app.status.set('Audio ready - click Start to begin');
+      }
+    } catch (error) {
+      console.error('Failed to start audio context:', error);
+      app.status.set('Audio initialization failed - try refreshing the page');
+    }
+  };
+  
+  // Add event listeners for user interaction
+  const interactionEvents = ['click', 'touchstart', 'keydown'];
+  
+  interactionEvents.forEach(eventType => {
+    document.addEventListener(eventType, handleFirstInteraction, { once: true });
+  });
+  
+  // Also handle the start button specifically
+  const startBtn = document.getElementById('startButton');
+  if (startBtn) {
+    startBtn.addEventListener('click', handleFirstInteraction, { once: true });
+  }
 }
 
 async function initializeApp(app) {
@@ -335,20 +372,29 @@ async function startPlayback(app, options = {}) {
     startBtn.disabled = true;
   }
   
-  await ensureTransportRunning(app);
-  
-  if (startBtn) {
-    startBtn.classList.remove('loading');
-    startBtn.disabled = false;
-  }
-  
-  if (stopBtn) {
-    stopBtn.style.background = 'rgba(255, 73, 175, 0.1)';
-    stopBtn.style.borderColor = '#ff49af';
-  }
-  
-  if (!options.silent) {
-    app.status.set('Playing');
+  try {
+    await ensureTransportRunning(app);
+    
+    if (startBtn) {
+      startBtn.classList.remove('loading');
+      startBtn.disabled = false;
+    }
+    
+    if (stopBtn) {
+      stopBtn.style.background = 'rgba(255, 73, 175, 0.1)';
+      stopBtn.style.borderColor = '#ff49af';
+    }
+    
+    if (!options.silent) {
+      app.status.set('Playing');
+    }
+  } catch (error) {
+    console.error('Failed to start playback:', error);
+    if (startBtn) {
+      startBtn.classList.remove('loading');
+      startBtn.disabled = false;
+    }
+    app.status.set('Failed to start playback - try clicking again');
   }
 }
 
@@ -356,7 +402,12 @@ async function ensureTransportRunning(app) {
   if (Tone.Transport.state === 'started') {
     return false;
   }
-  await Tone.start();
+  
+  // Ensure audio context is started with user interaction
+  if (Tone.context.state !== 'running') {
+    await Tone.start();
+  }
+  
   await app.audio.startSequences();
   Tone.Transport.start();
   return true;
