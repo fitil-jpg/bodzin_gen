@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preset Versioning Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #2a2a2a;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { background: #2d5a2d; }
+        .error { background: #5a2d2d; }
+        .info { background: #2d4a5a; }
+        button {
+            background: #4a9eff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #3d8bff;
+        }
+        pre {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Preset Versioning Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Create Versioned Preset</h2>
+        <button onclick="testCreatePreset()">Create Test Preset</button>
+        <div id="test1-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Migrate Legacy Preset</h2>
+        <button onclick="testLegacyMigration()">Test Legacy Migration</button>
+        <div id="test2-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Version Compatibility</h2>
+        <button onclick="testCompatibility()">Test Compatibility</button>
+        <div id="test3-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: Preset History</h2>
+        <button onclick="testHistory()">Test History</button>
+        <div id="test4-result"></div>
+    </div>
+
+    <script type="module">
+        import { PresetVersioning } from './modules/preset-versioning.js';
+        
+        const versioning = new PresetVersioning();
+        
+        // Mock app object for testing
+        const mockApp = {
+            controlState: {
+                leadFilter: 0.5,
+                bassFilter: 0.3,
+                masterVolume: 0.8
+            },
+            automation: {
+                tracks: [
+                    { id: 'leadFilter', values: [0.1, 0.2, 0.3, 0.4] }
+                ],
+                sections: [
+                    { name: 'Intro', start: 0, end: 3, color: '#49a9ff' }
+                ]
+            },
+            midi: {
+                mappings: {
+                    'cc1': 'leadFilter',
+                    'cc2': 'bassFilter'
+                }
+            }
+        };
+        
+        window.testCreatePreset = function() {
+            try {
+                const preset = versioning.buildVersionedPreset(mockApp, 'Test Preset', {
+                    description: 'A test preset',
+                    tags: ['test', 'demo'],
+                    author: 'Test User'
+                });
+                
+                document.getElementById('test1-result').innerHTML = `
+                    <div class="test-result success">✓ Preset created successfully</div>
+                    <pre>${JSON.stringify(preset, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('test1-result').innerHTML = `
+                    <div class="test-result error">✗ Error: ${error.message}</div>
+                `;
+            }
+        };
+        
+        window.testLegacyMigration = function() {
+            try {
+                const legacyPreset = {
+                    name: 'Legacy Preset',
+                    createdAt: '2023-01-01T00:00:00.000Z',
+                    controls: { leadFilter: 0.7 },
+                    automation: { tracks: [], sections: [] },
+                    midiMappings: {}
+                };
+                
+                const migrated = versioning.validateAndMigratePreset(legacyPreset);
+                const versionInfo = versioning.getVersionInfo(migrated);
+                
+                document.getElementById('test2-result').innerHTML = `
+                    <div class="test-result success">✓ Legacy preset migrated successfully</div>
+                    <div class="test-result info">Version: ${versionInfo.version}, Schema: ${versionInfo.schemaVersion}, Legacy: ${versionInfo.isLegacy}</div>
+                    <pre>${JSON.stringify(migrated, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('test2-result').innerHTML = `
+                    <div class="test-result error">✗ Error: ${error.message}</div>
+                `;
+            }
+        };
+        
+        window.testCompatibility = function() {
+            try {
+                const validPreset = {
+                    name: 'Valid Preset',
+                    version: '1.0.0',
+                    schemaVersion: 1,
+                    controls: {},
+                    automation: { tracks: [], sections: [] },
+                    midiMappings: {}
+                };
+                
+                const invalidPreset = {
+                    name: 'Invalid Preset',
+                    version: '0.9.0',
+                    controls: {}
+                };
+                
+                const validCompat = versioning.isCompatible(validPreset);
+                const invalidCompat = versioning.isCompatible(invalidPreset);
+                
+                document.getElementById('test3-result').innerHTML = `
+                    <div class="test-result ${validCompat ? 'success' : 'error'}">
+                        ✓ Valid preset compatibility: ${validCompat}
+                    </div>
+                    <div class="test-result ${!invalidCompat ? 'success' : 'error'}">
+                        ✓ Invalid preset compatibility: ${invalidCompat}
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('test3-result').innerHTML = `
+                    <div class="test-result error">✗ Error: ${error.message}</div>
+                `;
+            }
+        };
+        
+        window.testHistory = function() {
+            try {
+                const preset = versioning.buildVersionedPreset(mockApp, 'History Test');
+                const historyEntry = versioning.createHistoryEntry(preset, 'save');
+                
+                document.getElementById('test4-result').innerHTML = `
+                    <div class="test-result success">✓ History entry created successfully</div>
+                    <pre>${JSON.stringify(historyEntry, null, 2)}</pre>
+                `;
+            } catch (error) {
+                document.getElementById('test4-result').innerHTML = `
+                    <div class="test-result error">✗ Error: ${error.message}</div>
+                `;
+            }
+        };
+    </script>
+</body>
+</html>
