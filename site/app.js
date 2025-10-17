@@ -45,6 +45,51 @@ const AUTOMATION_TRACK_DEFINITIONS = [
       0.24, 0.25, 0.26, 0.28, 0.34, 0.4, 0.48, 0.54,
       0.52, 0.46, 0.4, 0.34, 0.3, 0.28, 0.26, 0.24
     ]
+  },
+  {
+    id: 'reverbDecay',
+    label: 'Reverb Decay',
+    color: '#ff6b35',
+    curve: [
+      0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65,
+      0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1, 0.95
+    ]
+  },
+  {
+    id: 'delayFeedback',
+    label: 'Delay Feedback',
+    color: '#4ecdc4',
+    curve: [
+      0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
+      0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15
+    ]
+  },
+  {
+    id: 'bassDrive',
+    label: 'Bass Drive',
+    color: '#f7b731',
+    curve: [
+      0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55,
+      0.6, 0.65, 0.7, 0.75, 0.8, 0.75, 0.7, 0.65
+    ]
+  },
+  {
+    id: 'leadResonance',
+    label: 'Lead Resonance',
+    color: '#a55eea',
+    curve: [
+      0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8,
+      0.9, 1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4
+    ]
+  },
+  {
+    id: 'masterVolume',
+    label: 'Master Volume',
+    color: '#26de81',
+    curve: [
+      0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95,
+      1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65
+    ]
   }
 ];
 
@@ -140,6 +185,55 @@ const PATTERN_VARIATION_CONFIG = {
     accentProbability: 0.15, // 0-1, probability of accenting a step
     accentMultiplier: 1.5 // Multiplier for accented steps
   }
+const LFO_DEFINITIONS = [
+  {
+    id: 'lfo1',
+    label: 'LFO 1',
+    color: '#ff6b6b',
+    rate: 0.5, // Hz
+    depth: 0.3,
+    waveform: 'sine',
+    target: 'leadFilter',
+    enabled: true
+  },
+  {
+    id: 'lfo2',
+    label: 'LFO 2',
+    color: '#4ecdc4',
+    rate: 0.25, // Hz
+    depth: 0.2,
+    waveform: 'triangle',
+    target: 'fxSend',
+    enabled: false
+  },
+  {
+    id: 'lfo3',
+    label: 'LFO 3',
+    color: '#45b7d1',
+    rate: 1.0, // Hz
+    depth: 0.15,
+    waveform: 'square',
+    target: 'bassFilter',
+    enabled: false
+  },
+  {
+    id: 'lfo4',
+    label: 'LFO 4',
+    color: '#96ceb4',
+    rate: 0.125, // Hz
+    depth: 0.25,
+    waveform: 'sawtooth',
+    target: 'reverbDecay',
+    enabled: false
+  }
+];
+
+const CURVE_TYPES = {
+  LINEAR: 'linear',
+  BEZIER: 'bezier',
+  EXPONENTIAL: 'exponential',
+  LOGARITHMIC: 'logarithmic',
+  SINE: 'sine'
 };
 
 function createSectionLayout(stepCount = STEP_COUNT) {
@@ -183,7 +277,10 @@ function createAutomationTrack(definition, stepCount = STEP_COUNT) {
     id: definition.id,
     label: definition.label,
     color: definition.color,
-    values: normalizeAutomationValues(definition.curve || [], stepCount)
+    values: normalizeAutomationValues(definition.curve || [], stepCount, definition.curveType),
+    curveType: definition.curveType || CURVE_TYPES.LINEAR,
+    lfo: definition.lfo || null,
+    breakpoints: definition.breakpoints || []
   };
 }
 
@@ -415,6 +512,68 @@ const CONTROL_SCHEMA = [
     ]
   },
   {
+    group: 'Distortion & Overdrive',
+    description: 'Harmonic saturation and drive effects.',
+    controls: [
+      {
+        id: 'leadDistortion',
+        label: 'Lead Distortion',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.2,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.leadDistortion.distortion = value;
+        }
+      },
+      {
+        id: 'leadOverdrive',
+        label: 'Lead Overdrive',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.3,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.leadOverdrive.drive = value;
+        }
+      },
+      {
+        id: 'drumDistortion',
+        label: 'Drum Distortion',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.15,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.drumDistortion.distortion = value;
+        }
+      },
+      {
+        id: 'masterOverdrive',
+        label: 'Master Overdrive',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.masterOverdrive.drive = value;
+        }
+      }
+    ]
+  },
+  {
     group: 'Ambience',
     description: 'Delay and space design.',
     controls: [
@@ -605,6 +764,91 @@ const CONTROL_SCHEMA = [
         format: value => `${value.toFixed(1)}x`,
         apply: (value, app) => {
           app.patternVariations.probabilityTriggers.accentMultiplier = value;
+    group: 'Sidechain Compression',
+    description: 'Duck bass and lead when kick hits.',
+    controls: [
+      {
+        id: 'sidechainEnabled',
+        label: 'Enable Sidechain',
+        type: 'select',
+        options: [
+          { value: 'off', label: 'Off' },
+          { value: 'on', label: 'On' }
+        ],
+        default: 'on',
+        apply: (value, app) => {
+          app.audio.sidechainEnabled = value === 'on';
+          app.audio.updateSidechainRouting();
+        }
+      },
+      {
+        id: 'sidechainThreshold',
+        label: 'Threshold',
+        type: 'range',
+        min: -40,
+        max: 0,
+        step: 1,
+        default: -24,
+        format: formatDb,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainCompressor.threshold.value = value;
+        }
+      },
+      {
+        id: 'sidechainRatio',
+        label: 'Ratio',
+        type: 'range',
+        min: 1,
+        max: 20,
+        step: 0.1,
+        default: 4,
+        format: value => `${value.toFixed(1)}:1`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainCompressor.ratio.value = value;
+        }
+      },
+      {
+        id: 'sidechainAttack',
+        label: 'Attack',
+        type: 'range',
+        min: 0.001,
+        max: 0.1,
+        step: 0.001,
+        default: 0.003,
+        format: value => `${(value * 1000).toFixed(1)} ms`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainCompressor.attack.value = value;
+        }
+      },
+      {
+        id: 'sidechainRelease',
+        label: 'Release',
+        type: 'range',
+        min: 0.01,
+        max: 2,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${(value * 1000).toFixed(0)} ms`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainCompressor.release.value = value;
+        }
+      },
+      {
+        id: 'sidechainAmount',
+        label: 'Amount',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.8,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.sidechainGain.gain.value = value;
         }
       }
     ]
@@ -617,7 +861,135 @@ document.addEventListener('DOMContentLoaded', () => {
   appInstance = createApp();
   initializeApp(appInstance);
   window.bodzinApp = appInstance;
+  
+  // Add mobile-specific optimizations
+  setupMobileOptimizations(appInstance);
 });
+
+function setupMobileOptimizations(app) {
+  // Prevent zoom on double tap
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (event) => {
+    const now = (new Date()).getTime();
+    if (now - lastTouchEnd <= 300) {
+      event.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, false);
+
+  // Optimize for mobile performance
+  if (window.innerWidth <= 768) {
+    // Reduce animation frequency on mobile
+    const originalDrawTimeline = drawTimeline;
+    let drawTimeout = null;
+    drawTimeline = (app) => {
+      if (drawTimeout) {
+        clearTimeout(drawTimeout);
+      }
+      drawTimeout = setTimeout(() => originalDrawTimeline(app), 16); // ~60fps
+    };
+
+    // Optimize canvas rendering
+    const canvas = app.timeline.canvas;
+    if (canvas) {
+      canvas.style.willChange = 'transform';
+      canvas.style.transform = 'translateZ(0)'; // Force hardware acceleration
+    }
+  }
+
+  // Add mobile-specific keyboard shortcuts
+  document.addEventListener('keydown', (event) => {
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') {
+      return; // Don't interfere with form inputs
+    }
+
+    switch (event.key) {
+      case ' ':
+        event.preventDefault();
+        if (Tone.Transport.state === 'started') {
+          stopPlayback(app);
+        } else {
+          startPlayback(app);
+        }
+        break;
+      case 'Escape':
+        if (app.midi.learning) {
+          setMidiLearn(app, false);
+        }
+        break;
+      case '=':
+      case '+':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          app.timeline.zoom = Math.min(app.timeline.zoom + app.timeline.zoomStep, app.timeline.maxZoom);
+          updateZoomLevel(app);
+          drawTimeline(app);
+        }
+        break;
+      case '-':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          app.timeline.zoom = Math.max(app.timeline.zoom - app.timeline.zoomStep, app.timeline.minZoom);
+          updateZoomLevel(app);
+          drawTimeline(app);
+        }
+        break;
+      case '0':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          app.timeline.zoom = 1.0;
+          app.timeline.pan = 0;
+          updateZoomLevel(app);
+          drawTimeline(app);
+        }
+        break;
+      case 'Home':
+        event.preventDefault();
+        app.timeline.pan = -getMaxPan(app);
+        drawTimeline(app);
+        break;
+      case 'End':
+        event.preventDefault();
+        app.timeline.pan = 0;
+        drawTimeline(app);
+        break;
+      case 'ArrowLeft':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          const stepWidth = (app.timeline.canvas.clientWidth / STEP_COUNT) * app.timeline.zoom;
+          app.timeline.pan = Math.max(app.timeline.pan - stepWidth * 0.1, -getMaxPan(app));
+          drawTimeline(app);
+        }
+        break;
+      case 'ArrowRight':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          const stepWidth = (app.timeline.canvas.clientWidth / STEP_COUNT) * app.timeline.zoom;
+          app.timeline.pan = Math.min(app.timeline.pan + stepWidth * 0.1, 0);
+          drawTimeline(app);
+        }
+        break;
+    }
+  });
+
+  // Handle orientation changes
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      syncTimelineCanvas(app);
+      drawTimeline(app);
+    }, 100);
+  });
+
+  // Handle resize events with debouncing
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      syncTimelineCanvas(app);
+      drawTimeline(app);
+    }, 150);
+  });
+}
 
 function createApp() {
   return {
@@ -639,6 +1011,25 @@ function createApp() {
       canvas: document.getElementById('timeline'),
       ctx: null,
       currentStep: 0,
+      deviceRatio: window.devicePixelRatio || 1,
+      zoom: 1.0,
+      pan: 0,
+      minZoom: 0.1,
+      maxZoom: 10.0,
+      zoomStep: 0.1,
+      isDragging: false,
+      lastPanX: 0,
+      snapToGrid: true,
+      gridSize: 1,
+      showRuler: true,
+      rulerHeight: 30
+    },
+    waveform: {
+      canvas: document.getElementById('waveform'),
+      ctx: null,
+      analyser: null,
+      dataArray: null,
+      animationId: null,
       deviceRatio: window.devicePixelRatio || 1
     },
     statusEl: document.getElementById('status'),
@@ -672,6 +1063,13 @@ function createApp() {
         fx: 'A'
       },
       lastVariationStep: 0
+    particles: [],
+    lastParticleTime: 0,
+    leds: {
+      drums: document.getElementById('led-drums'),
+      bass: document.getElementById('led-bass'),
+      lead: document.getElementById('led-lead'),
+      fx: document.getElementById('led-fx')
     }
   };
 }
@@ -682,7 +1080,14 @@ function initializeApp(app) {
     return;
   }
 
+  // Show mobile loading indicator
+  const mobileLoading = document.getElementById('mobile-loading');
+  if (mobileLoading && window.innerWidth <= 768) {
+    mobileLoading.style.display = 'flex';
+  }
+
   app.timeline.ctx = app.timeline.canvas.getContext('2d');
+  app.waveform.ctx = app.waveform.canvas.getContext('2d');
   app.audio = initializeAudioGraph();
   configureTransport();
 
@@ -715,12 +1120,22 @@ function initializeApp(app) {
   renderControlInterface(app);
   setupButtons(app);
   setupTimeline(app);
+  setupTimelineControls(app);
+  setupWaveform(app);
   setupAutomationScheduling(app);
   setupMidi(app);
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
+  updateLEDIndicators(app, getSectionForStep(app, 0));
   drawTimeline(app);
   setStatus(app, 'Idle');
+
+  // Hide mobile loading indicator
+  if (mobileLoading) {
+    setTimeout(() => {
+      mobileLoading.style.display = 'none';
+    }, 500);
+  }
 }
 
 function configureTransport() {
@@ -1043,6 +1458,10 @@ function buildDefaultControlState() {
 function renderControlInterface(app) {
   const container = document.getElementById('controls');
   container.innerHTML = '';
+  
+  // Add mobile-specific container classes
+  container.classList.add('mobile-optimized');
+  
   CONTROL_SCHEMA.forEach(section => {
     const sectionEl = document.createElement('section');
     sectionEl.className = 'control-section';
@@ -1088,6 +1507,12 @@ function renderControlInterface(app) {
         input.min = String(control.min);
         input.max = String(control.max);
         input.step = String(control.step);
+        
+        // Add mobile-specific attributes
+        input.setAttribute('aria-label', control.label);
+        input.setAttribute('role', 'slider');
+        input.setAttribute('aria-valuemin', control.min);
+        input.setAttribute('aria-valuemax', control.max);
       }
       input.id = control.id;
       input.dataset.controlId = control.id;
@@ -1115,15 +1540,73 @@ function renderControlInterface(app) {
         setControlValue(app, control, val);
       });
 
+      // Touch-specific event handlers for better mobile experience
+      if (control.type === 'range') {
+        let isDragging = false;
+        let startValue = 0;
+        let startY = 0;
+
+        const handleTouchStart = (event) => {
+          if (event.touches.length !== 1) return;
+          isDragging = true;
+          startValue = parseFloat(input.value);
+          startY = event.touches[0].clientY;
+          input.style.touchAction = 'none';
+          event.preventDefault();
+        };
+
+        const handleTouchMove = (event) => {
+          if (!isDragging || event.touches.length !== 1) return;
+          const deltaY = startY - event.touches[0].clientY;
+          const sensitivity = 0.5;
+          const range = control.max - control.min;
+          const step = control.step || 1;
+          const deltaValue = (deltaY / 100) * range * sensitivity;
+          const newValue = startValue + deltaValue;
+          const clampedValue = Math.max(control.min, Math.min(control.max, newValue));
+          const steppedValue = Math.round(clampedValue / step) * step;
+          
+          input.value = steppedValue;
+          const val = getInputValue(control, input);
+          setControlValue(app, control, val, { silent: true, skipSave: true });
+          event.preventDefault();
+        };
+
+        const handleTouchEnd = (event) => {
+          if (!isDragging) return;
+          isDragging = false;
+          input.style.touchAction = '';
+          const val = getInputValue(control, input);
+          setControlValue(app, control, val);
+          event.preventDefault();
+        };
+
+        input.addEventListener('touchstart', handleTouchStart, { passive: false });
+        input.addEventListener('touchmove', handleTouchMove, { passive: false });
+        input.addEventListener('touchend', handleTouchEnd, { passive: false });
+      }
+
       if (control.type === 'range') {
         const midiHandler = () => {
           if (app.midi.learning) {
             setMidiPendingControl(app, control.id);
           }
         };
+        
+        // Use pointer events for better cross-platform support
         input.addEventListener('pointerdown', midiHandler);
         input.addEventListener('mousedown', midiHandler);
         input.addEventListener('touchstart', midiHandler, { passive: true });
+        
+        // Add haptic feedback for mobile devices
+        const addHapticFeedback = () => {
+          if ('vibrate' in navigator) {
+            navigator.vibrate(10); // Short vibration
+          }
+        };
+        
+        input.addEventListener('input', addHapticFeedback);
+        input.addEventListener('change', addHapticFeedback);
       }
     });
   });
@@ -1157,7 +1640,12 @@ function setControlValue(app, control, value, options = {}) {
     } else {
       entry.input.value = String(normalizedValue);
     }
-    entry.valueEl.textContent = formatControlValue(control, normalizedValue);
+    
+    // Animate value change with smooth number transition
+    animateValueChange(entry.valueEl, formatControlValue(control, normalizedValue));
+    
+    // Add enhanced visual feedback animations
+    addParameterChangeAnimation(entry, control);
   }
 
   if (control.apply) {
@@ -1192,6 +1680,50 @@ function setControlValue(app, control, value, options = {}) {
   }
 }
 
+function animateValueChange(element, newValue) {
+  // Remove any existing animation classes
+  element.classList.remove('value-changing');
+  
+  // Force reflow to ensure class removal takes effect
+  element.offsetHeight;
+  
+  // Add animation class
+  element.classList.add('value-changing');
+  
+  // Update the text content
+  element.textContent = newValue;
+  
+  // Remove animation class after animation completes
+  setTimeout(() => {
+    element.classList.remove('value-changing');
+  }, 400);
+}
+
+function addParameterChangeAnimation(entry, control) {
+  // Remove any existing animation classes
+  entry.row.classList.remove('parameter-changing');
+  if (control.type === 'range') {
+    entry.input.classList.remove('slider-changing');
+  }
+  
+  // Force reflow
+  entry.row.offsetHeight;
+  
+  // Add animation classes
+  entry.row.classList.add('parameter-changing');
+  if (control.type === 'range') {
+    entry.input.classList.add('slider-changing');
+  }
+  
+  // Remove animation classes after animation completes
+  setTimeout(() => {
+    entry.row.classList.remove('parameter-changing');
+    if (control.type === 'range') {
+      entry.input.classList.remove('slider-changing');
+    }
+  }, 600);
+}
+
 function formatControlValue(control, value) {
   if (control.format) {
     return control.format(value);
@@ -1215,8 +1747,28 @@ function setupButtons(app) {
 
   startBtn?.addEventListener('click', () => startPlayback(app));
   stopBtn?.addEventListener('click', () => stopPlayback(app));
-  savePresetBtn?.addEventListener('click', () => savePreset(app));
-  loadPresetBtn?.addEventListener('click', () => triggerPresetLoad(app));
+  savePresetBtn?.addEventListener('click', () => {
+    // Add visual feedback for preset saving
+    savePresetBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    savePresetBtn.style.transform = 'scale(0.95)';
+    savePresetBtn.style.background = 'rgba(73, 169, 255, 0.2)';
+    setTimeout(() => {
+      savePresetBtn.style.transform = 'scale(1)';
+      savePresetBtn.style.background = '';
+    }, 300);
+    savePreset(app);
+  });
+  loadPresetBtn?.addEventListener('click', () => {
+    // Add visual feedback for preset loading
+    loadPresetBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    loadPresetBtn.style.transform = 'scale(0.95)';
+    loadPresetBtn.style.background = 'rgba(255, 73, 175, 0.2)';
+    setTimeout(() => {
+      loadPresetBtn.style.transform = 'scale(1)';
+      loadPresetBtn.style.background = '';
+    }, 300);
+    triggerPresetLoad(app);
+  });
   exportMixBtn?.addEventListener('click', () => exportMix(app));
   exportStemsBtn?.addEventListener('click', () => exportStems(app));
   triggerVariationBtn?.addEventListener('click', () => triggerPatternVariation(app));
@@ -1252,10 +1804,44 @@ function setupButtons(app) {
 }
 
 async function startPlayback(app, options = {}) {
+  const startBtn = document.getElementById('startButton');
+  const stopBtn = document.getElementById('stopButton');
+  
+  // Enhanced visual feedback with smooth animations
+  if (startBtn) {
+    startBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    startBtn.classList.add('loading');
+    startBtn.disabled = true;
+    startBtn.style.transform = 'scale(0.95)';
+  }
+  
   await ensureTransportRunning(app);
+  
+  if (startBtn) {
+    startBtn.classList.remove('loading');
+    startBtn.disabled = false;
+    startBtn.style.transform = 'scale(1)';
+    startBtn.style.background = 'rgba(73, 169, 255, 0.1)';
+    startBtn.style.borderColor = 'rgba(73, 169, 255, 0.3)';
+  }
+  
+  if (stopBtn) {
+    stopBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    stopBtn.style.background = 'rgba(255, 73, 175, 0.1)';
+    stopBtn.style.borderColor = '#ff49af';
+    stopBtn.style.transform = 'scale(1.02)';
+    setTimeout(() => {
+      stopBtn.style.transform = 'scale(1)';
+    }, 200);
+  }
+  
   if (!options.silent) {
     setStatus(app, 'Playing');
   }
+  
+  // Update LED indicators when starting playback
+  const currentSection = getSectionForStep(app, app.timeline.currentStep);
+  updateLEDIndicators(app, currentSection);
 }
 
 async function ensureTransportRunning(app) {
@@ -1275,12 +1861,44 @@ async function ensureTransportRunning(app) {
 }
 
 function stopPlayback(app) {
+  const startBtn = document.getElementById('startButton');
+  const stopBtn = document.getElementById('stopButton');
+  
+  // Enhanced visual feedback with smooth animations
+  if (stopBtn) {
+    stopBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    stopBtn.style.background = 'rgba(255, 255, 255, 0.04)';
+    stopBtn.style.borderColor = 'var(--border)';
+    stopBtn.style.transform = 'scale(0.98)';
+    setTimeout(() => {
+      stopBtn.style.transform = 'scale(1)';
+    }, 200);
+  }
+  
+  if (startBtn) {
+    startBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    startBtn.style.background = 'linear-gradient(135deg, var(--accent), #3d8bff)';
+    startBtn.style.borderColor = 'rgba(73, 169, 255, 0.45)';
+    startBtn.style.transform = 'scale(1.02)';
+    setTimeout(() => {
+      startBtn.style.transform = 'scale(1)';
+    }, 200);
+  }
+  
   Tone.Transport.stop();
   Tone.Transport.position = 0;
   app.timeline.currentStep = 0;
   app.automationStep = 0;
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
+  
+  // Clear all LED indicators when stopping
+  if (app.leds) {
+    Object.values(app.leds).forEach(led => {
+      if (led) led.classList.remove('active');
+    });
+  }
+  
   drawTimeline(app);
   setStatus(app, 'Stopped');
 }
@@ -1490,20 +2108,517 @@ function sanitizePresetSections(sections, stepCount = STEP_COUNT) {
 function setupTimeline(app) {
   const resizeObserver = new ResizeObserver(() => {
     syncTimelineCanvas(app);
+    syncWaveformCanvas(app);
     drawTimeline(app);
   });
   syncTimelineCanvas(app);
   resizeObserver.observe(app.timeline.canvas);
+
+  // Add mobile touch support for timeline
+  setupTimelineTouch(app);
+  setupTimelineZoomPan(app);
 }
 
-function syncTimelineCanvas(app) {
+function setupTimelineControls(app) {
+  const zoomInBtn = document.getElementById('zoomIn');
+  const zoomOutBtn = document.getElementById('zoomOut');
+  const zoomFitBtn = document.getElementById('zoomFit');
+  const zoomLevelEl = document.getElementById('zoomLevel');
+  const panLeftBtn = document.getElementById('panLeft');
+  const panRightBtn = document.getElementById('panRight');
+  const goToStartBtn = document.getElementById('goToStart');
+  const goToEndBtn = document.getElementById('goToEnd');
+  const snapToggle = document.getElementById('snapToGridToggle');
+  const rulerToggle = document.getElementById('showRulerToggle');
+
+  // Zoom controls
+  zoomInBtn?.addEventListener('click', () => {
+    app.timeline.zoom = Math.min(app.timeline.zoom + app.timeline.zoomStep, app.timeline.maxZoom);
+    updateZoomLevel(app);
+    drawTimeline(app);
+  });
+
+  zoomOutBtn?.addEventListener('click', () => {
+    app.timeline.zoom = Math.max(app.timeline.zoom - app.timeline.zoomStep, app.timeline.minZoom);
+    updateZoomLevel(app);
+    drawTimeline(app);
+  });
+
+  zoomFitBtn?.addEventListener('click', () => {
+    app.timeline.zoom = 1.0;
+    app.timeline.pan = 0;
+    updateZoomLevel(app);
+    drawTimeline(app);
+  });
+
+  // Pan controls
+  panLeftBtn?.addEventListener('click', () => {
+    const stepWidth = (app.timeline.canvas.clientWidth / STEP_COUNT) * app.timeline.zoom;
+    app.timeline.pan = Math.max(app.timeline.pan - stepWidth * 0.1, -getMaxPan(app));
+    drawTimeline(app);
+  });
+
+  panRightBtn?.addEventListener('click', () => {
+    const stepWidth = (app.timeline.canvas.clientWidth / STEP_COUNT) * app.timeline.zoom;
+    app.timeline.pan = Math.min(app.timeline.pan + stepWidth * 0.1, 0);
+    drawTimeline(app);
+  });
+
+  goToStartBtn?.addEventListener('click', () => {
+    app.timeline.pan = -getMaxPan(app);
+    drawTimeline(app);
+  });
+
+  goToEndBtn?.addEventListener('click', () => {
+    app.timeline.pan = 0;
+    drawTimeline(app);
+  });
+
+  // Toggle controls
+  snapToggle?.addEventListener('change', (event) => {
+    app.timeline.snapToGrid = event.target.checked;
+  });
+
+  rulerToggle?.addEventListener('change', (event) => {
+    app.timeline.showRuler = event.target.checked;
+    drawTimeline(app);
+  });
+
+  // Initialize zoom level display
+  updateZoomLevel(app);
+}
+
+function setupTimelineZoomPan(app) {
   const canvas = app.timeline.canvas;
+  let isPanning = false;
+  let lastPanX = 0;
+
+  // Mouse wheel zoom
+  canvas.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -app.timeline.zoomStep : app.timeline.zoomStep;
+    const oldZoom = app.timeline.zoom;
+    app.timeline.zoom = Math.max(app.timeline.minZoom, Math.min(app.timeline.maxZoom, app.timeline.zoom + delta));
+    
+    if (app.timeline.zoom !== oldZoom) {
+      // Zoom towards mouse position
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const zoomFactor = app.timeline.zoom / oldZoom;
+      app.timeline.pan = mouseX - (mouseX - app.timeline.pan) * zoomFactor;
+      
+      updateZoomLevel(app);
+      drawTimeline(app);
+    }
+  });
+
+  // Mouse pan
+  canvas.addEventListener('mousedown', (event) => {
+    if (event.button === 1 || (event.button === 0 && event.ctrlKey)) { // Middle mouse or Ctrl+left
+      isPanning = true;
+      lastPanX = event.clientX;
+      canvas.style.cursor = 'grabbing';
+      event.preventDefault();
+    }
+  });
+
+  canvas.addEventListener('mousemove', (event) => {
+    if (isPanning) {
+      const deltaX = event.clientX - lastPanX;
+      app.timeline.pan = Math.max(-getMaxPan(app), Math.min(0, app.timeline.pan + deltaX));
+      lastPanX = event.clientX;
+      drawTimeline(app);
+    }
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    isPanning = false;
+    canvas.style.cursor = '';
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    isPanning = false;
+    canvas.style.cursor = '';
+  });
+
+  // Touch pan and pinch zoom
+  let lastTouchX = 0;
+  let touchStartX = 0;
+  let lastTouchDistance = 0;
+  let initialZoom = 1.0;
+  let initialPan = 0;
+
+  canvas.addEventListener('touchstart', (event) => {
+    if (event.touches.length === 1) {
+      lastTouchX = event.touches[0].clientX;
+      touchStartX = event.touches[0].clientX;
+    } else if (event.touches.length === 2) {
+      // Pinch zoom
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      lastTouchDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) + 
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      initialZoom = app.timeline.zoom;
+      initialPan = app.timeline.pan;
+    }
+  }, { passive: true });
+
+  canvas.addEventListener('touchmove', (event) => {
+    if (event.touches.length === 1) {
+      const deltaX = event.touches[0].clientX - lastTouchX;
+      const totalDelta = Math.abs(event.touches[0].clientX - touchStartX);
+      
+      // Only pan if we've moved enough (to distinguish from tap)
+      if (totalDelta > 10) {
+        app.timeline.pan = Math.max(-getMaxPan(app), Math.min(0, app.timeline.pan + deltaX));
+        lastTouchX = event.touches[0].clientX;
+        drawTimeline(app);
+        event.preventDefault();
+      }
+    } else if (event.touches.length === 2) {
+      // Pinch zoom
+      const touch1 = event.touches[0];
+      const touch2 = event.touches[1];
+      const currentDistance = Math.sqrt(
+        Math.pow(touch2.clientX - touch1.clientX, 2) + 
+        Math.pow(touch2.clientY - touch1.clientY, 2)
+      );
+      
+      if (lastTouchDistance > 0) {
+        const scale = currentDistance / lastTouchDistance;
+        const newZoom = Math.max(app.timeline.minZoom, Math.min(app.timeline.maxZoom, initialZoom * scale));
+        
+        // Zoom towards center of pinch
+        const centerX = (touch1.clientX + touch2.clientX) / 2;
+        const rect = canvas.getBoundingClientRect();
+        const relativeX = centerX - rect.left;
+        const zoomFactor = newZoom / app.timeline.zoom;
+        
+        app.timeline.zoom = newZoom;
+        app.timeline.pan = relativeX - (relativeX - app.timeline.pan) * zoomFactor;
+        
+        updateZoomLevel(app);
+        drawTimeline(app);
+        event.preventDefault();
+      }
+    }
+  }, { passive: false });
+}
+
+function updateZoomLevel(app) {
+  const zoomLevelEl = document.getElementById('zoomLevel');
+  if (zoomLevelEl) {
+    zoomLevelEl.textContent = `${Math.round(app.timeline.zoom * 100)}%`;
+    
+    // Add visual feedback
+    zoomLevelEl.style.transform = 'scale(1.1)';
+    zoomLevelEl.style.color = '#49a9ff';
+    setTimeout(() => {
+      zoomLevelEl.style.transform = '';
+      zoomLevelEl.style.color = '';
+    }, 200);
+  }
+  
+  // Update pan button states
+  const panLeftBtn = document.getElementById('panLeft');
+  const panRightBtn = document.getElementById('panRight');
+  const goToStartBtn = document.getElementById('goToStart');
+  const goToEndBtn = document.getElementById('goToEnd');
+  
+  const maxPan = getMaxPan(app);
+  const canPanLeft = app.timeline.pan > -maxPan;
+  const canPanRight = app.timeline.pan < 0;
+  
+  if (panLeftBtn) {
+    panLeftBtn.disabled = !canPanLeft;
+    panLeftBtn.style.opacity = canPanLeft ? '1' : '0.5';
+  }
+  if (panRightBtn) {
+    panRightBtn.disabled = !canPanRight;
+    panRightBtn.style.opacity = canPanRight ? '1' : '0.5';
+  }
+  if (goToStartBtn) {
+    goToStartBtn.disabled = !canPanLeft;
+    goToStartBtn.style.opacity = canPanLeft ? '1' : '0.5';
+  }
+  if (goToEndBtn) {
+    goToEndBtn.disabled = !canPanRight;
+    goToEndBtn.style.opacity = canPanRight ? '1' : '0.5';
+  }
+}
+
+function getMaxPan(app) {
+  const canvasWidth = app.timeline.canvas.clientWidth;
+  const totalWidth = canvasWidth * app.timeline.zoom;
+  return Math.max(0, totalWidth - canvasWidth);
+}
+
+function setupTimelineTouch(app) {
+  const canvas = app.timeline.canvas;
+  let isDragging = false;
+  let lastTouchTime = 0;
+
+  const getStepFromPosition = (clientX) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const stepWidth = (rect.width / STEP_COUNT) * app.timeline.zoom;
+    const offsetX = app.timeline.pan;
+    const adjustedX = x - offsetX;
+    const step = Math.floor(adjustedX / stepWidth);
+    return app.timeline.snapToGrid ? step : Math.round(adjustedX / stepWidth);
+  };
+
+  const handleTimelineInteraction = (clientX) => {
+    const step = Math.max(0, Math.min(STEP_COUNT - 1, getStepFromPosition(clientX)));
+    if (step !== app.timeline.currentStep) {
+      // Add smooth transition animation
+      canvas.style.transition = 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+      
+      app.timeline.currentStep = step;
+      app.automationStep = step;
+      applyAutomationForStep(app, step);
+      syncSectionState(app, step);
+      drawTimeline(app);
+      setStatus(app, `Step ${step + 1}/${STEP_COUNT}`);
+      
+      // Add visual feedback for timeline interaction
+      canvas.style.transform = 'scale(1.01)';
+      setTimeout(() => {
+        canvas.style.transform = 'scale(1)';
+        canvas.style.transition = '';
+      }, 200);
+    }
+  };
+
+  // Mouse events
+  canvas.addEventListener('mousedown', (event) => {
+    if (event.button === 0) { // Left mouse button
+      isDragging = true;
+      handleTimelineInteraction(event.clientX);
+    }
+  });
+
+  canvas.addEventListener('mousemove', (event) => {
+    if (isDragging) {
+      handleTimelineInteraction(event.clientX);
+    }
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    isDragging = false;
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    isDragging = false;
+  });
+
+  // Touch events
+  canvas.addEventListener('touchstart', (event) => {
+    if (event.touches.length === 1) {
+      isDragging = true;
+      lastTouchTime = Date.now();
+      handleTimelineInteraction(event.touches[0].clientX);
+      event.preventDefault();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (event) => {
+    if (isDragging && event.touches.length === 1) {
+      handleTimelineInteraction(event.touches[0].clientX);
+      event.preventDefault();
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', (event) => {
+    if (isDragging) {
+      isDragging = false;
+      const touchDuration = Date.now() - lastTouchTime;
+      if (touchDuration < 200) { // Quick tap
+        handleTimelineInteraction(event.changedTouches[0].clientX);
+      }
+      event.preventDefault();
+    }
+  }, { passive: false });
+
+  // Prevent context menu on long press
+  canvas.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+  });
+}
+
+function setupWaveform(app) {
+  if (!app.waveform.canvas) return;
+  
+  const resizeObserver = new ResizeObserver(() => {
+    syncWaveformCanvas(app);
+  });
+  syncWaveformCanvas(app);
+  resizeObserver.observe(app.waveform.canvas);
+  
+  // Create analyser for waveform visualization
+  app.waveform.analyser = new Tone.Analyser('waveform', 1024);
+  app.audio.master.connect(app.waveform.analyser);
+  app.waveform.dataArray = new Uint8Array(app.waveform.analyser.size);
+  
+  startWaveformAnimation(app);
+}
+
+function syncWaveformCanvas(app) {
+  const canvas = app.waveform.canvas;
   const ratio = window.devicePixelRatio || 1;
   const width = canvas.clientWidth * ratio;
   const height = canvas.clientHeight * ratio;
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width;
     canvas.height = height;
+  }
+  app.waveform.deviceRatio = ratio;
+}
+
+function startWaveformAnimation(app) {
+  if (app.waveform.animationId) {
+    cancelAnimationFrame(app.waveform.animationId);
+  }
+  
+  function animate() {
+    if (app.waveform.analyser && app.waveform.ctx) {
+      drawWaveform(app);
+    }
+    app.waveform.animationId = requestAnimationFrame(animate);
+  }
+  
+  animate();
+}
+
+function drawWaveform(app) {
+  const { canvas, ctx, analyser, dataArray } = app.waveform;
+  if (!ctx || !analyser) return;
+  
+  const ratio = app.waveform.deviceRatio;
+  const width = canvas.width;
+  const height = canvas.height;
+  
+  // Smooth background fade instead of clear
+  ctx.fillStyle = 'rgba(8, 8, 11, 0.1)';
+  ctx.fillRect(0, 0, width, height);
+  
+  analyser.getValue(dataArray);
+  
+  const barWidth = (width / dataArray.length) * 2.5;
+  let x = 0;
+  
+  // Create animated gradient for waveform bars
+  const time = Date.now() * 0.002;
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, `rgba(73, 169, 255, ${0.8 + 0.2 * Math.sin(time)})`);
+  gradient.addColorStop(0.5, `rgba(255, 73, 175, ${0.6 + 0.2 * Math.sin(time + 1)})`);
+  gradient.addColorStop(1, `rgba(148, 255, 73, ${0.4 + 0.2 * Math.sin(time + 2)})`);
+  
+  ctx.fillStyle = gradient;
+  
+  // Store previous values for smooth interpolation
+  if (!app.waveform.previousData) {
+    app.waveform.previousData = new Array(dataArray.length).fill(0);
+  }
+  
+  for (let i = 0; i < dataArray.length; i++) {
+    // Smooth interpolation between current and previous values
+    const currentValue = dataArray[i] / 255;
+    const previousValue = app.waveform.previousData[i];
+    const smoothedValue = previousValue + (currentValue - previousValue) * 0.3;
+    app.waveform.previousData[i] = smoothedValue;
+    
+    const barHeight = smoothedValue * height;
+    const y = (height - barHeight) / 2;
+    
+    // Add some visual flair with rounded rectangles and smooth animation
+    ctx.beginPath();
+    ctx.roundRect(x, y, barWidth, barHeight, 2);
+    ctx.fill();
+    
+    // Add subtle glow to each bar
+    ctx.shadowColor = gradient;
+    ctx.shadowBlur = 2 * ratio;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    x += barWidth + 1;
+  }
+  
+  // Add a subtle animated glow effect
+  const glowIntensity = 0.1 + 0.05 * Math.sin(time * 0.5);
+  ctx.shadowColor = 'rgba(73, 169, 255, 0.3)';
+  ctx.shadowBlur = 15 * ratio;
+  ctx.fillStyle = `rgba(73, 169, 255, ${glowIntensity})`;
+  ctx.fillRect(0, 0, width, height);
+  ctx.shadowBlur = 0;
+}
+
+function createParticle(x, y, color) {
+  return {
+    x: x + (Math.random() - 0.5) * 20,
+    y: y + (Math.random() - 0.5) * 20,
+    vx: (Math.random() - 0.5) * 2,
+    vy: (Math.random() - 0.5) * 2,
+    life: 1.0,
+    decay: 0.02 + Math.random() * 0.01,
+    size: 2 + Math.random() * 3,
+    color: color || `hsl(${200 + Math.random() * 60}, 70%, 60%)`
+  };
+}
+
+function updateParticles(app) {
+  const now = Date.now();
+  if (now - app.lastParticleTime > 100) { // Add particles every 100ms
+    const colors = ['#49a9ff', '#ff49af', '#94ff49', '#ffb449'];
+    app.particles.push(createParticle(
+      Math.random() * window.innerWidth,
+      Math.random() * 200,
+      colors[Math.floor(Math.random() * colors.length)]
+    ));
+    app.lastParticleTime = now;
+  }
+  
+  app.particles = app.particles.filter(particle => {
+    particle.x += particle.vx;
+    particle.y += particle.vy;
+    particle.life -= particle.decay;
+    particle.vy += 0.1; // Gravity
+    return particle.life > 0;
+  });
+}
+
+function drawParticles(app, ctx, x, y, ratio) {
+  updateParticles(app);
+  
+  app.particles.forEach(particle => {
+    ctx.save();
+    ctx.globalAlpha = particle.life;
+    ctx.fillStyle = particle.color;
+    ctx.shadowColor = particle.color;
+    ctx.shadowBlur = 10 * ratio;
+    
+    ctx.beginPath();
+    ctx.arc(particle.x * ratio, particle.y * ratio, particle.size * ratio, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
+  });
+}
+
+function syncTimelineCanvas(app) {
+  const canvas = app.timeline.canvas;
+  const ratio = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2x for performance
+  const width = canvas.clientWidth * ratio;
+  const height = canvas.clientHeight * ratio;
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+    // Set CSS size to maintain crisp rendering
+    canvas.style.width = canvas.clientWidth + 'px';
+    canvas.style.height = canvas.clientHeight + 'px';
   }
   app.timeline.deviceRatio = ratio;
 }
@@ -1514,22 +2629,98 @@ function drawTimeline(app) {
   const ratio = app.timeline.deviceRatio;
   const width = canvas.width;
   const height = canvas.height;
-  ctx.clearRect(0, 0, width, height);
+  
+  // Use requestAnimationFrame for smooth rendering
+  requestAnimationFrame(() => {
+    ctx.clearRect(0, 0, width, height);
 
-  const padding = 20 * ratio;
-  const areaHeight = height - padding * 2;
-  const stepWidth = width / STEP_COUNT;
+    const rulerHeight = app.timeline.showRuler ? app.timeline.rulerHeight * ratio : 0;
+    const padding = 20 * ratio;
+    const areaHeight = height - padding * 2 - rulerHeight;
+    const stepWidth = (width / STEP_COUNT) * app.timeline.zoom;
+    const offsetX = app.timeline.pan;
 
-  const sections = app.automation.sections && app.automation.sections.length
-    ? app.automation.sections
-    : DEFAULT_SECTION_LAYOUT;
-  sections.forEach(section => {
-    const startX = section.start * stepWidth;
-    const sectionWidth = (section.end - section.start + 1) * stepWidth;
-    ctx.fillStyle = section.color || 'rgba(255, 255, 255, 0.04)';
-    ctx.fillRect(startX, padding, sectionWidth, areaHeight);
+    // Enable anti-aliasing for smoother lines
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    const sections = app.automation.sections && app.automation.sections.length
+      ? app.automation.sections
+      : DEFAULT_SECTION_LAYOUT;
+    
+    // Draw sections
+    sections.forEach(section => {
+      const startX = section.start * stepWidth + offsetX;
+      const sectionWidth = (section.end - section.start + 1) * stepWidth;
+      ctx.fillStyle = section.color || 'rgba(255, 255, 255, 0.04)';
+      ctx.fillRect(startX, padding + rulerHeight, sectionWidth, areaHeight);
+    });
+
+    // Draw ruler if enabled
+    if (app.timeline.showRuler) {
+      drawTimelineRuler(app, ctx, width, rulerHeight, stepWidth, offsetX, ratio);
+    }
+
+    // Draw grid lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 1 * ratio;
+    ctx.setLineDash([]);
+    for (let i = 0; i <= STEP_COUNT; i += 1) {
+      const x = i * stepWidth + offsetX;
+      if (x >= -stepWidth && x <= width + stepWidth) {
+        ctx.beginPath();
+        ctx.moveTo(x, padding + rulerHeight);
+        ctx.lineTo(x, padding + rulerHeight + areaHeight);
+        ctx.stroke();
+      }
+    }
+
+    // Draw automation tracks
+    app.automation.tracks.forEach(track => {
+      ctx.beginPath();
+      ctx.setLineDash([]);
+      let pathStarted = false;
+      track.values.forEach((value, index) => {
+        const x = index * stepWidth + stepWidth / 2 + offsetX;
+        if (x >= -stepWidth && x <= width + stepWidth) {
+          const y = padding + rulerHeight + (1 - value) * areaHeight;
+          if (!pathStarted) {
+            ctx.moveTo(x, y);
+            pathStarted = true;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+      });
+      ctx.strokeStyle = track.color;
+      ctx.lineWidth = 2 * ratio;
+      ctx.stroke();
+    });
+
+    // Draw active step indicator
+    const activeX = app.timeline.currentStep * stepWidth + offsetX;
+    if (activeX >= -stepWidth && activeX <= width + stepWidth) {
+      ctx.fillStyle = 'rgba(73, 169, 255, 0.18)';
+      ctx.fillRect(activeX, padding + rulerHeight, stepWidth, areaHeight);
+    }
+
+    // Draw step numbers on mobile for better usability
+    if (window.innerWidth <= 768) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.font = `${10 * ratio}px Inter, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      
+      const stepNumberInterval = app.timeline.zoom > 1.0 ? 1 : 2; // Show more numbers when zoomed in
+      for (let i = 0; i < STEP_COUNT; i += stepNumberInterval) {
+        const x = i * stepWidth + stepWidth / 2 + offsetX;
+        if (x >= -stepWidth && x <= width + stepWidth) {
+          const y = padding + rulerHeight + areaHeight + 5 * ratio;
+          ctx.fillText((i + 1).toString(), x, y);
+        }
+      }
+    }
   });
-
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
   ctx.lineWidth = 1 * ratio;
   for (let i = 0; i <= STEP_COUNT; i += 1) {
@@ -1540,24 +2731,186 @@ function drawTimeline(app) {
     ctx.stroke();
   }
 
-  app.automation.tracks.forEach(track => {
+  // Draw automation tracks with better visualization
+  const trackHeight = areaHeight / Math.max(app.automation.tracks.length, 1);
+  
+  app.automation.tracks.forEach((track, trackIndex) => {
+    const trackY = padding + rulerHeight + trackIndex * trackHeight;
+    const trackAreaHeight = trackHeight - 4 * ratio; // Small gap between tracks
+    
+    // Draw track background
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+    ctx.fillRect(0, trackY, width, trackAreaHeight);
+    
+    // Draw track label
+    ctx.fillStyle = track.color;
+    ctx.font = `${10 * ratio}px Inter, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(track.label, 4 * ratio, trackY + 12 * ratio);
+    
+    // Draw automation curve
     ctx.beginPath();
+    let pathStarted = false;
     track.values.forEach((value, index) => {
-      const x = index * stepWidth + stepWidth / 2;
-      const y = padding + (1 - value) * areaHeight;
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
+      const x = index * stepWidth + stepWidth / 2 + offsetX;
+      if (x >= -stepWidth && x <= width + stepWidth) {
+        const y = trackY + (1 - value) * trackAreaHeight;
+        if (!pathStarted) {
+          ctx.moveTo(x, y);
+          pathStarted = true;
+        } else {
+          ctx.lineTo(x, y);
+        }
       }
     });
     ctx.strokeStyle = track.color;
     ctx.lineWidth = 2 * ratio;
     ctx.stroke();
+    // Draw automation tracks with better visualization and smooth curves
+    const trackHeight = areaHeight / Math.max(app.automation.tracks.length, 1);
+    
+    app.automation.tracks.forEach((track, trackIndex) => {
+      const trackY = padding + trackIndex * trackHeight;
+      const trackAreaHeight = trackHeight - 4 * ratio; // Small gap between tracks
+      
+      // Draw track background with subtle animation
+      const time = Date.now() * 0.001;
+      const backgroundPulse = 0.02 + 0.01 * Math.sin(time + trackIndex);
+      ctx.fillStyle = `rgba(255, 255, 255, ${backgroundPulse})`;
+      ctx.fillRect(0, trackY, width, trackAreaHeight);
+      
+      // Draw track label with smooth color transition
+      ctx.fillStyle = track.color;
+      ctx.font = `${10 * ratio}px Inter, sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.fillText(track.label, 4 * ratio, trackY + 12 * ratio);
+      
+      // Draw automation curve with smooth interpolation
+      ctx.beginPath();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      // Use quadratic curves for smoother automation lines
+      track.values.forEach((value, index) => {
+        const x = index * stepWidth + stepWidth / 2;
+        const y = trackY + (1 - value) * trackAreaHeight;
+        
+        if (index === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          // Create smooth curves between points
+          const prevX = (index - 1) * stepWidth + stepWidth / 2;
+          const prevY = trackY + (1 - track.values[index - 1]) * trackAreaHeight;
+          const controlX = (prevX + x) / 2;
+          const controlY = (prevY + y) / 2;
+          ctx.quadraticCurveTo(controlX, controlY, x, y);
+        }
+      });
+      
+      // Add gradient stroke for visual appeal
+      const gradient = ctx.createLinearGradient(0, trackY, width, trackY);
+      gradient.addColorStop(0, track.color);
+      gradient.addColorStop(1, track.color + '80'); // Add transparency
+      
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 2.5 * ratio;
+      ctx.stroke();
+      
+      // Add subtle glow effect
+      ctx.shadowColor = track.color;
+      ctx.shadowBlur = 4 * ratio;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    
+    // Draw LFO indicator if track has LFO
+    const lfo = LFO_DEFINITIONS.find(l => l.target === track.id && l.enabled);
+    if (lfo) {
+      ctx.fillStyle = lfo.color;
+      ctx.font = `${8 * ratio}px Inter, sans-serif`;
+      ctx.textAlign = 'right';
+      ctx.fillText(`LFO: ${lfo.waveform}`, width - 4 * ratio, trackY + 12 * ratio);
+    }
+    
+    // Draw breakpoints if they exist
+    if (track.breakpoints && track.breakpoints.length > 0) {
+      track.breakpoints.forEach(bp => {
+        const x = bp.step * stepWidth + stepWidth / 2 + offsetX;
+        if (x >= -stepWidth && x <= width + stepWidth) {
+          const y = trackY + (1 - bp.value) * trackAreaHeight;
+          ctx.fillStyle = track.color;
+          ctx.beginPath();
+          ctx.arc(x, y, 3 * ratio, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
   });
 
+}
+
+function drawTimelineRuler(app, ctx, width, rulerHeight, stepWidth, offsetX, ratio) {
+  const rulerY = 0;
+  const rulerAreaHeight = rulerHeight;
+  
+  // Ruler background
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.fillRect(0, rulerY, width, rulerAreaHeight);
+  
+  // Ruler border
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.lineWidth = 1 * ratio;
+  ctx.strokeRect(0, rulerY, width, rulerAreaHeight);
+  
+  // Time markers
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.font = `${10 * ratio}px Inter, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  
+  const stepDuration = Tone.Time(STEP_DURATION).toSeconds();
+  const totalDuration = stepDuration * STEP_COUNT;
+  
+  // Calculate appropriate time division based on zoom level
+  let timeDivision = 1; // steps
+  if (app.timeline.zoom < 0.5) {
+    timeDivision = 4; // Show every 4th step
+  } else if (app.timeline.zoom < 1.0) {
+    timeDivision = 2; // Show every 2nd step
+  }
+  
+  for (let i = 0; i <= STEP_COUNT; i += timeDivision) {
+    const x = i * stepWidth + offsetX;
+    if (x >= -stepWidth && x <= width + stepWidth) {
+      // Vertical line
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 1 * ratio;
+      ctx.beginPath();
+      ctx.moveTo(x, rulerY);
+      ctx.lineTo(x, rulerY + rulerAreaHeight);
+      ctx.stroke();
+      
+      // Time label
+      const timeInSeconds = i * stepDuration;
+      const minutes = Math.floor(timeInSeconds / 60);
+      const seconds = (timeInSeconds % 60).toFixed(1);
+      const timeLabel = minutes > 0 ? `${minutes}:${seconds.padStart(4, '0')}` : `${seconds}s`;
+      
+      ctx.fillText(timeLabel, x, rulerY + rulerAreaHeight / 2);
+    }
+  }
+  // Draw animated playback cursor with enhanced smoothness
   const activeX = app.timeline.currentStep * stepWidth;
-  ctx.fillStyle = 'rgba(73, 169, 255, 0.18)';
+  const time = Date.now() * 0.003; // Slow animation
+  const pulseIntensity = 0.3 + 0.2 * Math.sin(time);
+  const smoothPulse = 0.5 + 0.5 * Math.sin(time * 1.5); // Additional smooth pulse
+  
+  // Main cursor with smooth gradient
+  const cursorGradient = ctx.createLinearGradient(activeX, padding, activeX + stepWidth, padding + areaHeight);
+  cursorGradient.addColorStop(0, `rgba(73, 169, 255, ${0.15 + pulseIntensity * 0.1})`);
+  cursorGradient.addColorStop(0.5, `rgba(73, 169, 255, ${0.25 + pulseIntensity * 0.15})`);
+  cursorGradient.addColorStop(1, `rgba(73, 169, 255, ${0.15 + pulseIntensity * 0.1})`);
+  
+  ctx.fillStyle = cursorGradient;
   ctx.fillRect(activeX, padding, stepWidth, areaHeight);
 
   // Draw pattern variation indicators
@@ -1594,6 +2947,54 @@ function drawTimeline(app) {
       ctx.fillRect(0, yOffset, width, 4);
       yOffset -= 6;
     });
+  
+  // Animated border with smooth transitions
+  ctx.strokeStyle = `rgba(73, 169, 255, ${0.7 + pulseIntensity * 0.3})`;
+  ctx.lineWidth = 2 * ratio;
+  ctx.setLineDash([5 * ratio, 3 * ratio]);
+  ctx.strokeRect(activeX, padding, stepWidth, areaHeight);
+  ctx.setLineDash([]);
+  
+  // Enhanced glow effect with multiple layers
+  const glowGradient = ctx.createLinearGradient(activeX, 0, activeX + stepWidth, 0);
+  glowGradient.addColorStop(0, `rgba(73, 169, 255, ${0.08 + smoothPulse * 0.05})`);
+  glowGradient.addColorStop(0.5, `rgba(73, 169, 255, ${0.18 + smoothPulse * 0.1})`);
+  glowGradient.addColorStop(1, `rgba(73, 169, 255, ${0.08 + smoothPulse * 0.05})`);
+  
+  ctx.fillStyle = glowGradient;
+  ctx.fillRect(activeX - 15 * ratio, padding, stepWidth + 30 * ratio, areaHeight);
+  
+  // Additional outer glow for depth
+  const outerGlow = ctx.createRadialGradient(
+    activeX + stepWidth / 2, padding + areaHeight / 2, 0,
+    activeX + stepWidth / 2, padding + areaHeight / 2, stepWidth
+  );
+  outerGlow.addColorStop(0, `rgba(73, 169, 255, ${0.05 + smoothPulse * 0.03})`);
+  outerGlow.addColorStop(1, 'rgba(73, 169, 255, 0)');
+  
+  ctx.fillStyle = outerGlow;
+  ctx.fillRect(activeX - stepWidth, padding - stepWidth, stepWidth * 3, areaHeight + stepWidth * 2);
+  
+  // Current time indicator
+  const currentTimeX = app.timeline.currentStep * stepWidth + offsetX;
+  if (currentTimeX >= -stepWidth && currentTimeX <= width + stepWidth) {
+    ctx.strokeStyle = '#49a9ff';
+    ctx.lineWidth = 2 * ratio;
+    ctx.beginPath();
+    ctx.moveTo(currentTimeX, rulerY);
+    ctx.lineTo(currentTimeX, rulerY + rulerAreaHeight);
+    ctx.stroke();
+    
+    // Current time label
+    const currentTimeInSeconds = app.timeline.currentStep * stepDuration;
+    const minutes = Math.floor(currentTimeInSeconds / 60);
+    const seconds = (currentTimeInSeconds % 60).toFixed(1);
+    const currentTimeLabel = minutes > 0 ? `${minutes}:${seconds.padStart(4, '0')}` : `${seconds}s`;
+    
+    ctx.fillStyle = '#49a9ff';
+    ctx.font = `${9 * ratio}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(currentTimeLabel, currentTimeX, rulerY + rulerAreaHeight - 5 * ratio);
   }
 }
 
@@ -1646,35 +3047,96 @@ function updateSectionPlayback(app, section) {
   });
 
   app.activeSection = sectionName;
+  
+  // Update LED indicators based on active sequences
+  updateLEDIndicators(app, section);
 }
 
 function syncSectionState(app, step) {
   const section = getSectionForStep(app, step);
   updateSectionPlayback(app, section);
   updateSectionLabel(app, step, section);
+  updateLEDIndicators(app, section);
 }
 
 function applyAutomationForStep(app, step, time) {
   const leadTrack = getAutomationTrack(app, 'leadFilter');
   const fxTrack = getAutomationTrack(app, 'fxSend');
   const bassTrack = getAutomationTrack(app, 'bassFilter');
+  const reverbTrack = getAutomationTrack(app, 'reverbDecay');
+  const delayTrack = getAutomationTrack(app, 'delayFeedback');
+  const driveTrack = getAutomationTrack(app, 'bassDrive');
+  const resonanceTrack = getAutomationTrack(app, 'leadResonance');
+  const masterTrack = getAutomationTrack(app, 'masterVolume');
+  
+  // New distortion tracks
+  const leadDistortionTrack = getAutomationTrack(app, 'leadDistortion');
+  const leadOverdriveTrack = getAutomationTrack(app, 'leadOverdrive');
+  const drumDistortionTrack = getAutomationTrack(app, 'drumDistortion');
+  const masterOverdriveTrack = getAutomationTrack(app, 'masterOverdrive');
+
   const leadBase = getControlValue(app, 'leadFilterBase');
   const leadMod = getControlValue(app, 'leadFilterMod');
   const fxBase = getControlValue(app, 'leadFxSend');
   const bassBase = getControlValue(app, 'bassFilterBase');
   const bassMod = getControlValue(app, 'bassFilterMod');
+  const reverbBase = getControlValue(app, 'reverbDecay');
+  const delayBase = getControlValue(app, 'delayFeedback');
+  const driveBase = getControlValue(app, 'bassDrive');
 
-  const leadValue = clamp(getAutomationValue(leadTrack, step), 0, 1);
-  const fxValue = clamp(getAutomationValue(fxTrack, step), 0, 1);
-  const bassValue = clamp(getAutomationValue(bassTrack, step), 0, 1);
+  // Apply LFOs to tracks
+  const lfoModulatedTracks = applyLFOModulation(app, {
+    leadFilter: leadTrack,
+    fxSend: fxTrack,
+    bassFilter: bassTrack,
+    reverbDecay: reverbTrack,
+    delayFeedback: delayTrack,
+    bassDrive: driveTrack,
+    leadResonance: resonanceTrack,
+    masterVolume: masterTrack,
+    leadDistortion: leadDistortionTrack,
+    leadOverdrive: leadOverdriveTrack,
+    drumDistortion: drumDistortionTrack,
+    masterOverdrive: masterOverdriveTrack
+  }, step, time);
+
+  const leadValue = clamp(getAutomationValue(lfoModulatedTracks.leadFilter, step), 0, 1);
+  const fxValue = clamp(getAutomationValue(lfoModulatedTracks.fxSend, step), 0, 1);
+  const bassValue = clamp(getAutomationValue(lfoModulatedTracks.bassFilter, step), 0, 1);
+  const reverbValue = clamp(getAutomationValue(lfoModulatedTracks.reverbDecay, step), 0, 1);
+  const delayValue = clamp(getAutomationValue(lfoModulatedTracks.delayFeedback, step), 0, 1);
+  const driveValue = clamp(getAutomationValue(lfoModulatedTracks.bassDrive, step), 0, 1);
+  const resonanceValue = clamp(getAutomationValue(lfoModulatedTracks.leadResonance, step), 0, 1);
+  const masterValue = clamp(getAutomationValue(lfoModulatedTracks.masterVolume, step), 0, 1);
+  
+  // New distortion values
+  const leadDistortionValue = clamp(getAutomationValue(lfoModulatedTracks.leadDistortion, step), 0, 1);
+  const leadOverdriveValue = clamp(getAutomationValue(lfoModulatedTracks.leadOverdrive, step), 0, 1);
+  const drumDistortionValue = clamp(getAutomationValue(lfoModulatedTracks.drumDistortion, step), 0, 1);
+  const masterOverdriveValue = clamp(getAutomationValue(lfoModulatedTracks.masterOverdrive, step), 0, 1);
 
   const leadFreq = leadBase + leadMod * leadValue;
   const fxAmount = fxValue * fxBase;
   const bassFreq = bassBase + bassMod * bassValue;
+  const reverbDecay = 0.5 + (reverbValue * 11.5); // 0.5 to 12 seconds
+  const delayFeedback = delayValue * 0.8; // 0 to 0.8
+  const driveAmount = driveValue;
+  const resonanceAmount = 0.3 + (resonanceValue * 1.2); // 0.3 to 1.5
+  const masterGain = 0.1 + (masterValue * 0.9); // 0.1 to 1.0
 
   const leadFrequency = app.audio.nodes.leadFilter.frequency;
   const leadFxGain = app.audio.nodes.leadFxSend.gain;
   const bassFrequency = app.audio.nodes.bassFilter.frequency;
+  const reverbNode = app.audio.nodes.reverb;
+  const delayNode = app.audio.nodes.delay;
+  const driveNode = app.audio.nodes.bassDrive;
+  const masterNode = app.audio.master;
+  
+  // New distortion nodes
+  const leadDistortionNode = app.audio.nodes.leadDistortion;
+  const leadOverdriveNode = app.audio.nodes.leadOverdrive;
+  const drumDistortionNode = app.audio.nodes.drumDistortion;
+  const masterOverdriveNode = app.audio.nodes.masterOverdrive;
 
   if (typeof time === 'number') {
     leadFrequency.setValueAtTime(leadFrequency.value, time);
@@ -1683,10 +3145,37 @@ function applyAutomationForStep(app, step, time) {
     leadFxGain.linearRampToValueAtTime(fxAmount, time + 0.1);
     bassFrequency.setValueAtTime(bassFrequency.value, time);
     bassFrequency.linearRampToValueAtTime(bassFreq, time + 0.1);
+    reverbNode.decay = reverbDecay;
+    delayNode.feedback.setValueAtTime(delayNode.feedback.value, time);
+    delayNode.feedback.linearRampToValueAtTime(delayFeedback, time + 0.1);
+    driveNode.wet.setValueAtTime(driveNode.wet.value, time);
+    driveNode.wet.linearRampToValueAtTime(driveAmount, time + 0.1);
+    masterNode.gain.setValueAtTime(masterNode.gain.value, time);
+    masterNode.gain.linearRampToValueAtTime(masterGain, time + 0.1);
+    
+    // Apply distortion automation
+    leadDistortionNode.distortion.setValueAtTime(leadDistortionNode.distortion.value, time);
+    leadDistortionNode.distortion.linearRampToValueAtTime(leadDistortionValue, time + 0.1);
+    leadOverdriveNode.drive.setValueAtTime(leadOverdriveNode.drive.value, time);
+    leadOverdriveNode.drive.linearRampToValueAtTime(leadOverdriveValue, time + 0.1);
+    drumDistortionNode.distortion.setValueAtTime(drumDistortionNode.distortion.value, time);
+    drumDistortionNode.distortion.linearRampToValueAtTime(drumDistortionValue, time + 0.1);
+    masterOverdriveNode.drive.setValueAtTime(masterOverdriveNode.drive.value, time);
+    masterOverdriveNode.drive.linearRampToValueAtTime(masterOverdriveValue, time + 0.1);
   } else {
     leadFrequency.value = leadFreq;
     leadFxGain.value = fxAmount;
     bassFrequency.value = bassFreq;
+    reverbNode.decay = reverbDecay;
+    delayNode.feedback.value = delayFeedback;
+    driveNode.wet.value = driveAmount;
+    masterNode.gain.value = masterGain;
+    
+    // Apply distortion values
+    leadDistortionNode.distortion = leadDistortionValue;
+    leadOverdriveNode.drive = leadOverdriveValue;
+    drumDistortionNode.distortion = drumDistortionValue;
+    masterOverdriveNode.drive = masterOverdriveValue;
   }
 }
 
@@ -1711,7 +3200,56 @@ function getAutomationValue(track, step) {
   return Number.isFinite(numericValue) ? numericValue : 0;
 }
 
-function normalizeAutomationValues(values, stepCount = STEP_COUNT) {
+function applyLFOModulation(app, tracks, step, time) {
+  const currentTime = time || Tone.now();
+  const modulatedTracks = { ...tracks };
+
+  LFO_DEFINITIONS.forEach(lfo => {
+    if (!lfo.enabled) return;
+    
+    const targetTrack = tracks[lfo.target];
+    if (!targetTrack) return;
+
+    const lfoValue = generateLFOValue(lfo, currentTime);
+    const baseValue = getAutomationValue(targetTrack, step);
+    const modulatedValue = baseValue + (lfoValue * lfo.depth);
+    
+    // Create a copy of the track with LFO modulation
+    modulatedTracks[lfo.target] = {
+      ...targetTrack,
+      values: [...targetTrack.values],
+      lfoModulated: true
+    };
+    
+    // Apply LFO to the current step
+    if (modulatedTracks[lfo.target].values[step] !== undefined) {
+      modulatedTracks[lfo.target].values[step] = clamp(modulatedValue, 0, 1);
+    }
+  });
+
+  return modulatedTracks;
+}
+
+function generateLFOValue(lfo, time) {
+  const phase = (time * lfo.rate) % 1;
+  
+  switch (lfo.waveform) {
+    case 'sine':
+      return Math.sin(phase * Math.PI * 2) * 0.5 + 0.5;
+    case 'triangle':
+      return phase < 0.5 ? phase * 2 : 2 - (phase * 2);
+    case 'square':
+      return phase < 0.5 ? 1 : 0;
+    case 'sawtooth':
+      return phase;
+    case 'reverseSawtooth':
+      return 1 - phase;
+    default:
+      return Math.sin(phase * Math.PI * 2) * 0.5 + 0.5;
+  }
+}
+
+function normalizeAutomationValues(values, stepCount = STEP_COUNT, curveType = CURVE_TYPES.LINEAR) {
   const totalSteps = Math.max(Math.floor(stepCount), 0);
   if (totalSteps <= 0) {
     return [];
@@ -1751,9 +3289,41 @@ function normalizeAutomationValues(values, stepCount = STEP_COUNT) {
       return lowerValue;
     }
     const ratio = scaledIndex - lowerIndex;
-    const interpolated = lowerValue + (upperValue - lowerValue) * ratio;
+    const interpolated = interpolateCurve(lowerValue, upperValue, ratio, curveType);
     return clamp(interpolated, 0, 1);
   });
+}
+
+function interpolateCurve(start, end, t, curveType) {
+  switch (curveType) {
+    case CURVE_TYPES.LINEAR:
+      return start + (end - start) * t;
+    case CURVE_TYPES.EXPONENTIAL:
+      return start + (end - start) * (t * t);
+    case CURVE_TYPES.LOGARITHMIC:
+      return start + (end - start) * Math.sqrt(t);
+    case CURVE_TYPES.SINE:
+      return start + (end - start) * (Math.sin(t * Math.PI - Math.PI / 2) * 0.5 + 0.5);
+    case CURVE_TYPES.BEZIER:
+      // Simple bezier with control points at 0.25 and 0.75
+      const p0 = start;
+      const p1 = start + (end - start) * 0.25;
+      const p2 = start + (end - start) * 0.75;
+      const p3 = end;
+      return bezierInterpolation(p0, p1, p2, p3, t);
+    default:
+      return start + (end - start) * t;
+  }
+}
+
+function bezierInterpolation(p0, p1, p2, p3, t) {
+  const u = 1 - t;
+  const tt = t * t;
+  const uu = u * u;
+  const uuu = uu * u;
+  const ttt = tt * t;
+  
+  return uuu * p0 + 3 * uu * t * p1 + 3 * u * tt * p2 + ttt * p3;
 }
 
 function normalizeAutomationState(automation, stepCount = STEP_COUNT) {
@@ -1883,11 +3453,83 @@ function normalizeSections(sections, stepCount = STEP_COUNT) {
 
 function updateSectionLabel(app, step, sectionOverride) {
   const section = sectionOverride || getSectionForStep(app, step);
-  if (section && app.sectionLabelEl) {
-    app.sectionLabelEl.textContent = `Section: ${section.name}`;
-  } else if (app.sectionLabelEl) {
-    app.sectionLabelEl.textContent = 'Section: Loop';
+  if (app.sectionLabelEl) {
+    // Add smooth transition for section changes
+    app.sectionLabelEl.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    app.sectionLabelEl.style.transform = 'scale(0.95)';
+    app.sectionLabelEl.style.opacity = '0.7';
+    
+    setTimeout(() => {
+      if (section) {
+        app.sectionLabelEl.textContent = `Section: ${section.name}`;
+        app.sectionLabelEl.style.color = section.color ? section.color.replace('0.04', '1') : 'var(--accent)';
+      } else {
+        app.sectionLabelEl.textContent = 'Section: Loop';
+        app.sectionLabelEl.style.color = 'var(--accent)';
+      }
+      
+      app.sectionLabelEl.style.transform = 'scale(1)';
+      app.sectionLabelEl.style.opacity = '1';
+    }, 200);
+    
+    setTimeout(() => {
+      app.sectionLabelEl.style.color = '';
+    }, 1000);
   }
+}
+
+function updateLEDIndicators(app, section) {
+  if (!app.leds) return;
+  
+  const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
+  const defaultState = { drums: true, bass: true, lead: true, fx: true };
+  
+  // Update each LED based on the current section's sequence activity
+  Object.keys(app.leds).forEach(groupName => {
+    const led = app.leds[groupName];
+    if (!led) return;
+    
+    const hasExplicitSetting = arrangement && Object.prototype.hasOwnProperty.call(arrangement, groupName);
+    const shouldEnable = hasExplicitSetting
+      ? Boolean(arrangement[groupName])
+      : defaultState[groupName] !== undefined
+        ? defaultState[groupName]
+        : true;
+    
+    if (shouldEnable) {
+      led.classList.add('active');
+    } else {
+      led.classList.remove('active');
+    }
+  });
+}
+
+function updateLEDIndicators(app, section) {
+  if (!app.leds) return;
+  
+  const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
+  const defaultState = { drums: true, bass: true, lead: true, fx: true };
+  const isPlaying = Tone.Transport.state === 'started';
+  
+  // Update each LED based on the current section's sequence activity
+  Object.keys(app.leds).forEach(groupName => {
+    const led = app.leds[groupName];
+    if (!led) return;
+    
+    const hasExplicitSetting = arrangement && Object.prototype.hasOwnProperty.call(arrangement, groupName);
+    const shouldEnable = hasExplicitSetting
+      ? Boolean(arrangement[groupName])
+      : defaultState[groupName] !== undefined
+        ? defaultState[groupName]
+        : true;
+    
+    // Only show active LEDs when actually playing
+    if (shouldEnable && isPlaying) {
+      led.classList.add('active');
+    } else {
+      led.classList.remove('active');
+    }
+  });
 }
 
 async function exportMix(app) {
@@ -1928,6 +3570,7 @@ async function captureBuses(app, buses) {
     app.timeline.currentStep = 0;
     applyAutomationForStep(app, 0);
     syncSectionState(app, 0);
+    updateLEDIndicators(app, getSectionForStep(app, 0));
     drawTimeline(app);
   }
 }
@@ -2032,11 +3675,45 @@ function getControlValue(app, id) {
 
 function setStatus(app, message) {
   if (!app.statusEl) return;
-  app.statusEl.textContent = `Status: ${message}`;
+  
+  // Add smooth visual feedback animation
+  app.statusEl.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+  app.statusEl.style.transform = 'scale(1.05)';
+  app.statusEl.style.color = '#49a9ff';
+  app.statusEl.style.textShadow = '0 0 10px rgba(73, 169, 255, 0.3)';
+  
+  // Smooth text transition
+  setTimeout(() => {
+    app.statusEl.textContent = `Status: ${message}`;
+  }, 100);
+  
+  setTimeout(() => {
+    app.statusEl.style.transform = 'scale(1)';
+    app.statusEl.style.textShadow = 'none';
+  }, 300);
+  
+  setTimeout(() => {
+    app.statusEl.style.color = '';
+  }, 500);
+  
   clearTimeout(app.statusTimer);
   app.statusTimer = setTimeout(() => {
+    app.statusEl.style.transition = 'all 0.5s ease-out';
     app.statusEl.textContent = 'Status: Idle';
+    app.statusEl.style.color = 'var(--muted)';
   }, 3500);
+  
+  // Add mobile-specific status feedback
+  if (window.innerWidth <= 768 && 'vibrate' in navigator) {
+    // Different vibration patterns for different status types
+    if (message.includes('Playing') || message.includes('Started')) {
+      navigator.vibrate([100, 50, 100]); // Success pattern
+    } else if (message.includes('Error') || message.includes('Failed')) {
+      navigator.vibrate([200, 100, 200, 100, 200]); // Error pattern
+    } else if (message.includes('MIDI')) {
+      navigator.vibrate(50); // Short feedback for MIDI
+    }
+  }
 }
 
 function wait(seconds) {
