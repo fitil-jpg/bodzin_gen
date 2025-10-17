@@ -461,6 +461,53 @@
       margin-bottom: 1.5rem;
     }
 
+    .randomize-section {
+      margin-top: 2rem;
+      padding: 1.25rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .randomize-section:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: var(--accent);
+    }
+
+    .randomize-section h3 {
+      margin: 0 0 1rem 0;
+      font-size: 1.1rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .randomize-buttons {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .randomize-buttons .btn {
+      justify-content: flex-start;
+      text-align: left;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .randomize-buttons .btn:hover {
+      transform: translateX(4px);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .randomize-buttons .btn-primary {
+      margin-top: 0.5rem;
+      justify-content: center;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
     .control-section h3 {
       margin: 0 0 0.5rem 0;
       font-size: 1.1rem;
@@ -808,6 +855,72 @@
       border-color: var(--accent);
     }
 
+    @media (max-width: 1024px) {
+      .app-header {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 1rem clamp(1rem, 3vw, 2rem);
+        gap: 0.75rem;
+      }
+
+      .app-layout {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1rem clamp(1rem, 3vw, 2rem) 1.5rem;
+      }
+
+      .sidebar {
+        order: 2;
+        padding: 1rem;
+      }
+
+      .timeline-card {
+        padding: 1rem;
+        min-height: 300px;
+      }
+    }
+
+    @media (max-width: 768px) {
+    .control-section {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .randomize-section {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-radius: 0.75rem;
+    }
+
+    .randomize-buttons {
+      gap: 0.5rem;
+    }
+
+    .randomize-buttons .btn {
+      padding: 0.6rem 0.8rem;
+      font-size: 0.85rem;
+    }
+
+    .control-section:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .control-section h3 {
+      margin: 0 0 0.5rem 0;
+      color: var(--accent);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .control-description {
+      margin: 0 0 1rem 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+      line-height: 1.4;
     .waveform-control:focus {
       outline: none;
       border-color: var(--accent);
@@ -2446,6 +2559,28 @@
       box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
     }
 
+      select {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+        min-height: 36px;
+      }
+
+      .randomize-section {
+        margin-top: 1rem;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+      }
+
+      .randomize-section h3 {
+        font-size: 0.9rem;
+        margin: 0 0 0.75rem 0;
+      }
+
+      .randomize-buttons .btn {
+        padding: 0.5rem 0.7rem;
+        font-size: 0.8rem;
+        min-height: 32px;
+      }
     .preset-search::placeholder {
       color: var(--muted);
     }
@@ -2589,6 +2724,14 @@
       <aside class="sidebar">
         <h2>Sound Controls</h2>
         <div id="controls"></div>
+        <div class="randomize-section">
+          <h3>Pattern Variations</h3>
+          <div class="randomize-buttons">
+            <button id="randomizeDrums" class="btn btn-outline">🎵 Randomize Drums</button>
+            <button id="randomizeBass" class="btn btn-outline">🎸 Randomize Bass</button>
+            <button id="randomizeLead" class="btn btn-outline">🎹 Randomize Lead</button>
+            <button id="randomizeFx" class="btn btn-outline">🎛️ Randomize FX</button>
+            <button id="randomizeAll" class="btn btn-primary">🎲 Randomize All</button>
         
         <!-- Pattern Chaining Controls -->
         <div class="control-section">
