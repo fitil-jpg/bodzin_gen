@@ -426,6 +426,68 @@ const CONTROL_SCHEMA = [
     ]
   },
   {
+    group: 'Distortion & Overdrive',
+    description: 'Harmonic saturation and drive effects.',
+    controls: [
+      {
+        id: 'leadDistortion',
+        label: 'Lead Distortion',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.2,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.leadDistortion.distortion = value;
+        }
+      },
+      {
+        id: 'leadOverdrive',
+        label: 'Lead Overdrive',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.3,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.leadOverdrive.drive = value;
+        }
+      },
+      {
+        id: 'drumDistortion',
+        label: 'Drum Distortion',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.15,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.drumDistortion.distortion = value;
+        }
+      },
+      {
+        id: 'masterOverdrive',
+        label: 'Master Overdrive',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.masterOverdrive.drive = value;
+        }
+      }
+    ]
+  },
+  {
     group: 'Ambience',
     description: 'Delay and space design.',
     controls: [
@@ -681,7 +743,13 @@ function createApp() {
     statusTimer: null,
     presetFileInput: null,
     particles: [],
-    lastParticleTime: 0
+    lastParticleTime: 0,
+    leds: {
+      drums: document.getElementById('led-drums'),
+      bass: document.getElementById('led-bass'),
+      lead: document.getElementById('led-lead'),
+      fx: document.getElementById('led-fx')
+    }
   };
 }
 
@@ -732,6 +800,7 @@ function initializeApp(app) {
   setupMidi(app);
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
+  updateLEDIndicators(app, getSectionForStep(app, 0));
   drawTimeline(app);
   setStatus(app, 'Idle');
 
@@ -1134,15 +1203,12 @@ function setControlValue(app, control, value, options = {}) {
     } else {
       entry.input.value = String(normalizedValue);
     }
-    entry.valueEl.textContent = formatControlValue(control, normalizedValue);
     
-    // Add visual feedback animation
-    entry.row.style.transform = 'scale(1.02)';
-    entry.valueEl.style.color = '#49a9ff';
-    setTimeout(() => {
-      entry.row.style.transform = '';
-      entry.valueEl.style.color = '';
-    }, 200);
+    // Animate value change with smooth number transition
+    animateValueChange(entry.valueEl, formatControlValue(control, normalizedValue));
+    
+    // Add enhanced visual feedback animations
+    addParameterChangeAnimation(entry, control);
   }
 
   if (control.apply) {
@@ -1160,6 +1226,50 @@ function setControlValue(app, control, value, options = {}) {
   if (!silent) {
     setStatus(app, `${control.label} → ${formatControlValue(control, normalizedValue)}`);
   }
+}
+
+function animateValueChange(element, newValue) {
+  // Remove any existing animation classes
+  element.classList.remove('value-changing');
+  
+  // Force reflow to ensure class removal takes effect
+  element.offsetHeight;
+  
+  // Add animation class
+  element.classList.add('value-changing');
+  
+  // Update the text content
+  element.textContent = newValue;
+  
+  // Remove animation class after animation completes
+  setTimeout(() => {
+    element.classList.remove('value-changing');
+  }, 400);
+}
+
+function addParameterChangeAnimation(entry, control) {
+  // Remove any existing animation classes
+  entry.row.classList.remove('parameter-changing');
+  if (control.type === 'range') {
+    entry.input.classList.remove('slider-changing');
+  }
+  
+  // Force reflow
+  entry.row.offsetHeight;
+  
+  // Add animation classes
+  entry.row.classList.add('parameter-changing');
+  if (control.type === 'range') {
+    entry.input.classList.add('slider-changing');
+  }
+  
+  // Remove animation classes after animation completes
+  setTimeout(() => {
+    entry.row.classList.remove('parameter-changing');
+    if (control.type === 'range') {
+      entry.input.classList.remove('slider-changing');
+    }
+  }, 600);
 }
 
 function formatControlValue(control, value) {
@@ -1184,8 +1294,28 @@ function setupButtons(app) {
 
   startBtn?.addEventListener('click', () => startPlayback(app));
   stopBtn?.addEventListener('click', () => stopPlayback(app));
-  savePresetBtn?.addEventListener('click', () => savePreset(app));
-  loadPresetBtn?.addEventListener('click', () => triggerPresetLoad(app));
+  savePresetBtn?.addEventListener('click', () => {
+    // Add visual feedback for preset saving
+    savePresetBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    savePresetBtn.style.transform = 'scale(0.95)';
+    savePresetBtn.style.background = 'rgba(73, 169, 255, 0.2)';
+    setTimeout(() => {
+      savePresetBtn.style.transform = 'scale(1)';
+      savePresetBtn.style.background = '';
+    }, 300);
+    savePreset(app);
+  });
+  loadPresetBtn?.addEventListener('click', () => {
+    // Add visual feedback for preset loading
+    loadPresetBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    loadPresetBtn.style.transform = 'scale(0.95)';
+    loadPresetBtn.style.background = 'rgba(255, 73, 175, 0.2)';
+    setTimeout(() => {
+      loadPresetBtn.style.transform = 'scale(1)';
+      loadPresetBtn.style.background = '';
+    }, 300);
+    triggerPresetLoad(app);
+  });
   exportMixBtn?.addEventListener('click', () => exportMix(app));
   exportStemsBtn?.addEventListener('click', () => exportStems(app));
   midiToggle?.addEventListener('change', event => {
@@ -1223,10 +1353,12 @@ async function startPlayback(app, options = {}) {
   const startBtn = document.getElementById('startButton');
   const stopBtn = document.getElementById('stopButton');
   
-  // Visual feedback
+  // Enhanced visual feedback with smooth animations
   if (startBtn) {
+    startBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
     startBtn.classList.add('loading');
     startBtn.disabled = true;
+    startBtn.style.transform = 'scale(0.95)';
   }
   
   await ensureTransportRunning(app);
@@ -1234,16 +1366,28 @@ async function startPlayback(app, options = {}) {
   if (startBtn) {
     startBtn.classList.remove('loading');
     startBtn.disabled = false;
+    startBtn.style.transform = 'scale(1)';
+    startBtn.style.background = 'rgba(73, 169, 255, 0.1)';
+    startBtn.style.borderColor = 'rgba(73, 169, 255, 0.3)';
   }
   
   if (stopBtn) {
+    stopBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
     stopBtn.style.background = 'rgba(255, 73, 175, 0.1)';
     stopBtn.style.borderColor = '#ff49af';
+    stopBtn.style.transform = 'scale(1.02)';
+    setTimeout(() => {
+      stopBtn.style.transform = 'scale(1)';
+    }, 200);
   }
   
   if (!options.silent) {
     setStatus(app, 'Playing');
   }
+  
+  // Update LED indicators when starting playback
+  const currentSection = getSectionForStep(app, app.timeline.currentStep);
+  updateLEDIndicators(app, currentSection);
 }
 
 async function ensureTransportRunning(app) {
@@ -1266,15 +1410,25 @@ function stopPlayback(app) {
   const startBtn = document.getElementById('startButton');
   const stopBtn = document.getElementById('stopButton');
   
-  // Visual feedback
+  // Enhanced visual feedback with smooth animations
   if (stopBtn) {
+    stopBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
     stopBtn.style.background = 'rgba(255, 255, 255, 0.04)';
     stopBtn.style.borderColor = 'var(--border)';
+    stopBtn.style.transform = 'scale(0.98)';
+    setTimeout(() => {
+      stopBtn.style.transform = 'scale(1)';
+    }, 200);
   }
   
   if (startBtn) {
+    startBtn.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
     startBtn.style.background = 'linear-gradient(135deg, var(--accent), #3d8bff)';
     startBtn.style.borderColor = 'rgba(73, 169, 255, 0.45)';
+    startBtn.style.transform = 'scale(1.02)';
+    setTimeout(() => {
+      startBtn.style.transform = 'scale(1)';
+    }, 200);
   }
   
   Tone.Transport.stop();
@@ -1283,6 +1437,14 @@ function stopPlayback(app) {
   app.automationStep = 0;
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
+  
+  // Clear all LED indicators when stopping
+  if (app.leds) {
+    Object.values(app.leds).forEach(led => {
+      if (led) led.classList.remove('active');
+    });
+  }
+  
   drawTimeline(app);
   setStatus(app, 'Stopped');
 }
@@ -1753,12 +1915,22 @@ function setupTimelineTouch(app) {
   const handleTimelineInteraction = (clientX) => {
     const step = Math.max(0, Math.min(STEP_COUNT - 1, getStepFromPosition(clientX)));
     if (step !== app.timeline.currentStep) {
+      // Add smooth transition animation
+      canvas.style.transition = 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)';
+      
       app.timeline.currentStep = step;
       app.automationStep = step;
       applyAutomationForStep(app, step);
       syncSectionState(app, step);
       drawTimeline(app);
       setStatus(app, `Step ${step + 1}/${STEP_COUNT}`);
+      
+      // Add visual feedback for timeline interaction
+      canvas.style.transform = 'scale(1.01)';
+      setTimeout(() => {
+        canvas.style.transform = 'scale(1)';
+        canvas.style.transition = '';
+      }, 200);
     }
   };
 
@@ -1870,37 +2042,58 @@ function drawWaveform(app) {
   const width = canvas.width;
   const height = canvas.height;
   
-  ctx.clearRect(0, 0, width, height);
+  // Smooth background fade instead of clear
+  ctx.fillStyle = 'rgba(8, 8, 11, 0.1)';
+  ctx.fillRect(0, 0, width, height);
   
   analyser.getValue(dataArray);
   
   const barWidth = (width / dataArray.length) * 2.5;
   let x = 0;
   
-  // Create gradient for waveform bars
+  // Create animated gradient for waveform bars
+  const time = Date.now() * 0.002;
   const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, 'rgba(73, 169, 255, 0.8)');
-  gradient.addColorStop(0.5, 'rgba(255, 73, 175, 0.6)');
-  gradient.addColorStop(1, 'rgba(148, 255, 73, 0.4)');
+  gradient.addColorStop(0, `rgba(73, 169, 255, ${0.8 + 0.2 * Math.sin(time)})`);
+  gradient.addColorStop(0.5, `rgba(255, 73, 175, ${0.6 + 0.2 * Math.sin(time + 1)})`);
+  gradient.addColorStop(1, `rgba(148, 255, 73, ${0.4 + 0.2 * Math.sin(time + 2)})`);
   
   ctx.fillStyle = gradient;
   
+  // Store previous values for smooth interpolation
+  if (!app.waveform.previousData) {
+    app.waveform.previousData = new Array(dataArray.length).fill(0);
+  }
+  
   for (let i = 0; i < dataArray.length; i++) {
-    const barHeight = (dataArray[i] / 255) * height;
+    // Smooth interpolation between current and previous values
+    const currentValue = dataArray[i] / 255;
+    const previousValue = app.waveform.previousData[i];
+    const smoothedValue = previousValue + (currentValue - previousValue) * 0.3;
+    app.waveform.previousData[i] = smoothedValue;
+    
+    const barHeight = smoothedValue * height;
     const y = (height - barHeight) / 2;
     
-    // Add some visual flair with rounded rectangles
+    // Add some visual flair with rounded rectangles and smooth animation
     ctx.beginPath();
     ctx.roundRect(x, y, barWidth, barHeight, 2);
     ctx.fill();
     
+    // Add subtle glow to each bar
+    ctx.shadowColor = gradient;
+    ctx.shadowBlur = 2 * ratio;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
     x += barWidth + 1;
   }
   
-  // Add a subtle glow effect
+  // Add a subtle animated glow effect
+  const glowIntensity = 0.1 + 0.05 * Math.sin(time * 0.5);
   ctx.shadowColor = 'rgba(73, 169, 255, 0.3)';
-  ctx.shadowBlur = 10;
-  ctx.fillStyle = 'rgba(73, 169, 255, 0.1)';
+  ctx.shadowBlur = 15 * ratio;
+  ctx.fillStyle = `rgba(73, 169, 255, ${glowIntensity})`;
   ctx.fillRect(0, 0, width, height);
   ctx.shadowBlur = 0;
 }
@@ -2115,6 +2308,61 @@ function drawTimeline(app) {
     ctx.strokeStyle = track.color;
     ctx.lineWidth = 2 * ratio;
     ctx.stroke();
+    // Draw automation tracks with better visualization and smooth curves
+    const trackHeight = areaHeight / Math.max(app.automation.tracks.length, 1);
+    
+    app.automation.tracks.forEach((track, trackIndex) => {
+      const trackY = padding + trackIndex * trackHeight;
+      const trackAreaHeight = trackHeight - 4 * ratio; // Small gap between tracks
+      
+      // Draw track background with subtle animation
+      const time = Date.now() * 0.001;
+      const backgroundPulse = 0.02 + 0.01 * Math.sin(time + trackIndex);
+      ctx.fillStyle = `rgba(255, 255, 255, ${backgroundPulse})`;
+      ctx.fillRect(0, trackY, width, trackAreaHeight);
+      
+      // Draw track label with smooth color transition
+      ctx.fillStyle = track.color;
+      ctx.font = `${10 * ratio}px Inter, sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.fillText(track.label, 4 * ratio, trackY + 12 * ratio);
+      
+      // Draw automation curve with smooth interpolation
+      ctx.beginPath();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      // Use quadratic curves for smoother automation lines
+      track.values.forEach((value, index) => {
+        const x = index * stepWidth + stepWidth / 2;
+        const y = trackY + (1 - value) * trackAreaHeight;
+        
+        if (index === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          // Create smooth curves between points
+          const prevX = (index - 1) * stepWidth + stepWidth / 2;
+          const prevY = trackY + (1 - track.values[index - 1]) * trackAreaHeight;
+          const controlX = (prevX + x) / 2;
+          const controlY = (prevY + y) / 2;
+          ctx.quadraticCurveTo(controlX, controlY, x, y);
+        }
+      });
+      
+      // Add gradient stroke for visual appeal
+      const gradient = ctx.createLinearGradient(0, trackY, width, trackY);
+      gradient.addColorStop(0, track.color);
+      gradient.addColorStop(1, track.color + '80'); // Add transparency
+      
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 2.5 * ratio;
+      ctx.stroke();
+      
+      // Add subtle glow effect
+      ctx.shadowColor = track.color;
+      ctx.shadowBlur = 4 * ratio;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
     
     // Draw LFO indicator if track has LFO
     const lfo = LFO_DEFINITIONS.find(l => l.target === track.id && l.enabled);
@@ -2192,6 +2440,47 @@ function drawTimelineRuler(app, ctx, width, rulerHeight, stepWidth, offsetX, rat
       ctx.fillText(timeLabel, x, rulerY + rulerAreaHeight / 2);
     }
   }
+  // Draw animated playback cursor with enhanced smoothness
+  const activeX = app.timeline.currentStep * stepWidth;
+  const time = Date.now() * 0.003; // Slow animation
+  const pulseIntensity = 0.3 + 0.2 * Math.sin(time);
+  const smoothPulse = 0.5 + 0.5 * Math.sin(time * 1.5); // Additional smooth pulse
+  
+  // Main cursor with smooth gradient
+  const cursorGradient = ctx.createLinearGradient(activeX, padding, activeX + stepWidth, padding + areaHeight);
+  cursorGradient.addColorStop(0, `rgba(73, 169, 255, ${0.15 + pulseIntensity * 0.1})`);
+  cursorGradient.addColorStop(0.5, `rgba(73, 169, 255, ${0.25 + pulseIntensity * 0.15})`);
+  cursorGradient.addColorStop(1, `rgba(73, 169, 255, ${0.15 + pulseIntensity * 0.1})`);
+  
+  ctx.fillStyle = cursorGradient;
+  ctx.fillRect(activeX, padding, stepWidth, areaHeight);
+  
+  // Animated border with smooth transitions
+  ctx.strokeStyle = `rgba(73, 169, 255, ${0.7 + pulseIntensity * 0.3})`;
+  ctx.lineWidth = 2 * ratio;
+  ctx.setLineDash([5 * ratio, 3 * ratio]);
+  ctx.strokeRect(activeX, padding, stepWidth, areaHeight);
+  ctx.setLineDash([]);
+  
+  // Enhanced glow effect with multiple layers
+  const glowGradient = ctx.createLinearGradient(activeX, 0, activeX + stepWidth, 0);
+  glowGradient.addColorStop(0, `rgba(73, 169, 255, ${0.08 + smoothPulse * 0.05})`);
+  glowGradient.addColorStop(0.5, `rgba(73, 169, 255, ${0.18 + smoothPulse * 0.1})`);
+  glowGradient.addColorStop(1, `rgba(73, 169, 255, ${0.08 + smoothPulse * 0.05})`);
+  
+  ctx.fillStyle = glowGradient;
+  ctx.fillRect(activeX - 15 * ratio, padding, stepWidth + 30 * ratio, areaHeight);
+  
+  // Additional outer glow for depth
+  const outerGlow = ctx.createRadialGradient(
+    activeX + stepWidth / 2, padding + areaHeight / 2, 0,
+    activeX + stepWidth / 2, padding + areaHeight / 2, stepWidth
+  );
+  outerGlow.addColorStop(0, `rgba(73, 169, 255, ${0.05 + smoothPulse * 0.03})`);
+  outerGlow.addColorStop(1, 'rgba(73, 169, 255, 0)');
+  
+  ctx.fillStyle = outerGlow;
+  ctx.fillRect(activeX - stepWidth, padding - stepWidth, stepWidth * 3, areaHeight + stepWidth * 2);
   
   // Current time indicator
   const currentTimeX = app.timeline.currentStep * stepWidth + offsetX;
@@ -2264,12 +2553,16 @@ function updateSectionPlayback(app, section) {
   });
 
   app.activeSection = sectionName;
+  
+  // Update LED indicators based on active sequences
+  updateLEDIndicators(app, section);
 }
 
 function syncSectionState(app, step) {
   const section = getSectionForStep(app, step);
   updateSectionPlayback(app, section);
   updateSectionLabel(app, step, section);
+  updateLEDIndicators(app, section);
 }
 
 function applyAutomationForStep(app, step, time) {
@@ -2281,6 +2574,12 @@ function applyAutomationForStep(app, step, time) {
   const driveTrack = getAutomationTrack(app, 'bassDrive');
   const resonanceTrack = getAutomationTrack(app, 'leadResonance');
   const masterTrack = getAutomationTrack(app, 'masterVolume');
+  
+  // New distortion tracks
+  const leadDistortionTrack = getAutomationTrack(app, 'leadDistortion');
+  const leadOverdriveTrack = getAutomationTrack(app, 'leadOverdrive');
+  const drumDistortionTrack = getAutomationTrack(app, 'drumDistortion');
+  const masterOverdriveTrack = getAutomationTrack(app, 'masterOverdrive');
 
   const leadBase = getControlValue(app, 'leadFilterBase');
   const leadMod = getControlValue(app, 'leadFilterMod');
@@ -2300,7 +2599,11 @@ function applyAutomationForStep(app, step, time) {
     delayFeedback: delayTrack,
     bassDrive: driveTrack,
     leadResonance: resonanceTrack,
-    masterVolume: masterTrack
+    masterVolume: masterTrack,
+    leadDistortion: leadDistortionTrack,
+    leadOverdrive: leadOverdriveTrack,
+    drumDistortion: drumDistortionTrack,
+    masterOverdrive: masterOverdriveTrack
   }, step, time);
 
   const leadValue = clamp(getAutomationValue(lfoModulatedTracks.leadFilter, step), 0, 1);
@@ -2311,6 +2614,12 @@ function applyAutomationForStep(app, step, time) {
   const driveValue = clamp(getAutomationValue(lfoModulatedTracks.bassDrive, step), 0, 1);
   const resonanceValue = clamp(getAutomationValue(lfoModulatedTracks.leadResonance, step), 0, 1);
   const masterValue = clamp(getAutomationValue(lfoModulatedTracks.masterVolume, step), 0, 1);
+  
+  // New distortion values
+  const leadDistortionValue = clamp(getAutomationValue(lfoModulatedTracks.leadDistortion, step), 0, 1);
+  const leadOverdriveValue = clamp(getAutomationValue(lfoModulatedTracks.leadOverdrive, step), 0, 1);
+  const drumDistortionValue = clamp(getAutomationValue(lfoModulatedTracks.drumDistortion, step), 0, 1);
+  const masterOverdriveValue = clamp(getAutomationValue(lfoModulatedTracks.masterOverdrive, step), 0, 1);
 
   const leadFreq = leadBase + leadMod * leadValue;
   const fxAmount = fxValue * fxBase;
@@ -2328,6 +2637,12 @@ function applyAutomationForStep(app, step, time) {
   const delayNode = app.audio.nodes.delay;
   const driveNode = app.audio.nodes.bassDrive;
   const masterNode = app.audio.master;
+  
+  // New distortion nodes
+  const leadDistortionNode = app.audio.nodes.leadDistortion;
+  const leadOverdriveNode = app.audio.nodes.leadOverdrive;
+  const drumDistortionNode = app.audio.nodes.drumDistortion;
+  const masterOverdriveNode = app.audio.nodes.masterOverdrive;
 
   if (typeof time === 'number') {
     leadFrequency.setValueAtTime(leadFrequency.value, time);
@@ -2343,6 +2658,16 @@ function applyAutomationForStep(app, step, time) {
     driveNode.wet.linearRampToValueAtTime(driveAmount, time + 0.1);
     masterNode.gain.setValueAtTime(masterNode.gain.value, time);
     masterNode.gain.linearRampToValueAtTime(masterGain, time + 0.1);
+    
+    // Apply distortion automation
+    leadDistortionNode.distortion.setValueAtTime(leadDistortionNode.distortion.value, time);
+    leadDistortionNode.distortion.linearRampToValueAtTime(leadDistortionValue, time + 0.1);
+    leadOverdriveNode.drive.setValueAtTime(leadOverdriveNode.drive.value, time);
+    leadOverdriveNode.drive.linearRampToValueAtTime(leadOverdriveValue, time + 0.1);
+    drumDistortionNode.distortion.setValueAtTime(drumDistortionNode.distortion.value, time);
+    drumDistortionNode.distortion.linearRampToValueAtTime(drumDistortionValue, time + 0.1);
+    masterOverdriveNode.drive.setValueAtTime(masterOverdriveNode.drive.value, time);
+    masterOverdriveNode.drive.linearRampToValueAtTime(masterOverdriveValue, time + 0.1);
   } else {
     leadFrequency.value = leadFreq;
     leadFxGain.value = fxAmount;
@@ -2351,6 +2676,12 @@ function applyAutomationForStep(app, step, time) {
     delayNode.feedback.value = delayFeedback;
     driveNode.wet.value = driveAmount;
     masterNode.gain.value = masterGain;
+    
+    // Apply distortion values
+    leadDistortionNode.distortion = leadDistortionValue;
+    leadOverdriveNode.drive = leadOverdriveValue;
+    drumDistortionNode.distortion = drumDistortionValue;
+    masterOverdriveNode.drive = masterOverdriveValue;
   }
 }
 
@@ -2628,11 +2959,83 @@ function normalizeSections(sections, stepCount = STEP_COUNT) {
 
 function updateSectionLabel(app, step, sectionOverride) {
   const section = sectionOverride || getSectionForStep(app, step);
-  if (section && app.sectionLabelEl) {
-    app.sectionLabelEl.textContent = `Section: ${section.name}`;
-  } else if (app.sectionLabelEl) {
-    app.sectionLabelEl.textContent = 'Section: Loop';
+  if (app.sectionLabelEl) {
+    // Add smooth transition for section changes
+    app.sectionLabelEl.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+    app.sectionLabelEl.style.transform = 'scale(0.95)';
+    app.sectionLabelEl.style.opacity = '0.7';
+    
+    setTimeout(() => {
+      if (section) {
+        app.sectionLabelEl.textContent = `Section: ${section.name}`;
+        app.sectionLabelEl.style.color = section.color ? section.color.replace('0.04', '1') : 'var(--accent)';
+      } else {
+        app.sectionLabelEl.textContent = 'Section: Loop';
+        app.sectionLabelEl.style.color = 'var(--accent)';
+      }
+      
+      app.sectionLabelEl.style.transform = 'scale(1)';
+      app.sectionLabelEl.style.opacity = '1';
+    }, 200);
+    
+    setTimeout(() => {
+      app.sectionLabelEl.style.color = '';
+    }, 1000);
   }
+}
+
+function updateLEDIndicators(app, section) {
+  if (!app.leds) return;
+  
+  const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
+  const defaultState = { drums: true, bass: true, lead: true, fx: true };
+  
+  // Update each LED based on the current section's sequence activity
+  Object.keys(app.leds).forEach(groupName => {
+    const led = app.leds[groupName];
+    if (!led) return;
+    
+    const hasExplicitSetting = arrangement && Object.prototype.hasOwnProperty.call(arrangement, groupName);
+    const shouldEnable = hasExplicitSetting
+      ? Boolean(arrangement[groupName])
+      : defaultState[groupName] !== undefined
+        ? defaultState[groupName]
+        : true;
+    
+    if (shouldEnable) {
+      led.classList.add('active');
+    } else {
+      led.classList.remove('active');
+    }
+  });
+}
+
+function updateLEDIndicators(app, section) {
+  if (!app.leds) return;
+  
+  const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
+  const defaultState = { drums: true, bass: true, lead: true, fx: true };
+  const isPlaying = Tone.Transport.state === 'started';
+  
+  // Update each LED based on the current section's sequence activity
+  Object.keys(app.leds).forEach(groupName => {
+    const led = app.leds[groupName];
+    if (!led) return;
+    
+    const hasExplicitSetting = arrangement && Object.prototype.hasOwnProperty.call(arrangement, groupName);
+    const shouldEnable = hasExplicitSetting
+      ? Boolean(arrangement[groupName])
+      : defaultState[groupName] !== undefined
+        ? defaultState[groupName]
+        : true;
+    
+    // Only show active LEDs when actually playing
+    if (shouldEnable && isPlaying) {
+      led.classList.add('active');
+    } else {
+      led.classList.remove('active');
+    }
+  });
 }
 
 async function exportMix(app) {
@@ -2673,6 +3076,7 @@ async function captureBuses(app, buses) {
     app.timeline.currentStep = 0;
     applyAutomationForStep(app, 0);
     syncSectionState(app, 0);
+    updateLEDIndicators(app, getSectionForStep(app, 0));
     drawTimeline(app);
   }
 }
@@ -2778,18 +3182,29 @@ function getControlValue(app, id) {
 function setStatus(app, message) {
   if (!app.statusEl) return;
   
-  // Add visual feedback animation
+  // Add smooth visual feedback animation
+  app.statusEl.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
   app.statusEl.style.transform = 'scale(1.05)';
   app.statusEl.style.color = '#49a9ff';
+  app.statusEl.style.textShadow = '0 0 10px rgba(73, 169, 255, 0.3)';
+  
+  // Smooth text transition
+  setTimeout(() => {
+    app.statusEl.textContent = `Status: ${message}`;
+  }, 100);
   
   setTimeout(() => {
-    app.statusEl.style.transform = '';
-    app.statusEl.style.color = '';
-  }, 150);
+    app.statusEl.style.transform = 'scale(1)';
+    app.statusEl.style.textShadow = 'none';
+  }, 300);
   
-  app.statusEl.textContent = `Status: ${message}`;
+  setTimeout(() => {
+    app.statusEl.style.color = '';
+  }, 500);
+  
   clearTimeout(app.statusTimer);
   app.statusTimer = setTimeout(() => {
+    app.statusEl.style.transition = 'all 0.5s ease-out';
     app.statusEl.textContent = 'Status: Idle';
     app.statusEl.style.color = 'var(--muted)';
   }, 3500);
