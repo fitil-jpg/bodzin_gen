@@ -618,7 +618,13 @@ function createApp() {
     statusTimer: null,
     presetFileInput: null,
     particles: [],
-    lastParticleTime: 0
+    lastParticleTime: 0,
+    leds: {
+      drums: document.getElementById('led-drums'),
+      bass: document.getElementById('led-bass'),
+      lead: document.getElementById('led-lead'),
+      fx: document.getElementById('led-fx')
+    }
   };
 }
 
@@ -668,6 +674,7 @@ function initializeApp(app) {
   setupMidi(app);
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
+  updateLEDIndicators(app, getSectionForStep(app, 0));
   drawTimeline(app);
   setStatus(app, 'Idle');
 
@@ -1252,6 +1259,10 @@ async function startPlayback(app, options = {}) {
   if (!options.silent) {
     setStatus(app, 'Playing');
   }
+  
+  // Update LED indicators when starting playback
+  const currentSection = getSectionForStep(app, app.timeline.currentStep);
+  updateLEDIndicators(app, currentSection);
 }
 
 async function ensureTransportRunning(app) {
@@ -1301,6 +1312,14 @@ function stopPlayback(app) {
   app.automationStep = 0;
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
+  
+  // Clear all LED indicators when stopping
+  if (app.leds) {
+    Object.values(app.leds).forEach(led => {
+      if (led) led.classList.remove('active');
+    });
+  }
+  
   drawTimeline(app);
   setStatus(app, 'Stopped');
 }
@@ -2043,12 +2062,16 @@ function updateSectionPlayback(app, section) {
   });
 
   app.activeSection = sectionName;
+  
+  // Update LED indicators based on active sequences
+  updateLEDIndicators(app, section);
 }
 
 function syncSectionState(app, step) {
   const section = getSectionForStep(app, step);
   updateSectionPlayback(app, section);
   updateSectionLabel(app, step, section);
+  updateLEDIndicators(app, section);
 }
 
 function applyAutomationForStep(app, step, time) {
@@ -2432,6 +2455,60 @@ function updateSectionLabel(app, step, sectionOverride) {
   }
 }
 
+function updateLEDIndicators(app, section) {
+  if (!app.leds) return;
+  
+  const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
+  const defaultState = { drums: true, bass: true, lead: true, fx: true };
+  
+  // Update each LED based on the current section's sequence activity
+  Object.keys(app.leds).forEach(groupName => {
+    const led = app.leds[groupName];
+    if (!led) return;
+    
+    const hasExplicitSetting = arrangement && Object.prototype.hasOwnProperty.call(arrangement, groupName);
+    const shouldEnable = hasExplicitSetting
+      ? Boolean(arrangement[groupName])
+      : defaultState[groupName] !== undefined
+        ? defaultState[groupName]
+        : true;
+    
+    if (shouldEnable) {
+      led.classList.add('active');
+    } else {
+      led.classList.remove('active');
+    }
+  });
+}
+
+function updateLEDIndicators(app, section) {
+  if (!app.leds) return;
+  
+  const arrangement = section ? SECTION_SEQUENCE_ACTIVITY[section.name] : null;
+  const defaultState = { drums: true, bass: true, lead: true, fx: true };
+  const isPlaying = Tone.Transport.state === 'started';
+  
+  // Update each LED based on the current section's sequence activity
+  Object.keys(app.leds).forEach(groupName => {
+    const led = app.leds[groupName];
+    if (!led) return;
+    
+    const hasExplicitSetting = arrangement && Object.prototype.hasOwnProperty.call(arrangement, groupName);
+    const shouldEnable = hasExplicitSetting
+      ? Boolean(arrangement[groupName])
+      : defaultState[groupName] !== undefined
+        ? defaultState[groupName]
+        : true;
+    
+    // Only show active LEDs when actually playing
+    if (shouldEnable && isPlaying) {
+      led.classList.add('active');
+    } else {
+      led.classList.remove('active');
+    }
+  });
+}
+
 async function exportMix(app) {
   await captureBuses(app, [
     { node: app.audio.master, label: 'mix' }
@@ -2470,6 +2547,7 @@ async function captureBuses(app, buses) {
     app.timeline.currentStep = 0;
     applyAutomationForStep(app, 0);
     syncSectionState(app, 0);
+    updateLEDIndicators(app, getSectionForStep(app, 0));
     drawTimeline(app);
   }
 }

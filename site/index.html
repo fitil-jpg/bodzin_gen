@@ -507,6 +507,21 @@
     }
 
     @media (max-width: 768px) {
+    .led-indicators {
+      gap: 6px;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+    }
+
+    .led-indicator {
+      width: 10px;
+      height: 10px;
+    }
+
+    .led-label {
+      font-size: 9px;
+    }
+
     .control-section {
       margin-bottom: 1.5rem;
       padding: 1rem;
@@ -1002,6 +1017,121 @@
       }
     }
 
+    /* LED Indicator Styles */
+    .led-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .led-indicator.active {
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(73, 169, 255, 0.6);
+      border-color: rgba(73, 169, 255, 0.8);
+      animation: ledPulse 1.5s ease-in-out infinite;
+    }
+
+    .led-indicator.active::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      animation: ledGlow 2s ease-in-out infinite;
+    }
+
+    .led-indicator.drums.active {
+      background: #ff6b6b;
+      box-shadow: 0 0 8px rgba(255, 107, 107, 0.6);
+      border-color: rgba(255, 107, 107, 0.8);
+      animation-delay: 0s;
+    }
+
+    .led-indicator.bass.active {
+      background: #4ecdc4;
+      box-shadow: 0 0 8px rgba(78, 205, 196, 0.6);
+      border-color: rgba(78, 205, 196, 0.8);
+      animation-delay: 0.2s;
+    }
+
+    .led-indicator.lead.active {
+      background: #45b7d1;
+      box-shadow: 0 0 8px rgba(69, 183, 209, 0.6);
+      border-color: rgba(69, 183, 209, 0.8);
+      animation-delay: 0.4s;
+    }
+
+    .led-indicator.fx.active {
+      background: #96ceb4;
+      box-shadow: 0 0 8px rgba(150, 206, 180, 0.6);
+      border-color: rgba(150, 206, 180, 0.8);
+      animation-delay: 0.6s;
+    }
+
+    @keyframes ledPulse {
+      0%, 100% { 
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% { 
+        transform: scale(1.1);
+        opacity: 0.8;
+      }
+    }
+
+    @keyframes ledGlow {
+      0%, 100% { 
+        opacity: 0.8;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      50% { 
+        opacity: 0.4;
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+    }
+
+    .led-indicators {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(4px);
+      transition: all 0.3s ease;
+    }
+
+    .led-indicators:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .led-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .led-label {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
     /* High DPI display optimizations */
     @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
       .btn, .toggle {
@@ -1068,6 +1198,24 @@
             <div id="sectionLabel">Section: Intro</div>
             <div id="status">Status: Idle</div>
             <div id="patternStatus">Pattern: A</div>
+          </div>
+          <div class="led-indicators">
+            <div class="led-group">
+              <div class="led-indicator drums" id="led-drums"></div>
+              <div class="led-label">Drums</div>
+            </div>
+            <div class="led-group">
+              <div class="led-indicator bass" id="led-bass"></div>
+              <div class="led-label">Bass</div>
+            </div>
+            <div class="led-group">
+              <div class="led-indicator lead" id="led-lead"></div>
+              <div class="led-label">Lead</div>
+            </div>
+            <div class="led-group">
+              <div class="led-indicator fx" id="led-fx"></div>
+              <div class="led-label">FX</div>
+            </div>
           </div>
           <div class="timeline-container">
             <canvas id="timeline" width="1200" height="240" aria-label="Arrangement timeline"></canvas>
