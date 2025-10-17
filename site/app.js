@@ -426,6 +426,68 @@ const CONTROL_SCHEMA = [
     ]
   },
   {
+    group: 'Distortion & Overdrive',
+    description: 'Harmonic saturation and drive effects.',
+    controls: [
+      {
+        id: 'leadDistortion',
+        label: 'Lead Distortion',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.2,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.leadDistortion.distortion = value;
+        }
+      },
+      {
+        id: 'leadOverdrive',
+        label: 'Lead Overdrive',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.3,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.leadOverdrive.drive = value;
+        }
+      },
+      {
+        id: 'drumDistortion',
+        label: 'Drum Distortion',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.15,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.drumDistortion.distortion = value;
+        }
+      },
+      {
+        id: 'masterOverdrive',
+        label: 'Master Overdrive',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.1,
+        format: value => `${Math.round(value * 100)}%`,
+        affectsAutomation: true,
+        apply: (value, app) => {
+          app.audio.nodes.masterOverdrive.drive = value;
+        }
+      }
+    ]
+  },
+  {
     group: 'Ambience',
     description: 'Delay and space design.',
     controls: [
@@ -679,7 +741,6 @@ function initializeApp(app) {
   setStatus(app, 'Idle');
 
   // Hide mobile loading indicator
-  const mobileLoading = document.getElementById('mobile-loading');
   if (mobileLoading) {
     setTimeout(() => {
       mobileLoading.style.display = 'none';
@@ -2083,6 +2144,12 @@ function applyAutomationForStep(app, step, time) {
   const driveTrack = getAutomationTrack(app, 'bassDrive');
   const resonanceTrack = getAutomationTrack(app, 'leadResonance');
   const masterTrack = getAutomationTrack(app, 'masterVolume');
+  
+  // New distortion tracks
+  const leadDistortionTrack = getAutomationTrack(app, 'leadDistortion');
+  const leadOverdriveTrack = getAutomationTrack(app, 'leadOverdrive');
+  const drumDistortionTrack = getAutomationTrack(app, 'drumDistortion');
+  const masterOverdriveTrack = getAutomationTrack(app, 'masterOverdrive');
 
   const leadBase = getControlValue(app, 'leadFilterBase');
   const leadMod = getControlValue(app, 'leadFilterMod');
@@ -2102,7 +2169,11 @@ function applyAutomationForStep(app, step, time) {
     delayFeedback: delayTrack,
     bassDrive: driveTrack,
     leadResonance: resonanceTrack,
-    masterVolume: masterTrack
+    masterVolume: masterTrack,
+    leadDistortion: leadDistortionTrack,
+    leadOverdrive: leadOverdriveTrack,
+    drumDistortion: drumDistortionTrack,
+    masterOverdrive: masterOverdriveTrack
   }, step, time);
 
   const leadValue = clamp(getAutomationValue(lfoModulatedTracks.leadFilter, step), 0, 1);
@@ -2113,6 +2184,12 @@ function applyAutomationForStep(app, step, time) {
   const driveValue = clamp(getAutomationValue(lfoModulatedTracks.bassDrive, step), 0, 1);
   const resonanceValue = clamp(getAutomationValue(lfoModulatedTracks.leadResonance, step), 0, 1);
   const masterValue = clamp(getAutomationValue(lfoModulatedTracks.masterVolume, step), 0, 1);
+  
+  // New distortion values
+  const leadDistortionValue = clamp(getAutomationValue(lfoModulatedTracks.leadDistortion, step), 0, 1);
+  const leadOverdriveValue = clamp(getAutomationValue(lfoModulatedTracks.leadOverdrive, step), 0, 1);
+  const drumDistortionValue = clamp(getAutomationValue(lfoModulatedTracks.drumDistortion, step), 0, 1);
+  const masterOverdriveValue = clamp(getAutomationValue(lfoModulatedTracks.masterOverdrive, step), 0, 1);
 
   const leadFreq = leadBase + leadMod * leadValue;
   const fxAmount = fxValue * fxBase;
@@ -2130,6 +2207,12 @@ function applyAutomationForStep(app, step, time) {
   const delayNode = app.audio.nodes.delay;
   const driveNode = app.audio.nodes.bassDrive;
   const masterNode = app.audio.master;
+  
+  // New distortion nodes
+  const leadDistortionNode = app.audio.nodes.leadDistortion;
+  const leadOverdriveNode = app.audio.nodes.leadOverdrive;
+  const drumDistortionNode = app.audio.nodes.drumDistortion;
+  const masterOverdriveNode = app.audio.nodes.masterOverdrive;
 
   if (typeof time === 'number') {
     leadFrequency.setValueAtTime(leadFrequency.value, time);
@@ -2145,6 +2228,16 @@ function applyAutomationForStep(app, step, time) {
     driveNode.wet.linearRampToValueAtTime(driveAmount, time + 0.1);
     masterNode.gain.setValueAtTime(masterNode.gain.value, time);
     masterNode.gain.linearRampToValueAtTime(masterGain, time + 0.1);
+    
+    // Apply distortion automation
+    leadDistortionNode.distortion.setValueAtTime(leadDistortionNode.distortion.value, time);
+    leadDistortionNode.distortion.linearRampToValueAtTime(leadDistortionValue, time + 0.1);
+    leadOverdriveNode.drive.setValueAtTime(leadOverdriveNode.drive.value, time);
+    leadOverdriveNode.drive.linearRampToValueAtTime(leadOverdriveValue, time + 0.1);
+    drumDistortionNode.distortion.setValueAtTime(drumDistortionNode.distortion.value, time);
+    drumDistortionNode.distortion.linearRampToValueAtTime(drumDistortionValue, time + 0.1);
+    masterOverdriveNode.drive.setValueAtTime(masterOverdriveNode.drive.value, time);
+    masterOverdriveNode.drive.linearRampToValueAtTime(masterOverdriveValue, time + 0.1);
   } else {
     leadFrequency.value = leadFreq;
     leadFxGain.value = fxAmount;
@@ -2153,6 +2246,12 @@ function applyAutomationForStep(app, step, time) {
     delayNode.feedback.value = delayFeedback;
     driveNode.wet.value = driveAmount;
     masterNode.gain.value = masterGain;
+    
+    // Apply distortion values
+    leadDistortionNode.distortion = leadDistortionValue;
+    leadOverdriveNode.drive = leadOverdriveValue;
+    drumDistortionNode.distortion = drumDistortionValue;
+    masterOverdriveNode.drive = masterOverdriveValue;
   }
 }
 
