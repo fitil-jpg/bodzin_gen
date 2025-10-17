@@ -65,4 +65,28 @@ export function smoothstep(edge0, edge1, x) {
 
 export function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+export function lerp(start, end, t) {
+  return start + (end - start) * t;
+}
+
+export function smoothstep(edge0, edge1, x) {
+  const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
+export function randomBetween(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+export function randomChoice(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+export function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 }

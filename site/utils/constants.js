@@ -104,6 +104,42 @@ export const AUTOMATION_TRACK_DEFINITIONS = [
       0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95,
       1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65
     ]
+  },
+  {
+    id: 'leadDistortion',
+    label: 'Lead Distortion',
+    color: '#ff4757',
+    curve: [
+      0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
+      0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15
+    ]
+  },
+  {
+    id: 'leadOverdrive',
+    label: 'Lead Overdrive',
+    color: '#ff6b35',
+    curve: [
+      0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55,
+      0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25
+    ]
+  },
+  {
+    id: 'drumDistortion',
+    label: 'Drum Distortion',
+    color: '#ffa502',
+    curve: [
+      0.1, 0.12, 0.15, 0.18, 0.2, 0.22, 0.25, 0.28,
+      0.3, 0.28, 0.25, 0.22, 0.2, 0.18, 0.15, 0.12
+    ]
+  },
+  {
+    id: 'masterOverdrive',
+    label: 'Master Overdrive',
+    color: '#ff3838',
+    curve: [
+      0.05, 0.08, 0.1, 0.12, 0.15, 0.18, 0.2, 0.22,
+      0.25, 0.22, 0.2, 0.18, 0.15, 0.12, 0.1, 0.08
+    ]
   }
 ];
 
@@ -290,7 +326,7 @@ export const CONTROL_SCHEMA = [
         default: -4,
         format: value => `${value.toFixed(1)} dB`,
         apply: (value, app) => {
-          if (app.audio?.buses?.drums) {
+          if (app.audio && app.audio.buses && app.audio.buses.drums) {
             app.audio.buses.drums.gain.value = Tone.dbToGain(value);
           }
         }
@@ -305,7 +341,7 @@ export const CONTROL_SCHEMA = [
         default: -6,
         format: value => `${value.toFixed(1)} dB`,
         apply: (value, app) => {
-          if (app.audio?.buses?.bass) {
+          if (app.audio && app.audio.buses && app.audio.buses.bass) {
             app.audio.buses.bass.gain.value = Tone.dbToGain(value);
           }
         }
@@ -320,7 +356,7 @@ export const CONTROL_SCHEMA = [
         default: -3,
         format: value => `${value.toFixed(1)} dB`,
         apply: (value, app) => {
-          if (app.audio?.buses?.lead) {
+          if (app.audio && app.audio.buses && app.audio.buses.lead) {
             app.audio.buses.lead.gain.value = Tone.dbToGain(value);
           }
         }
@@ -335,8 +371,75 @@ export const CONTROL_SCHEMA = [
         default: -8,
         format: value => `${value.toFixed(1)} dB`,
         apply: (value, app) => {
-          if (app.audio?.buses?.fx) {
+          if (app.audio && app.audio.buses && app.audio.buses.fx) {
             app.audio.buses.fx.gain.value = Tone.dbToGain(value);
+          }
+        }
+      }
+    ]
+  },
+  {
+    group: 'Pattern Variations',
+    description: 'A/B pattern switching and variation controls.',
+    controls: [
+      {
+        id: 'patternSelect',
+        label: 'Pattern',
+        type: 'select',
+        default: 'A',
+        options: [
+          { value: 'A', label: 'Pattern A' },
+          { value: 'B', label: 'Pattern B' },
+          { value: 'C', label: 'Pattern C' }
+        ],
+        apply: (value, app) => {
+          if (app.patternVariation) {
+            app.patternVariation.switchPattern(value);
+          }
+        }
+      },
+      {
+        id: 'variationIntensity',
+        label: 'Variation Intensity',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.5,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.patternVariation) {
+            app.patternVariation.setVariationIntensity(value);
+          }
+        }
+      },
+      {
+        id: 'morphingEnabled',
+        label: 'Pattern Morphing',
+        type: 'select',
+        default: 'off',
+        options: [
+          { value: 'off', label: 'Off' },
+          { value: 'on', label: 'On' }
+        ],
+        apply: (value, app) => {
+          if (app.patternVariation) {
+            app.patternVariation.setMorphingEnabled(value === 'on');
+          }
+        }
+      },
+      {
+        id: 'randomizationAmount',
+        label: 'Randomization',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.2,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.patternVariation) {
+            app.patternVariation.setRandomizationAmount(value);
           }
         }
       }
