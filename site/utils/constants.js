@@ -24,6 +24,14 @@ export const CURVE_TYPES = {
   SINE: 'sine'
 };
 
+export const CURVE_TYPES = {
+  LINEAR: 'linear',
+  BEZIER: 'bezier',
+  EXPONENTIAL: 'exponential',
+  LOGARITHMIC: 'logarithmic',
+  SINE: 'sine'
+};
+
 export const AUTOMATION_TRACK_DEFINITIONS = [
   {
     id: 'leadFilter',
@@ -95,6 +103,42 @@ export const AUTOMATION_TRACK_DEFINITIONS = [
     curve: [
       0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95,
       1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65
+    ]
+  },
+  {
+    id: 'leadDistortion',
+    label: 'Lead Distortion',
+    color: '#ff4757',
+    curve: [
+      0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
+      0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15
+    ]
+  },
+  {
+    id: 'leadOverdrive',
+    label: 'Lead Overdrive',
+    color: '#ff6b35',
+    curve: [
+      0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55,
+      0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25
+    ]
+  },
+  {
+    id: 'drumDistortion',
+    label: 'Drum Distortion',
+    color: '#ffa502',
+    curve: [
+      0.1, 0.12, 0.15, 0.18, 0.2, 0.22, 0.25, 0.28,
+      0.3, 0.28, 0.25, 0.22, 0.2, 0.18, 0.15, 0.12
+    ]
+  },
+  {
+    id: 'masterOverdrive',
+    label: 'Master Overdrive',
+    color: '#ff3838',
+    curve: [
+      0.05, 0.08, 0.1, 0.12, 0.15, 0.18, 0.2, 0.22,
+      0.25, 0.22, 0.2, 0.18, 0.15, 0.12, 0.1, 0.08
     ]
   }
 ];
@@ -399,6 +443,114 @@ export const CONTROL_SCHEMA = [
       {
         id: 'kickLevel',
         label: 'Kick Level',
+    group: 'Pattern Morphing',
+    description: 'Smooth transitions between sections.',
+    controls: [
+      {
+        id: 'morphingEnabled',
+        label: 'Enable Morphing',
+        type: 'checkbox',
+        default: false,
+        apply: (value, app) => {
+          if (app.patternMorphing) {
+            if (value) {
+              app.patternMorphing.startMorphing('Intro', 'Lift', 4, 'easeInOut');
+            } else {
+              app.patternMorphing.resetMorphing();
+            }
+          }
+        }
+      },
+      {
+        id: 'morphSource',
+        label: 'Source Section',
+        type: 'select',
+        options: SECTION_DEFINITIONS.map(section => ({
+          value: section.name,
+          label: section.name
+        })),
+        default: 'Intro',
+        apply: (value, app) => {
+          if (app.patternMorphing && app.patternMorphing.morphingState.isActive) {
+            app.patternMorphing.morphingState.sourceSection = value;
+          }
+        }
+      },
+      {
+        id: 'morphTarget',
+        label: 'Target Section',
+        type: 'select',
+        options: SECTION_DEFINITIONS.map(section => ({
+          value: section.name,
+          label: section.name
+        })),
+        default: 'Lift',
+        apply: (value, app) => {
+          if (app.patternMorphing && app.patternMorphing.morphingState.isActive) {
+            app.patternMorphing.morphingState.targetSection = value;
+          }
+        }
+      },
+      {
+        id: 'morphDuration',
+        label: 'Morph Duration',
+        type: 'range',
+        min: 1,
+        max: 8,
+        step: 1,
+        default: 4,
+        format: value => `${value} steps`,
+        apply: (value, app) => {
+          if (app.patternMorphing) {
+            app.patternMorphing.morphingState.morphDuration = value;
+          }
+        }
+      },
+      {
+        id: 'morphType',
+        label: 'Morph Type',
+        type: 'select',
+        options: [
+          { value: 'linear', label: 'Linear' },
+          { value: 'easeInOut', label: 'Ease In/Out' },
+          { value: 'easeIn', label: 'Ease In' },
+          { value: 'easeOut', label: 'Ease Out' },
+          { value: 'bezier', label: 'Bezier' },
+          { value: 'exponential', label: 'Exponential' },
+          { value: 'logarithmic', label: 'Logarithmic' },
+          { value: 'sine', label: 'Sine' }
+        ],
+        default: 'easeInOut',
+        apply: (value, app) => {
+          if (app.patternMorphing) {
+            app.patternMorphing.morphingState.easingFunction = value;
+          }
+        }
+      }
+    ]
+  },
+  {
+    group: 'Bus Levels',
+    description: 'Mix bus trims for the core stems.',
+    controls: [
+      {
+        id: 'drumLevel',
+        label: 'Drums Level',
+        type: 'range',
+        min: -24,
+        max: 6,
+        step: 0.5,
+        default: -4,
+        format: value => `${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          if (app.audio && app.audio.buses && app.audio.buses.drums) {
+            app.audio.buses.drums.gain.value = Tone.dbToGain(value);
+          }
+        }
+      },
+      {
+        id: 'bassLevel',
+        label: 'Bass Level',
         type: 'range',
         min: -24,
         max: 6,
@@ -414,6 +566,17 @@ export const CONTROL_SCHEMA = [
       {
         id: 'snareLevel',
         label: 'Snare Level',
+        default: -6,
+        format: value => `${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          if (app.audio && app.audio.buses && app.audio.buses.bass) {
+            app.audio.buses.bass.gain.value = Tone.dbToGain(value);
+          }
+        }
+      },
+      {
+        id: 'leadLevel',
+        label: 'Lead Level',
         type: 'range',
         min: -24,
         max: 6,
@@ -429,6 +592,17 @@ export const CONTROL_SCHEMA = [
       {
         id: 'hihatLevel',
         label: 'Hi-hat Level',
+        default: -3,
+        format: value => `${value.toFixed(1)} dB`,
+        apply: (value, app) => {
+          if (app.audio && app.audio.buses && app.audio.buses.lead) {
+            app.audio.buses.lead.gain.value = Tone.dbToGain(value);
+          }
+        }
+      },
+      {
+        id: 'fxLevel',
+        label: 'FX Return',
         type: 'range',
         min: -24,
         max: 6,
@@ -518,6 +692,66 @@ export const CONTROL_SCHEMA = [
       {
         id: 'lfo1Depth',
         label: 'LFO 1 Depth',
+          if (app.audio && app.audio.buses && app.audio.buses.fx) {
+            app.audio.buses.fx.gain.value = Tone.dbToGain(value);
+          }
+        }
+      }
+    ]
+  },
+  {
+    group: 'Pattern Variations',
+    description: 'A/B pattern switching and variation controls.',
+    controls: [
+      {
+        id: 'patternSelect',
+        label: 'Pattern',
+        type: 'select',
+        default: 'A',
+        options: [
+          { value: 'A', label: 'Pattern A' },
+          { value: 'B', label: 'Pattern B' },
+          { value: 'C', label: 'Pattern C' }
+        ],
+        apply: (value, app) => {
+          if (app.patternVariation) {
+            app.patternVariation.switchPattern(value);
+          }
+        }
+      },
+      {
+        id: 'variationIntensity',
+        label: 'Variation Intensity',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.5,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.patternVariation) {
+            app.patternVariation.setVariationIntensity(value);
+          }
+        }
+      },
+      {
+        id: 'morphingEnabled',
+        label: 'Pattern Morphing',
+        type: 'select',
+        default: 'off',
+        options: [
+          { value: 'off', label: 'Off' },
+          { value: 'on', label: 'On' }
+        ],
+        apply: (value, app) => {
+          if (app.patternVariation) {
+            app.patternVariation.setMorphingEnabled(value === 'on');
+          }
+        }
+      },
+      {
+        id: 'randomizationAmount',
+        label: 'Randomization',
         type: 'range',
         min: 0,
         max: 1,
@@ -544,6 +778,11 @@ export const CONTROL_SCHEMA = [
         apply: (value, app) => {
           if (app.audio && app.audio.lfos && app.audio.lfos.lfo1) {
             app.audio.lfos.lfo1.type = value;
+        default: 0.2,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.patternVariation) {
+            app.patternVariation.setRandomizationAmount(value);
           }
         }
       }

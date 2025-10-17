@@ -8,6 +8,14 @@ import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
 import { SearchFilter } from './modules/search-filter.js';
+import { PatternMorphing } from './modules/pattern-morphing.js';
+import { PatternChainManager } from './modules/pattern-chain-manager.js';
+import { MobileGestures } from './modules/mobile-gestures.js';
+import { PresetManager } from './modules/preset-manager.js';
+import { PresetLibraryUI } from './modules/preset-library-ui.js';
+import { PresetManager } from './modules/preset-manager.js';
+import { PresetLibraryUI } from './modules/preset-library-ui.js';
+import { PatternVariationManager } from './modules/pattern-variation-manager.js';
 
 import { 
   STEP_COUNT, 
@@ -40,6 +48,14 @@ function createApp() {
     storage: null,
     status: null,
     searchFilter: null,
+    patternMorphing: null,
+    patternChain: null,
+    mobileGestures: null,
+    presetManager: null,
+    presetLibraryUI: null,
+    presetManager: null,
+    presetLibraryUI: null,
+    patternVariation: null,
     
     // State
     controlState: {},
@@ -69,10 +85,18 @@ async function initializeApp(app) {
   app.storage = new StorageManager();
   app.status = new StatusManager();
   app.audio = new AudioEngine().initialize();
+  app.patternChain = new PatternChainManager(app.audio);
+  app.patternVariation = new PatternVariationManager(app);
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
   app.searchFilter = new SearchFilter(app);
+  app.patternMorphing = new PatternMorphing(app);
+  app.mobileGestures = new MobileGestures(app);
+  app.presetManager = new PresetManager(app);
+  app.presetLibraryUI = new PresetLibraryUI(app);
+  app.presetManager = new PresetManager(app);
+  app.presetLibraryUI = new PresetLibraryUI(app);
 
   // Initialize timeline
   app.timeline.initialize();
@@ -111,11 +135,34 @@ async function initializeApp(app) {
   // Initialize MIDI
   await app.midi.initialize();
   
+  // Initialize mobile gestures
+  app.mobileGestures.initialize();
+  
+  // Register service worker for offline functionality
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('Service Worker registered:', registration);
+      })
+      .catch(error => {
+        console.log('Service Worker registration failed:', error);
+      });
+  }
+  // Initialize preset manager
+  app.presetManager.initialize();
+  // Setup keyboard shortcuts
+  setupKeyboardShortcuts(app);
+  
   // Apply initial state
   applyAutomationForStep(app, 0);
   syncSectionState(app, 0);
   app.timeline.draw();
   app.status.set('Idle');
+  
+  // Initialize pattern variation status
+  if (app.patternVariation) {
+    updatePatternStatus(app, app.patternVariation.currentPattern);
+  }
 }
 
 function setupButtons(app) {
@@ -126,17 +173,64 @@ function setupButtons(app) {
   const exportMixBtn = document.getElementById('exportMixButton');
   const exportStemsBtn = document.getElementById('exportStemsButton');
   const midiToggle = document.getElementById('midiLearnToggle');
+  
+  // Morphing buttons
+  const morphToLiftBtn = document.getElementById('morphToLiftButton');
+  const morphToPeakBtn = document.getElementById('morphToPeakButton');
+  const morphToBreakBtn = document.getElementById('morphToBreakButton');
+  // Pattern variation buttons
+  const patternABtn = document.getElementById('patternAButton');
+  const patternBBtn = document.getElementById('patternBButton');
+  const patternCBtn = document.getElementById('patternCButton');
+  const randomizeBtn = document.getElementById('randomizePatternButton');
 
   startBtn?.addEventListener('click', () => startPlayback(app));
   stopBtn?.addEventListener('click', () => stopPlayback(app));
-  savePresetBtn?.addEventListener('click', () => savePreset(app));
-  loadPresetBtn?.addEventListener('click', () => triggerPresetLoad(app));
+  savePresetBtn?.addEventListener('click', () => app.presetLibraryUI.showSavePresetDialog());
+  loadPresetBtn?.addEventListener('click', () => app.presetLibraryUI.open());
   exportMixBtn?.addEventListener('click', () => exportMix(app));
   exportStemsBtn?.addEventListener('click', () => exportStems(app));
+  
+  // Add pattern chain export/import buttons
+  const exportChainBtn = document.getElementById('exportChainButton');
+  const importChainBtn = document.getElementById('importChainButton');
+  
+  if (exportChainBtn) {
+    exportChainBtn.addEventListener('click', () => exportPatternChain(app));
+  }
+  if (importChainBtn) {
+    importChainBtn.addEventListener('click', () => triggerChainImport(app));
+  }
   midiToggle?.addEventListener('change', event => {
     const enabled = Boolean(event.target.checked);
     app.midi.setLearning(enabled);
   });
+  
+  // Morphing button handlers
+  morphToLiftBtn?.addEventListener('click', () => {
+    const currentSection = app.patternMorphing?.getCurrentSection() || 'Intro';
+    app.patternMorphing?.startMorphing(currentSection, 'Lift', 4, 'easeInOut');
+  });
+  
+  morphToPeakBtn?.addEventListener('click', () => {
+    const currentSection = app.patternMorphing?.getCurrentSection() || 'Intro';
+    app.patternMorphing?.startMorphing(currentSection, 'Peak', 4, 'easeInOut');
+  });
+  
+  morphToBreakBtn?.addEventListener('click', () => {
+    const currentSection = app.patternMorphing?.getCurrentSection() || 'Intro';
+    app.patternMorphing?.startMorphing(currentSection, 'Break', 4, 'easeInOut');
+  });
+  // Pattern variation button handlers
+  patternABtn?.addEventListener('click', () => switchPattern(app, 'A'));
+  patternBBtn?.addEventListener('click', () => switchPattern(app, 'B'));
+  patternCBtn?.addEventListener('click', () => switchPattern(app, 'C'));
+  randomizeBtn?.addEventListener('click', () => randomizeCurrentPattern(app));
+  
+  // Add double-click handlers for pattern morphing
+  patternABtn?.addEventListener('dblclick', () => morphToPattern(app, 'A'));
+  patternBBtn?.addEventListener('dblclick', () => morphToPattern(app, 'B'));
+  patternCBtn?.addEventListener('dblclick', () => morphToPattern(app, 'C'));
 
   const fileInput = document.createElement('input');
   fileInput.type = 'file';
@@ -259,7 +353,8 @@ function buildPresetPayload(app, name) {
       tracks: app.automation.tracks.map(track => ({ id: track.id, values: [...track.values] })),
       sections: app.automation.sections.map(section => ({ ...section }))
     },
-    midiMappings: { ...app.midi.mappings }
+    midiMappings: { ...app.midi.mappings },
+    patternVariations: app.patternVariation ? app.patternVariation.getPatternForPreset() : null
   };
 }
 
@@ -281,6 +376,9 @@ function applyPreset(app, presetData) {
   if (presetData.midiMappings) {
     app.midi.mappings = { ...presetData.midiMappings };
     app.midi.saveMappings();
+  }
+  if (presetData.patternVariations && app.patternVariation) {
+    app.patternVariation.applyPatternFromPreset(presetData.patternVariations);
   }
   if (presetData.name) {
     app.presetName = presetData.name;
@@ -519,8 +617,25 @@ function setupAutomationScheduling(app) {
   app.automationEvent = Tone.Transport.scheduleRepeat(time => {
     const step = app.automationStep % STEP_COUNT;
     app.timeline.currentStep = step;
+    
+    // Update pattern morphing
+    if (app.patternMorphing) {
+      const stepProgress = step / STEP_COUNT;
+      app.patternMorphing.updateMorphing(stepProgress);
+      app.patternMorphing.applyMorphedPattern();
+    }
+    
     applyAutomationForStep(app, step, time);
     syncSectionState(app, step);
+    
+    // Handle pattern chaining
+    if (app.patternChain && app.patternChain.isChaining) {
+      // Advance chain every 16 steps (one complete pattern)
+      if (step === 0 && app.automationStep > 0) {
+        app.patternChain.advanceChain();
+      }
+    }
+    
     requestAnimationFrame(() => app.timeline.draw());
     app.automationStep = (step + 1) % STEP_COUNT;
   }, STEP_DURATION);
@@ -550,9 +665,54 @@ function updateSectionLabel(app, step, sectionOverride) {
 }
 
 function applyAutomationForStep(app, step, time) {
-  // This would contain the automation logic
-  // For now, it's a placeholder
-  console.log(`Applying automation for step ${step}`);
+  if (!app.automation || !app.automation.tracks) return;
+  
+  // Apply pattern variation if enabled
+  if (app.patternVariation) {
+    const currentPattern = app.patternVariation.getCurrentPattern();
+    if (currentPattern) {
+      // Apply pattern-specific automation values
+      currentPattern.tracks.forEach(patternTrack => {
+        const automationTrack = app.automation.tracks.find(track => track.id === patternTrack.id);
+        if (automationTrack && patternTrack.values[step] !== undefined) {
+          // Apply the pattern value with any morphing or randomization
+          let value = patternTrack.values[step];
+          
+          // Apply morphing if enabled
+          if (app.patternVariation.morphingEnabled) {
+            // This could be enhanced with actual morphing logic
+            const morphProgress = (step / STEP_COUNT) % 1;
+            // Simple morphing example - could be more sophisticated
+            value = value * (1 + Math.sin(morphProgress * Math.PI * 2) * 0.1);
+          }
+          
+          // Apply randomization if enabled
+          if (app.patternVariation.randomizationEnabled) {
+            const randomFactor = (Math.random() - 0.5) * app.patternVariation.randomizationAmount;
+            value = clamp(value + randomFactor, 0, 1);
+          }
+          
+          // Apply the value to the audio engine
+          applyAutomationValue(app, patternTrack.id, value);
+        }
+      });
+    }
+  } else {
+    // Fallback to original automation logic
+    app.automation.tracks.forEach(track => {
+      if (track.values[step] !== undefined) {
+        applyAutomationValue(app, track.id, track.values[step]);
+      }
+    });
+  }
+}
+
+function applyAutomationValue(app, trackId, value) {
+  // Apply automation value to the appropriate audio parameter
+  // This would need to be connected to the actual audio engine parameters
+  if (app.audio && app.audio.applyAutomation) {
+    app.audio.applyAutomation(trackId, value);
+  }
 }
 
 async function exportMix(app) {
@@ -612,6 +772,97 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
+function exportPatternChain(app) {
+  if (!app.patternChain) {
+    app.status.set('Pattern chaining not available');
+    return;
+  }
+  
+  const chainConfig = app.patternChain.exportChainConfiguration();
+  const name = prompt('Pattern chain name', 'My Pattern Chain');
+  if (!name) return;
+  
+  const payload = {
+    name,
+    type: 'pattern-chain',
+    createdAt: new Date().toISOString(),
+    chainConfig
+  };
+  
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = slugify(name) + '-chain.json';
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+  
+  app.status.set(`Pattern chain "${name}" exported`);
+}
+
+function triggerChainImport(app) {
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'application/json';
+  fileInput.style.display = 'none';
+  fileInput.addEventListener('change', event => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (parsed.type === 'pattern-chain' && parsed.chainConfig) {
+          importPatternChain(app, parsed);
+          app.status.set(`Pattern chain "${parsed.name || 'Imported'}" loaded`);
+        } else {
+          app.status.set('Invalid pattern chain file');
+        }
+      } catch (err) {
+        console.error('Pattern chain parse failed', err);
+        app.status.set('Pattern chain load failed');
+      } finally {
+        fileInput.value = '';
+      }
+    };
+    reader.readAsText(file);
+  });
+  document.body.appendChild(fileInput);
+  fileInput.click();
+  document.body.removeChild(fileInput);
+}
+
+function importPatternChain(app, chainData) {
+  if (!app.patternChain) {
+    app.status.set('Pattern chaining not available');
+    return;
+  }
+  
+  app.patternChain.importChainConfiguration(chainData.chainConfig);
+  
+  // Update UI controls
+  const chainLengthSlider = document.getElementById('chainLengthSlider');
+  const variationIntensitySlider = document.getElementById('variationIntensitySlider');
+  const transitionModeSelect = document.getElementById('transitionModeSelect');
+  
+  if (chainLengthSlider) {
+    chainLengthSlider.value = chainData.chainConfig.chainLength;
+    chainLengthSlider.dispatchEvent(new Event('input'));
+  }
+  
+  if (variationIntensitySlider) {
+    variationIntensitySlider.value = chainData.chainConfig.variationIntensity;
+    variationIntensitySlider.dispatchEvent(new Event('input'));
+  }
+  
+  if (transitionModeSelect) {
+    transitionModeSelect.value = chainData.chainConfig.transitionMode;
+    transitionModeSelect.dispatchEvent(new Event('change'));
+  }
+}
+
 function slugify(name) {
   return name
     .toLowerCase()
@@ -621,4 +872,172 @@ function slugify(name) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function switchPattern(app, patternId) {
+  if (!app.patternVariation) return;
+  
+  const success = app.patternVariation.switchPattern(patternId);
+  if (success) {
+    updatePatternButtons(app, patternId);
+    updatePatternStatus(app, patternId);
+    app.status.set(`Switched to Pattern ${patternId}`);
+    
+    // Update automation for current step
+    applyAutomationForStep(app, app.timeline.currentStep);
+    syncSectionState(app, app.timeline.currentStep);
+    app.timeline.draw();
+  }
+}
+
+function updatePatternStatus(app, patternId) {
+  const patternStatusEl = document.getElementById('patternStatus');
+  if (patternStatusEl) {
+    patternStatusEl.textContent = `Pattern: ${patternId}`;
+    
+    // Add visual feedback
+    patternStatusEl.style.color = '#49a9ff';
+    patternStatusEl.style.transform = 'scale(1.1)';
+    setTimeout(() => {
+      patternStatusEl.style.color = '';
+      patternStatusEl.style.transform = '';
+    }, 300);
+  }
+}
+
+function updatePatternButtons(app, activePatternId) {
+  const patternButtons = {
+    'A': document.getElementById('patternAButton'),
+    'B': document.getElementById('patternBButton'),
+    'C': document.getElementById('patternCButton')
+  };
+  
+  Object.entries(patternButtons).forEach(([patternId, button]) => {
+    if (button) {
+      if (patternId === activePatternId) {
+        button.classList.add('btn-primary');
+        button.classList.remove('btn-outline');
+      } else {
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-outline');
+      }
+    }
+  });
+}
+
+function randomizeCurrentPattern(app) {
+  if (!app.patternVariation) return;
+  
+  const currentPattern = app.patternVariation.getCurrentPattern();
+  if (currentPattern) {
+    app.patternVariation.randomizePattern(currentPattern.id, 0.3);
+    app.status.set(`Randomized Pattern ${currentPattern.id}`);
+    
+    // Update automation for current step
+    applyAutomationForStep(app, app.timeline.currentStep);
+    syncSectionState(app, app.timeline.currentStep);
+    app.timeline.draw();
+  }
+}
+
+function setupKeyboardShortcuts(app) {
+  document.addEventListener('keydown', (event) => {
+    // Only handle shortcuts when not typing in input fields
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+      return;
+    }
+    
+    switch (event.key.toLowerCase()) {
+      case '1':
+        switchPattern(app, 'A');
+        break;
+      case '2':
+        switchPattern(app, 'B');
+        break;
+      case '3':
+        switchPattern(app, 'C');
+        break;
+      case 'r':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          randomizeCurrentPattern(app);
+        }
+        break;
+      case 'm':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          toggleMorphing(app);
+        }
+        break;
+      case 'shift':
+        // Hold shift for morphing mode
+        if (app.patternVariation) {
+          app.patternVariation.setMorphingEnabled(true);
+        }
+        break;
+    }
+  });
+  
+  document.addEventListener('keyup', (event) => {
+    if (event.key === 'Shift' && app.patternVariation) {
+      app.patternVariation.setMorphingEnabled(false);
+    }
+  });
+}
+
+function toggleMorphing(app) {
+  if (!app.patternVariation) return;
+  
+  const currentMorphing = app.patternVariation.morphingEnabled;
+  app.patternVariation.setMorphingEnabled(!currentMorphing);
+  app.status.set(`Pattern morphing ${!currentMorphing ? 'enabled' : 'disabled'}`);
+}
+
+function morphToPattern(app, targetPatternId) {
+  if (!app.patternVariation) return;
+  
+  const currentPattern = app.patternVariation.getCurrentPattern();
+  if (!currentPattern || currentPattern.id === targetPatternId) return;
+  
+  app.status.set(`Morphing from Pattern ${currentPattern.id} to Pattern ${targetPatternId}`);
+  
+  // Start morphing animation
+  let morphProgress = 0;
+  const morphDuration = 2000; // 2 seconds
+  const startTime = Date.now();
+  
+  function morphStep() {
+    const elapsed = Date.now() - startTime;
+    morphProgress = Math.min(elapsed / morphDuration, 1);
+    
+    // Create morphed pattern
+    const morphedPattern = app.patternVariation.morphBetweenPatterns(
+      currentPattern.id, 
+      targetPatternId, 
+      morphProgress
+    );
+    
+    if (morphedPattern) {
+      // Apply morphed pattern to automation
+      morphedPattern.tracks.forEach(patternTrack => {
+        const automationTrack = app.automation.tracks.find(track => track.id === patternTrack.id);
+        if (automationTrack) {
+          automationTrack.values = [...patternTrack.values];
+        }
+      });
+      
+      // Update timeline
+      app.timeline.draw();
+    }
+    
+    if (morphProgress < 1) {
+      requestAnimationFrame(morphStep);
+    } else {
+      // Complete morphing by switching to target pattern
+      switchPattern(app, targetPatternId);
+      app.status.set(`Morphing complete - now using Pattern ${targetPatternId}`);
+    }
+  }
+  
+  morphStep();
 }

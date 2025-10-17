@@ -21,18 +21,25 @@ export class AudioEngine {
   initialize() {
     this.master = new Tone.Gain(0.9);
     const limiter = new Tone.Limiter(-1);
-    this.master.connect(limiter);
-    limiter.toDestination();
-
+    
     this.buses = {
       drums: new Tone.Gain(0.8),
       bass: new Tone.Gain(0.8),
       lead: new Tone.Gain(0.8),
       fx: new Tone.Gain(0.5)
     };
-    Object.values(this.buses).forEach(bus => bus.connect(this.master));
 
     this.nodes = this.createEffects();
+    
+    // Connect master chain with overdrive
+    this.master.chain(this.nodes.masterOverdrive, limiter);
+    limiter.toDestination();
+    
+    // Connect buses to master (except drums which go through distortion)
+    this.buses.bass.connect(this.master);
+    this.buses.lead.connect(this.master);
+    this.buses.fx.connect(this.master);
+
     this.instruments = this.createInstruments();
     this.sequences = this.buildSequences(this.instruments);
 
@@ -47,6 +54,24 @@ export class AudioEngine {
     const leadFxSend = new Tone.Gain(0.45);
     const bassFilter = new Tone.Filter(140, 'lowpass', -12);
     const bassDrive = new Tone.Distortion(0.35);
+    
+    // New distortion and overdrive effects
+    const leadDistortion = new Tone.Distortion({
+      distortion: 0.2,
+      oversample: '2x'
+    });
+    const leadOverdrive = new Tone.Overdrive({
+      drive: 0.3,
+      output: 0.8
+    });
+    const drumDistortion = new Tone.Distortion({
+      distortion: 0.15,
+      oversample: '4x'
+    });
+    const masterOverdrive = new Tone.Overdrive({
+      drive: 0.1,
+      output: 0.9
+    });
 
     return {
       delay,
@@ -54,7 +79,11 @@ export class AudioEngine {
       leadFilter,
       leadFxSend,
       bassFilter,
-      bassDrive
+      bassDrive,
+      leadDistortion,
+      leadOverdrive,
+      drumDistortion,
+      masterOverdrive
     };
   }
 
@@ -63,6 +92,12 @@ export class AudioEngine {
     this.buses.fx.connect(this.nodes.reverb);
     this.nodes.delay.connect(this.master);
     this.nodes.reverb.connect(this.master);
+    
+    // Connect drum distortion
+    this.buses.drums.connect(this.nodes.drumDistortion);
+    this.nodes.drumDistortion.connect(this.master);
+    
+    // Note: Master overdrive is connected in initialize
   }
 
   createInstruments() {
@@ -100,8 +135,12 @@ export class AudioEngine {
       oscillator: { type: 'sawtooth' },
       envelope: { attack: 0.02, decay: 0.35, sustain: 0.4, release: 0.7 }
     });
-    lead.connect(this.nodes.leadFilter);
-    this.nodes.leadFilter.connect(this.buses.lead);
+    lead.chain(
+      this.nodes.leadDistortion,
+      this.nodes.leadOverdrive,
+      this.nodes.leadFilter,
+      this.buses.lead
+    );
     this.nodes.leadFilter.connect(this.nodes.leadFxSend);
     this.nodes.leadFxSend.connect(this.buses.fx);
 

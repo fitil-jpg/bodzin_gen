@@ -525,6 +525,68 @@
       100% { transform: rotate(360deg); }
     }
 
+    /* Morphing animations */
+    @keyframes morphingPulse {
+      0%, 100% { 
+        opacity: 0.6;
+        transform: scale(1);
+      }
+      50% { 
+        opacity: 1;
+        transform: scale(1.05);
+      }
+    }
+
+    @keyframes morphingGlow {
+      0%, 100% { 
+        box-shadow: 0 0 10px rgba(73, 169, 255, 0.3);
+      }
+      50% { 
+        box-shadow: 0 0 20px rgba(73, 169, 255, 0.6), 0 0 30px rgba(255, 73, 175, 0.4);
+      }
+    }
+
+    @keyframes morphingWave {
+      0% { 
+        transform: translateX(-100%);
+        opacity: 0;
+      }
+      50% { 
+        opacity: 1;
+      }
+      100% { 
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+
+    .morphing-active {
+      animation: morphingPulse 2s ease-in-out infinite;
+    }
+
+    .morphing-button {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .morphing-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      animation: morphingWave 2s ease-in-out infinite;
+    }
+
+    .morphing-progress {
+      position: relative;
+      background: linear-gradient(90deg, #49a9ff, #ff49af);
+      background-size: 200% 100%;
+      animation: morphingGlow 1.5s ease-in-out infinite;
+    }
+
     .main-panel {
       display: flex;
       flex-direction: column;
@@ -547,6 +609,80 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .timeline-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .zoom-controls, .pan-controls, .timeline-options {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .zoom-level {
+      font-size: 0.9rem;
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    .timeline-options .toggle {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+      min-height: 32px;
+    }
+
+    .timeline-controls .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .timeline-controls .btn:disabled:hover {
+      transform: none;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .zoom-level {
+      transition: all 0.2s ease;
+    }
+
+    @media (max-width: 768px) {
+      .timeline-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+      }
+
+      .timeline-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+      }
+
+      .zoom-controls, .pan-controls, .timeline-options {
+        gap: 0.25rem;
+      }
+
+      .timeline-controls .btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+        min-height: 36px;
+        min-width: 36px;
+      }
+
+      .zoom-level {
+        font-size: 0.8rem;
+        min-width: 40px;
+      }
     }
 
     #sectionLabel {
@@ -559,6 +695,13 @@
       font-size: 0.9rem;
       color: var(--muted);
       font-weight: 500;
+    }
+
+    #patternStatus {
+      font-size: 0.9rem;
+      color: var(--accent);
+      font-weight: 600;
+      transition: all 0.3s ease;
     }
 
     .timeline-container {
@@ -585,10 +728,253 @@
       border-radius: 0.5rem;
       opacity: 0.8;
       transition: opacity 0.3s ease;
+      touch-action: manipulation;
     }
 
     #waveform:hover {
       opacity: 1;
+    }
+
+    /* Mobile gesture controls */
+    .gesture-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .gesture-indicator {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background: rgba(73, 169, 255, 0.8);
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: white;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
+    }
+
+    .gesture-indicator.active {
+      opacity: 1;
+    }
+
+    /* Mobile timeline touch controls */
+    .timeline-touch-controls {
+      position: relative;
+      touch-action: pan-x pinch-zoom;
+    }
+
+    .timeline-touch-controls::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      z-index: 1;
+    }
+
+    /* Mobile control panels */
+    .mobile-control-panel {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(24, 24, 29, 0.95);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      padding: 1rem;
+      z-index: 20;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .mobile-control-panel.active {
+      transform: translateY(0);
+    }
+
+    .mobile-control-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .mobile-tab {
+      flex: 1;
+      min-width: 80px;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .mobile-tab.active {
+      background: var(--accent);
+      color: #020205;
+      border-color: var(--accent);
+    }
+
+    .mobile-control-content {
+      max-height: 60vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Mobile floating action button */
+    .mobile-fab {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--accent), #3d8bff);
+      border: none;
+      border-radius: 50%;
+      color: #020205;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(73, 169, 255, 0.4);
+      z-index: 15;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mobile-fab:active {
+      transform: scale(0.95);
+    }
+
+    /* Mobile timeline gestures */
+    .timeline-gesture-zone {
+      position: relative;
+      touch-action: pan-x;
+      cursor: grab;
+    }
+
+    .timeline-gesture-zone:active {
+      cursor: grabbing;
+    }
+
+    /* Mobile parameter editing */
+    .mobile-parameter-editor {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(15, 15, 18, 0.95);
+      backdrop-filter: blur(12px);
+      z-index: 25;
+      display: none;
+      flex-direction: column;
+      padding: 1rem;
+    }
+
+    .mobile-parameter-editor.active {
+      display: flex;
+    }
+
+    .parameter-editor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .parameter-editor-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .parameter-editor-close {
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      color: var(--text);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .parameter-editor-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .parameter-value-display {
+      text-align: center;
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: 2rem 0;
+    }
+
+    .parameter-slider-container {
+      position: relative;
+      margin: 2rem 0;
+    }
+
+    .parameter-slider {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .parameter-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
+    }
+
+    .parameter-slider::-moz-range-thumb {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 4px 12px rgba(73, 169, 255, 0.4);
     }
 
     @media (max-width: 1024px) {
@@ -654,6 +1040,20 @@
       .filter-select {
         min-width: 120px;
       }
+    .led-indicators {
+      gap: 6px;
+      padding: 6px 8px;
+      margin-bottom: 8px;
+    }
+
+    .led-indicator {
+      width: 10px;
+      height: 10px;
+    }
+
+    .led-label {
+      font-size: 9px;
+    }
 
     .control-section {
       margin-bottom: 1.5rem;
@@ -1163,6 +1563,121 @@
       }
     }
 
+    /* LED Indicator Styles */
+    .led-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .led-indicator.active {
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(73, 169, 255, 0.6);
+      border-color: rgba(73, 169, 255, 0.8);
+      animation: ledPulse 1.5s ease-in-out infinite;
+    }
+
+    .led-indicator.active::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      animation: ledGlow 2s ease-in-out infinite;
+    }
+
+    .led-indicator.drums.active {
+      background: #ff6b6b;
+      box-shadow: 0 0 8px rgba(255, 107, 107, 0.6);
+      border-color: rgba(255, 107, 107, 0.8);
+      animation-delay: 0s;
+    }
+
+    .led-indicator.bass.active {
+      background: #4ecdc4;
+      box-shadow: 0 0 8px rgba(78, 205, 196, 0.6);
+      border-color: rgba(78, 205, 196, 0.8);
+      animation-delay: 0.2s;
+    }
+
+    .led-indicator.lead.active {
+      background: #45b7d1;
+      box-shadow: 0 0 8px rgba(69, 183, 209, 0.6);
+      border-color: rgba(69, 183, 209, 0.8);
+      animation-delay: 0.4s;
+    }
+
+    .led-indicator.fx.active {
+      background: #96ceb4;
+      box-shadow: 0 0 8px rgba(150, 206, 180, 0.6);
+      border-color: rgba(150, 206, 180, 0.8);
+      animation-delay: 0.6s;
+    }
+
+    @keyframes ledPulse {
+      0%, 100% { 
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% { 
+        transform: scale(1.1);
+        opacity: 0.8;
+      }
+    }
+
+    @keyframes ledGlow {
+      0%, 100% { 
+        opacity: 0.8;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      50% { 
+        opacity: 0.4;
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+    }
+
+    .led-indicators {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(4px);
+      transition: all 0.3s ease;
+    }
+
+    .led-indicators:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .led-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .led-label {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
     /* High DPI display optimizations */
     @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
       .btn, .toggle {
@@ -1183,6 +1698,127 @@
 
       .timeline-card {
         min-height: 150px;
+      }
+    }
+
+    /* Preset Library Styles */
+    .preset-modal {
+      font-family: "Inter", "Segoe UI", sans-serif;
+    }
+
+    .preset-modal-content {
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .preset-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preset-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .preset-card:hover::before {
+      left: 100%;
+    }
+
+    .preset-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .category-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateX(4px);
+    }
+
+    .preset-search:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(73, 169, 255, 0.2);
+    }
+
+    .preset-search::placeholder {
+      color: var(--muted);
+    }
+
+    .preset-actions .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .preset-actions .btn:disabled:hover {
+      transform: none;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    /* Mobile optimizations for preset library */
+    @media (max-width: 768px) {
+      .preset-modal-content {
+        width: 95%;
+        max-height: 95vh;
+        margin: 2.5vh auto;
+        transform: none;
+        top: auto;
+        left: auto;
+      }
+
+      .preset-sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        max-height: 200px;
+        overflow-y: auto;
+      }
+
+      .preset-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+      }
+
+      .preset-footer {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+      }
+
+      .preset-actions {
+        justify-content: center;
+      }
+
+      .preset-actions .btn {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .preset-header {
+        padding: 1rem;
+      }
+
+      .preset-header h2 {
+        font-size: 1.2rem;
+      }
+
+      .preset-card {
+        padding: 1rem;
+      }
+
+      .preset-card h3 {
+        font-size: 1rem;
+      }
+
+      .preset-footer {
+        padding: 1rem;
       }
     }
   </style>
@@ -1230,20 +1866,130 @@
           <input type="checkbox" id="midiLearnToggle">
           MIDI Learn
         </label>
+        <button id="morphToLiftButton" class="btn">Morph to Lift</button>
+        <button id="morphToPeakButton" class="btn">Morph to Peak</button>
+        <button id="morphToBreakButton" class="btn">Morph to Break</button>
         <button id="exportMixButton" class="btn">Export Mix</button>
         <button id="exportStemsButton" class="btn">Export Stems</button>
+        <button id="exportChainButton" class="btn">Export Chain</button>
+        <button id="importChainButton" class="btn">Import Chain</button>
+      </div>
+      <div class="header-group" aria-label="Pattern Variations">
+        <button id="patternAButton" class="btn btn-primary">Pattern A</button>
+        <button id="patternBButton" class="btn">Pattern B</button>
+        <button id="patternCButton" class="btn">Pattern C</button>
+        <button id="randomizePatternButton" class="btn">Randomize</button>
       </div>
     </header>
     <div class="app-layout">
       <aside class="sidebar">
         <h2>Sound Controls</h2>
         <div id="controls"></div>
+        
+        <!-- Pattern Chaining Controls -->
+        <div class="control-section">
+          <h3>Pattern Chaining</h3>
+          <div class="control-description">
+            Chain multiple patterns together to create longer, evolving sequences. Perfect for extended music generation.
+          </div>
+          
+          <div class="control-row">
+            <label class="label">Enable Chaining</label>
+            <div class="control-input">
+              <label class="toggle">
+                <input type="checkbox" id="patternChainingToggle">
+                <span>Active</span>
+              </label>
+            </div>
+            <div class="control-value" id="chainingStatus">Off</div>
+          </div>
+          
+          <div class="control-row">
+            <label class="label">Chain Length</label>
+            <div class="control-input">
+              <input type="range" id="chainLengthSlider" min="2" max="8" value="4" step="1">
+            </div>
+            <div class="control-value" id="chainLengthValue">4</div>
+          </div>
+          
+          <div class="control-row">
+            <label class="label">Variation Intensity</label>
+            <div class="control-input">
+              <input type="range" id="variationIntensitySlider" min="0" max="1" value="0.3" step="0.1">
+            </div>
+            <div class="control-value" id="variationIntensityValue">30%</div>
+          </div>
+          
+          <div class="control-row">
+            <label class="label">Transition Mode</label>
+            <div class="control-input">
+              <select id="transitionModeSelect">
+                <option value="immediate">Immediate</option>
+                <option value="fade">Fade</option>
+                <option value="crossfade">Crossfade</option>
+                <option value="stutter">Stutter</option>
+              </select>
+            </div>
+            <div class="control-value" id="transitionModeValue">Immediate</div>
+          </div>
+          
+          <div class="control-row">
+            <label class="label">Chain Position</label>
+            <div class="control-input">
+              <input type="range" id="chainPositionSlider" min="0" max="3" value="0" step="1" disabled>
+            </div>
+            <div class="control-value" id="chainPositionValue">1/4</div>
+          </div>
+        </div>
       </aside>
       <main class="main-panel">
         <section class="timeline-card">
           <div class="timeline-header">
             <div id="sectionLabel">Section: Intro</div>
+            <div class="timeline-controls">
+              <div class="zoom-controls">
+                <button id="zoomOut" class="btn btn-outline" title="Zoom Out">−</button>
+                <span id="zoomLevel" class="zoom-level">100%</span>
+                <button id="zoomIn" class="btn btn-outline" title="Zoom In">+</button>
+                <button id="zoomFit" class="btn btn-outline" title="Fit to Window">Fit</button>
+              </div>
+              <div class="pan-controls">
+                <button id="panLeft" class="btn btn-outline" title="Pan Left">←</button>
+                <button id="panRight" class="btn btn-outline" title="Pan Right">→</button>
+                <button id="goToStart" class="btn btn-outline" title="Go to Start">⏮</button>
+                <button id="goToEnd" class="btn btn-outline" title="Go to End">⏭</button>
+              </div>
+              <div class="timeline-options">
+                <label class="toggle" for="snapToGridToggle">
+                  <input type="checkbox" id="snapToGridToggle" checked>
+                  Snap
+                </label>
+                <label class="toggle" for="showRulerToggle">
+                  <input type="checkbox" id="showRulerToggle" checked>
+                  Ruler
+                </label>
+              </div>
+            </div>
             <div id="status">Status: Idle</div>
+            <div id="patternStatus">Pattern: A</div>
+          </div>
+          <div class="led-indicators">
+            <div class="led-group">
+              <div class="led-indicator drums" id="led-drums"></div>
+              <div class="led-label">Drums</div>
+            </div>
+            <div class="led-group">
+              <div class="led-indicator bass" id="led-bass"></div>
+              <div class="led-label">Bass</div>
+            </div>
+            <div class="led-group">
+              <div class="led-indicator lead" id="led-lead"></div>
+              <div class="led-label">Lead</div>
+            </div>
+            <div class="led-group">
+              <div class="led-indicator fx" id="led-fx"></div>
+              <div class="led-label">FX</div>
+            </div>
           </div>
           <div class="timeline-container">
             <canvas id="timeline" width="1200" height="240" aria-label="Arrangement timeline"></canvas>
