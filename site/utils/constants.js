@@ -24,6 +24,14 @@ export const CURVE_TYPES = {
   SINE: 'sine'
 };
 
+export const CURVE_TYPES = {
+  LINEAR: 'linear',
+  BEZIER: 'bezier',
+  EXPONENTIAL: 'exponential',
+  LOGARITHMIC: 'logarithmic',
+  SINE: 'sine'
+};
+
 export const AUTOMATION_TRACK_DEFINITIONS = [
   {
     id: 'leadFilter',
@@ -213,6 +221,93 @@ export const CONTROL_SCHEMA = [
         apply: (value) => {
           Tone.Transport.swing = value;
           Tone.Transport.swingSubdivision = '8n';
+        }
+      }
+    ]
+  },
+  {
+    group: 'Pattern Morphing',
+    description: 'Smooth transitions between sections.',
+    controls: [
+      {
+        id: 'morphingEnabled',
+        label: 'Enable Morphing',
+        type: 'checkbox',
+        default: false,
+        apply: (value, app) => {
+          if (app.patternMorphing) {
+            if (value) {
+              app.patternMorphing.startMorphing('Intro', 'Lift', 4, 'easeInOut');
+            } else {
+              app.patternMorphing.resetMorphing();
+            }
+          }
+        }
+      },
+      {
+        id: 'morphSource',
+        label: 'Source Section',
+        type: 'select',
+        options: SECTION_DEFINITIONS.map(section => ({
+          value: section.name,
+          label: section.name
+        })),
+        default: 'Intro',
+        apply: (value, app) => {
+          if (app.patternMorphing && app.patternMorphing.morphingState.isActive) {
+            app.patternMorphing.morphingState.sourceSection = value;
+          }
+        }
+      },
+      {
+        id: 'morphTarget',
+        label: 'Target Section',
+        type: 'select',
+        options: SECTION_DEFINITIONS.map(section => ({
+          value: section.name,
+          label: section.name
+        })),
+        default: 'Lift',
+        apply: (value, app) => {
+          if (app.patternMorphing && app.patternMorphing.morphingState.isActive) {
+            app.patternMorphing.morphingState.targetSection = value;
+          }
+        }
+      },
+      {
+        id: 'morphDuration',
+        label: 'Morph Duration',
+        type: 'range',
+        min: 1,
+        max: 8,
+        step: 1,
+        default: 4,
+        format: value => `${value} steps`,
+        apply: (value, app) => {
+          if (app.patternMorphing) {
+            app.patternMorphing.morphingState.morphDuration = value;
+          }
+        }
+      },
+      {
+        id: 'morphType',
+        label: 'Morph Type',
+        type: 'select',
+        options: [
+          { value: 'linear', label: 'Linear' },
+          { value: 'easeInOut', label: 'Ease In/Out' },
+          { value: 'easeIn', label: 'Ease In' },
+          { value: 'easeOut', label: 'Ease Out' },
+          { value: 'bezier', label: 'Bezier' },
+          { value: 'exponential', label: 'Exponential' },
+          { value: 'logarithmic', label: 'Logarithmic' },
+          { value: 'sine', label: 'Sine' }
+        ],
+        default: 'easeInOut',
+        apply: (value, app) => {
+          if (app.patternMorphing) {
+            app.patternMorphing.morphingState.easingFunction = value;
+          }
         }
       }
     ]

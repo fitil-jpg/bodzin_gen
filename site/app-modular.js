@@ -7,6 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { PatternMorphing } from './modules/pattern-morphing.js';
 import { PatternChainManager } from './modules/pattern-chain-manager.js';
 import { MobileGestures } from './modules/mobile-gestures.js';
 import { PresetManager } from './modules/preset-manager.js';
@@ -45,6 +46,7 @@ function createApp() {
     midi: null,
     storage: null,
     status: null,
+    patternMorphing: null,
     patternChain: null,
     mobileGestures: null,
     presetManager: null,
@@ -86,6 +88,7 @@ async function initializeApp(app) {
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
+  app.patternMorphing = new PatternMorphing(app);
   app.mobileGestures = new MobileGestures(app);
   app.presetManager = new PresetManager(app);
   app.presetLibraryUI = new PresetLibraryUI(app);
@@ -168,6 +171,10 @@ function setupButtons(app) {
   const exportStemsBtn = document.getElementById('exportStemsButton');
   const midiToggle = document.getElementById('midiLearnToggle');
   
+  // Morphing buttons
+  const morphToLiftBtn = document.getElementById('morphToLiftButton');
+  const morphToPeakBtn = document.getElementById('morphToPeakButton');
+  const morphToBreakBtn = document.getElementById('morphToBreakButton');
   // Pattern variation buttons
   const patternABtn = document.getElementById('patternAButton');
   const patternBBtn = document.getElementById('patternBButton');
@@ -196,6 +203,21 @@ function setupButtons(app) {
     app.midi.setLearning(enabled);
   });
   
+  // Morphing button handlers
+  morphToLiftBtn?.addEventListener('click', () => {
+    const currentSection = app.patternMorphing?.getCurrentSection() || 'Intro';
+    app.patternMorphing?.startMorphing(currentSection, 'Lift', 4, 'easeInOut');
+  });
+  
+  morphToPeakBtn?.addEventListener('click', () => {
+    const currentSection = app.patternMorphing?.getCurrentSection() || 'Intro';
+    app.patternMorphing?.startMorphing(currentSection, 'Peak', 4, 'easeInOut');
+  });
+  
+  morphToBreakBtn?.addEventListener('click', () => {
+    const currentSection = app.patternMorphing?.getCurrentSection() || 'Intro';
+    app.patternMorphing?.startMorphing(currentSection, 'Break', 4, 'easeInOut');
+  });
   // Pattern variation button handlers
   patternABtn?.addEventListener('click', () => switchPattern(app, 'A'));
   patternBBtn?.addEventListener('click', () => switchPattern(app, 'B'));
@@ -592,6 +614,14 @@ function setupAutomationScheduling(app) {
   app.automationEvent = Tone.Transport.scheduleRepeat(time => {
     const step = app.automationStep % STEP_COUNT;
     app.timeline.currentStep = step;
+    
+    // Update pattern morphing
+    if (app.patternMorphing) {
+      const stepProgress = step / STEP_COUNT;
+      app.patternMorphing.updateMorphing(stepProgress);
+      app.patternMorphing.applyMorphedPattern();
+    }
+    
     applyAutomationForStep(app, step, time);
     syncSectionState(app, step);
     
