@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pattern Morphing Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f0f12;
+      color: #f1f1f4;
+      padding: 20px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 1px solid #2a2a33;
+      border-radius: 8px;
+    }
+    button {
+      background: #49a9ff;
+      color: #020205;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #5bb3ff;
+    }
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(73, 169, 255, 0.1);
+      border-radius: 4px;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.39/Tone.min.js"></script>
+</head>
+<body>
+  <h1>Pattern Morphing Test</h1>
+  
+  <div class="test-section">
+    <h2>Morphing Controls</h2>
+    <button onclick="testMorphing('Intro', 'Lift')">Morph: Intro → Lift</button>
+    <button onclick="testMorphing('Lift', 'Peak')">Morph: Lift → Peak</button>
+    <button onclick="testMorphing('Peak', 'Break')">Morph: Peak → Break</button>
+    <button onclick="testMorphing('Break', 'Intro')">Morph: Break → Intro</button>
+    <button onclick="resetMorphing()">Reset Morphing</button>
+  </div>
+  
+  <div class="test-section">
+    <h2>Status</h2>
+    <div id="status" class="status">Ready to test pattern morphing</div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Pattern Preview</h2>
+    <div id="pattern-preview">No pattern selected</div>
+  </div>
+
+  <script type="module">
+    import { PatternMorphing } from './modules/pattern-morphing.js';
+    
+    // Create a mock app object
+    const mockApp = {
+      automation: {
+        sections: [
+          { name: 'Intro', start: 0, end: 3 },
+          { name: 'Lift', start: 4, end: 7 },
+          { name: 'Peak', start: 8, end: 11 },
+          { name: 'Break', start: 12, end: 15 }
+        ],
+        tracks: []
+      },
+      automationStep: 0,
+      status: {
+        updateStatus: (message) => {
+          document.getElementById('status').textContent = message;
+        }
+      }
+    };
+    
+    // Initialize pattern morphing
+    const patternMorphing = new PatternMorphing(mockApp);
+    mockApp.patternMorphing = patternMorphing;
+    
+    // Test functions
+    window.testMorphing = (source, target) => {
+      const success = patternMorphing.startMorphing(source, target, 4, 'easeInOut');
+      if (success) {
+        document.getElementById('status').textContent = `Morphing: ${source} → ${target}`;
+        updatePatternPreview();
+      } else {
+        document.getElementById('status').textContent = `Failed to start morphing: ${source} → ${target}`;
+      }
+    };
+    
+    window.resetMorphing = () => {
+      patternMorphing.resetMorphing();
+      document.getElementById('status').textContent = 'Morphing reset';
+      updatePatternPreview();
+    };
+    
+    function updatePatternPreview() {
+      const currentPattern = patternMorphing.getCurrentSectionPattern();
+      const preview = document.getElementById('pattern-preview');
+      
+      if (patternMorphing.morphingState.isActive) {
+        const morphedPattern = patternMorphing.getMorphedPattern();
+        preview.innerHTML = `
+          <h3>Morphing: ${patternMorphing.morphingState.sourceSection} → ${patternMorphing.morphingState.targetSection}</h3>
+          <p>Progress: ${Math.round(patternMorphing.morphingState.morphProgress * 100)}%</p>
+          <p>Eased Progress: ${Math.round(patternMorphing.getEasedProgress() * 100)}%</p>
+          <h4>Automation Tracks:</h4>
+          <ul>
+            ${Object.keys(morphedPattern.automation).map(trackId => 
+              `<li>${trackId}: [${morphedPattern.automation[trackId].map(v => v.toFixed(2)).join(', ')}]</li>`
+            ).join('')}
+          </ul>
+        `;
+      } else {
+        const currentSection = patternMorphing.getCurrentSection();
+        preview.innerHTML = `
+          <h3>Current Section: ${currentSection}</h3>
+          <h4>Automation Tracks:</h4>
+          <ul>
+            ${Object.keys(currentPattern.automation).map(trackId => 
+              `<li>${trackId}: [${currentPattern.automation[trackId].map(v => v.toFixed(2)).join(', ')}]</li>`
+            ).join('')}
+          </ul>
+        `;
+      }
+    }
+    
+    // Initialize
+    updatePatternPreview();
+    
+    // Simulate morphing progress
+    setInterval(() => {
+      if (patternMorphing.morphingState.isActive) {
+        const stepProgress = (Date.now() % 4000) / 4000; // 4 second cycle
+        patternMorphing.updateMorphing(stepProgress);
+        updatePatternPreview();
+      }
+    }, 100);
+  </script>
+</body>
+</html>
