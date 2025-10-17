@@ -120,6 +120,88 @@ export const AUTOMATION_TRACK_DEFINITIONS = [
       1, 0.95, 0.9, 0.85, 0.8, 0.75, 0.7, 0.65
     ]
   },
+  // Reverb automation tracks
+  {
+    id: 'reverbMix',
+    label: 'Reverb Mix',
+    color: '#ff8c42',
+    curve: [
+      0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
+      0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15
+    ]
+  },
+  {
+    id: 'reverbPreDelay',
+    label: 'Reverb PreDelay',
+    color: '#ff6b6b',
+    curve: [
+      0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045,
+      0.05, 0.045, 0.04, 0.035, 0.03, 0.025, 0.02, 0.015
+    ]
+  },
+  {
+    id: 'reverbRoomSize',
+    label: 'Reverb Room Size',
+    color: '#ff9ff3',
+    curve: [
+      0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1,
+      0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2
+    ]
+  },
+  // Delay automation tracks
+  {
+    id: 'delayTime',
+    label: 'Delay Time',
+    color: '#54a0ff',
+    curve: [
+      0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1,
+      0.875, 0.75, 0.625, 0.5, 0.375, 0.25, 0.125, 0.1
+    ]
+  },
+  {
+    id: 'delayMix',
+    label: 'Delay Mix',
+    color: '#5f27cd',
+    curve: [
+      0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2,
+      0.1, 0.15, 0.2, 0.25, 0.3, 0.25, 0.2, 0.15
+    ]
+  },
+  {
+    id: 'delayFilter',
+    label: 'Delay Filter',
+    color: '#00d2d3',
+    curve: [
+      0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+      1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3
+    ]
+  },
+  // Distortion automation tracks
+  {
+    id: 'distortionAmount',
+    label: 'Distortion Amount',
+    color: '#ff3838',
+    curve: [
+      0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8,
+      0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2
+    ]
+  },
+  {
+    id: 'distortionTone',
+    label: 'Distortion Tone',
+    color: '#ff9f43',
+    curve: [
+      0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+      1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3
+    ]
+  },
+  {
+    id: 'distortionMix',
+    label: 'Distortion Mix',
+    color: '#ee5a24',
+    curve: [
+      0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
+      0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15
   {
     id: 'sidechainAmount',
     label: 'Sidechain Amount',

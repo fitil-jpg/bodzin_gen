@@ -90,8 +90,25 @@ export class AudioEngine {
   }
 
   createEffects() {
+    // Enhanced delay with more parameters
     const delay = new Tone.FeedbackDelay('8n', 0.38);
-    const reverb = new Tone.Reverb({ decay: 6, wet: 0.28, preDelay: 0.02 });
+    const delayFilter = new Tone.Filter(8000, 'lowpass', -12);
+    const delayMix = new Tone.Gain(0.3);
+    
+    // Enhanced reverb with more parameters
+    const reverb = new Tone.Reverb({ 
+      decay: 6, 
+      wet: 0.28, 
+      preDelay: 0.02,
+      roomSize: 0.7
+    });
+    
+    // Additional distortion effects
+    const distortion = new Tone.Distortion(0.5);
+    const distortionFilter = new Tone.Filter(2000, 'lowpass', -12);
+    const distortionMix = new Tone.Gain(0.4);
+    
+    // Existing effects
     const leadFilter = new Tone.Filter(520, 'lowpass', -12);
     const leadFxSend = new Tone.Gain(0.45);
     const bassFilter = new Tone.Filter(140, 'lowpass', -12);
@@ -131,7 +148,12 @@ export class AudioEngine {
 
     return {
       delay,
+      delayFilter,
+      delayMix,
       reverb,
+      distortion,
+      distortionFilter,
+      distortionMix,
       leadFilter,
       leadFxSend,
       bassFilter,
@@ -217,11 +239,21 @@ export class AudioEngine {
   }
 
   connectEffects() {
+    // Connect delay chain: fx -> delay -> delayFilter -> delayMix -> master
     this.buses.fx.connect(this.nodes.delay);
+    this.nodes.delay.connect(this.nodes.delayFilter);
+    this.nodes.delayFilter.connect(this.nodes.delayMix);
+    this.nodes.delayMix.connect(this.master);
+    
+    // Connect reverb: fx -> reverb -> master
     this.buses.fx.connect(this.nodes.reverb);
-    this.nodes.delay.connect(this.master);
     this.nodes.reverb.connect(this.master);
     
+    // Connect distortion chain: fx -> distortion -> distortionFilter -> distortionMix -> master
+    this.buses.fx.connect(this.nodes.distortion);
+    this.nodes.distortion.connect(this.nodes.distortionFilter);
+    this.nodes.distortionFilter.connect(this.nodes.distortionMix);
+    this.nodes.distortionMix.connect(this.master);
     // Connect EQ to master bus
     this.nodes.eq.chain.connect(this.master);
     // Initialize sidechain state
