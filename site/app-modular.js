@@ -7,6 +7,10 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { PresetManager } from './modules/preset-manager.js';
+import { PresetLibraryUI } from './modules/preset-library-ui.js';
+import { PresetManager } from './modules/preset-manager.js';
+import { PresetLibraryUI } from './modules/preset-library-ui.js';
 import { PatternVariationManager } from './modules/pattern-variation-manager.js';
 
 import { 
@@ -39,6 +43,10 @@ function createApp() {
     midi: null,
     storage: null,
     status: null,
+    presetManager: null,
+    presetLibraryUI: null,
+    presetManager: null,
+    presetLibraryUI: null,
     patternVariation: null,
     
     // State
@@ -73,6 +81,10 @@ async function initializeApp(app) {
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
+  app.presetManager = new PresetManager(app);
+  app.presetLibraryUI = new PresetLibraryUI(app);
+  app.presetManager = new PresetManager(app);
+  app.presetLibraryUI = new PresetLibraryUI(app);
 
   // Initialize timeline
   app.timeline.initialize();
@@ -111,6 +123,8 @@ async function initializeApp(app) {
   // Initialize MIDI
   await app.midi.initialize();
   
+  // Initialize preset manager
+  app.presetManager.initialize();
   // Setup keyboard shortcuts
   setupKeyboardShortcuts(app);
   
@@ -143,8 +157,8 @@ function setupButtons(app) {
 
   startBtn?.addEventListener('click', () => startPlayback(app));
   stopBtn?.addEventListener('click', () => stopPlayback(app));
-  savePresetBtn?.addEventListener('click', () => savePreset(app));
-  loadPresetBtn?.addEventListener('click', () => triggerPresetLoad(app));
+  savePresetBtn?.addEventListener('click', () => app.presetLibraryUI.showSavePresetDialog());
+  loadPresetBtn?.addEventListener('click', () => app.presetLibraryUI.open());
   exportMixBtn?.addEventListener('click', () => exportMix(app));
   exportStemsBtn?.addEventListener('click', () => exportStems(app));
   midiToggle?.addEventListener('change', event => {
