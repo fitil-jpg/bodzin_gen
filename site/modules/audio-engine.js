@@ -28,6 +28,15 @@ export class AudioEngine {
   }
 
   initialize() {
+    // Don't create Tone.js objects until audio context is started
+    // This will be done in initializeAudio() after user interaction
+    this.master = null;
+    this.audioInitialized = false;
+  }
+
+  async initializeAudio() {
+    if (this.audioInitialized) return;
+    
     this.master = new Tone.Gain(0.9);
     
     // Create compressor/limiter chain with enhanced settings
@@ -52,22 +61,17 @@ export class AudioEngine {
     this.compressorMakeup.connect(this.limiter);
     this.limiter.toDestination();
 
-    const limiter = new Tone.Limiter(-1);
-    
     this.buses = {
       drums: new Tone.Gain(0.8),
       bass: new Tone.Gain(0.8),
       lead: new Tone.Gain(0.8),
       fx: new Tone.Gain(0.5)
     };
-    // Connect all buses to EQ chain instead of directly to master
-    Object.values(this.buses).forEach(bus => bus.connect(this.nodes.eq.chain));
 
     this.nodes = this.createEffects();
     
-    // Connect master chain with overdrive
-    this.master.chain(this.nodes.masterOverdrive, limiter);
-    limiter.toDestination();
+    // Connect all buses to EQ chain instead of directly to master
+    Object.values(this.buses).forEach(bus => bus.connect(this.nodes.eq.chain));
     
     // Connect buses to master (except drums which go through distortion)
     this.buses.bass.connect(this.master);
@@ -84,8 +88,8 @@ export class AudioEngine {
     this.connectLFOs();
     this.probabilityManager.initializeProbabilityTracks();
 
-    this.connectEffects();
     this.connectBuses();
+    this.audioInitialized = true;
     return this;
   }
 

@@ -10,6 +10,15 @@ import { StatusManager } from './modules/status-manager.js';
 import { CurveEditor } from './modules/curve-editor.js';
 import { LFOManager } from './modules/lfo-manager.js';
 import { EQVisualizer } from './modules/eq-visualizer.js';
+import { PatternChainManager } from './modules/pattern-chain-manager.js';
+import { PatternVariationManager } from './modules/pattern-variation-manager.js';
+import { CommunityPresetManager } from './modules/community-preset-manager.js';
+import { PresetVersioning } from './modules/preset-versioning.js';
+import { SearchFilter } from './modules/search-filter.js';
+import { PatternMorphing } from './modules/pattern-morphing.js';
+import { MobileGestures } from './modules/mobile-gestures.js';
+import { PresetManager } from './modules/preset-manager.js';
+import { PresetLibraryUI } from './modules/preset-library-ui.js';
 
 import { 
   STEP_COUNT, 
@@ -97,6 +106,13 @@ function setupUserInteractionHandler(app) {
         await Tone.start();
         app.audioContextStarted = true;
         console.log('Audio context started successfully');
+        
+        // Initialize audio engine now that audio context is running
+        await app.audio.initializeAudio();
+        
+        // Initialize waveform analyser now that audio context is running
+        initializeWaveformAnalyser(app);
+        
         app.status.set('Audio ready - click Start to begin');
       }
     } catch (error) {
@@ -408,6 +424,11 @@ async function ensureTransportRunning(app) {
     await Tone.start();
   }
   
+  // Ensure audio engine is initialized
+  if (!app.audio.audioInitialized) {
+    await app.audio.initializeAudio();
+  }
+  
   await app.audio.startSequences();
   Tone.Transport.start();
   return true;
@@ -544,7 +565,7 @@ function buildPresetPayload(app, name) {
       sections: app.automation.sections.map(section => ({ ...section }))
     },
     midiMappings: { ...app.midi.mappings },
-    probabilitySettings: app.audio.exportProbabilitySettings()
+    probabilitySettings: app.audio.exportProbabilitySettings(),
     patternVariations: app.patternVariation ? app.patternVariation.getPatternForPreset() : null
   };
 }
@@ -595,30 +616,34 @@ function applyPreset(app, presetData) {
   } catch (error) {
     console.error('Failed to apply preset:', error);
     app.status.set(`Preset load failed: ${error.message}`);
-  if (presetData.controls) {
-    Object.entries(presetData.controls).forEach(([id, value]) => {
-      const control = app.uiControls.getControlDefinition(id);
-      if (control) {
-        app.uiControls.setControlValue(control, value, { silent: true });
-      }
-    });
-    app.storage.saveControlState(app.controlState);
-  }
-  if (presetData.automation) {
-    applyAutomationPreset(app, presetData.automation);
-    app.timeline.draw();
-  }
-  if (presetData.midiMappings) {
-    app.midi.mappings = { ...presetData.midiMappings };
-    app.midi.saveMappings();
-  }
-  if (presetData.probabilitySettings) {
-    app.audio.importProbabilitySettings(presetData.probabilitySettings);
-  if (presetData.patternVariations && app.patternVariation) {
-    app.patternVariation.applyPatternFromPreset(presetData.patternVariations);
-  }
-  if (presetData.name) {
-    app.presetName = presetData.name;
+    
+    // Fallback to basic preset loading
+    if (presetData.controls) {
+      Object.entries(presetData.controls).forEach(([id, value]) => {
+        const control = app.uiControls.getControlDefinition(id);
+        if (control) {
+          app.uiControls.setControlValue(control, value, { silent: true });
+        }
+      });
+      app.storage.saveControlState(app.controlState);
+    }
+    if (presetData.automation) {
+      applyAutomationPreset(app, presetData.automation);
+      app.timeline.draw();
+    }
+    if (presetData.midiMappings) {
+      app.midi.mappings = { ...presetData.midiMappings };
+      app.midi.saveMappings();
+    }
+    if (presetData.probabilitySettings) {
+      app.audio.importProbabilitySettings(presetData.probabilitySettings);
+    }
+    if (presetData.patternVariations && app.patternVariation) {
+      app.patternVariation.applyPatternFromPreset(presetData.patternVariations);
+    }
+    if (presetData.name) {
+      app.presetName = presetData.name;
+    }
   }
 }
 
@@ -765,12 +790,18 @@ function setupWaveform(app) {
   syncWaveformCanvas(app);
   resizeObserver.observe(app.waveform.canvas);
   
+  // Don't create analyser until audio context is started
+  // This will be done in setupUserInteractionHandler after user interaction
+  startWaveformAnimation(app);
+}
+
+function initializeWaveformAnalyser(app) {
+  if (!app.waveform.canvas || app.waveform.analyser) return;
+  
   // Create analyser for waveform visualization
   app.waveform.analyser = new Tone.Analyser('waveform', 1024);
   app.audio.master.connect(app.waveform.analyser);
   app.waveform.dataArray = new Uint8Array(app.waveform.analyser.size);
-  
-  startWaveformAnimation(app);
 }
 
 function setupEQVisualizer(app) {
@@ -969,6 +1000,8 @@ function applyTrackAutomation(app, trackId, value) {
         app.audio.master.volume.rampTo(value * 20 - 20, 0.1);
       }
       break;
+  }
+  
   // Apply LFO modulation
   if (app.lfo) {
     app.lfo.applyModulation();
@@ -1035,20 +1068,10 @@ function applyAutomationTrackValue(app, trackId, value) {
         app.audio.master.volume.value = db;
       }
       break;
-  // Update audio engine context for probability calculations
-  const section = getSectionForStep(app, step);
-  app.audio.updateStepContext(step, section);
-  
-  // Process probability-based triggers
-  if (time !== undefined) {
-    app.audio.processProbabilityTriggers(time);
   }
-  
-  // Apply automation curves to audio parameters
-  if (app.automation && app.automation.tracks) {
-    app.automation.tracks.forEach(track => {
-      const value = track.values[step] || 0;
-      applyAutomationValue(app, track.id, value);
+}
+
+function applyAutomationForStep(app, step, time) {
   if (!app.automation || !app.automation.tracks) return;
   
   // Apply pattern variation if enabled
@@ -1136,6 +1159,8 @@ function applyAutomationValue(app, trackId, value) {
         audio.master.gain.value = 0.1 + (value * 0.8);
       }
       break;
+  }
+  
   // Apply automation value to the appropriate audio parameter
   // This would need to be connected to the actual audio engine parameters
   if (app.audio && app.audio.applyAutomation) {
@@ -1315,6 +1340,8 @@ function addRandomizeAnimation(button) {
     button.style.background = '';
     button.style.borderColor = '';
   }, 200);
+}
+
 function switchPattern(app, patternId) {
   if (!app.patternVariation) return;
   
