@@ -7,6 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { CommunityPresetManager } from './modules/community-preset-manager.js';
 import { PresetVersioning } from './modules/preset-versioning.js';
 import { SearchFilter } from './modules/search-filter.js';
 import { PatternMorphing } from './modules/pattern-morphing.js';
@@ -38,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
   appInstance = createApp();
   initializeApp(appInstance);
   window.bodzinApp = appInstance;
+  window.communityPresetManager = appInstance.communityPresets;
 });
 
 function createApp() {
@@ -49,6 +51,7 @@ function createApp() {
     midi: null,
     storage: null,
     status: null,
+    communityPresets: null,
     searchFilter: null,
     patternMorphing: null,
     patternChain: null,
@@ -92,6 +95,7 @@ async function initializeApp(app) {
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
+  app.communityPresets = new CommunityPresetManager(app);
   app.presetVersioning = new PresetVersioning();
   app.searchFilter = new SearchFilter(app);
   app.patternMorphing = new PatternMorphing(app);
@@ -103,6 +107,9 @@ async function initializeApp(app) {
 
   // Initialize timeline
   app.timeline.initialize();
+
+  // Initialize community presets
+  app.communityPresets.initialize();
 
   // Configure transport
   app.audio.configureTransport();
