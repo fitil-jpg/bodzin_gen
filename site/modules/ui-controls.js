@@ -14,9 +14,26 @@ export class UIControls {
     CONTROL_SCHEMA.forEach(section => {
       const sectionEl = document.createElement('section');
       sectionEl.className = 'control-section';
+      sectionEl.setAttribute('data-group', section.group);
 
       const heading = document.createElement('h3');
       heading.textContent = section.group;
+      
+      // Add compressor status indicator
+      if (section.group === 'Compressor/Limiter') {
+        const statusIndicator = document.createElement('div');
+        statusIndicator.className = 'compressor-status';
+        statusIndicator.id = 'compressorStatus';
+        heading.appendChild(statusIndicator);
+        
+        // Add gain reduction display
+        const gainReductionDisplay = document.createElement('div');
+        gainReductionDisplay.className = 'compressor-ratio-display';
+        gainReductionDisplay.id = 'gainReductionDisplay';
+        gainReductionDisplay.textContent = '0.0 dB';
+        sectionEl.appendChild(gainReductionDisplay);
+      }
+      
       sectionEl.appendChild(heading);
 
       if (section.description) {
@@ -32,6 +49,9 @@ export class UIControls {
         this.createControlRow(sectionEl, control);
       });
     });
+    
+    // Add pattern chaining controls
+    this.setupPatternChainingControls();
   }
 
   createControlRow(sectionEl, control) {
@@ -56,6 +76,9 @@ export class UIControls {
         opt.textContent = option.label;
         input.appendChild(opt);
       });
+    } else if (control.type === 'checkbox') {
+      input = document.createElement('input');
+      input.type = 'checkbox';
     } else {
       input = document.createElement('input');
       input.type = 'range';
@@ -71,6 +94,23 @@ export class UIControls {
     wrap.appendChild(input);
     row.appendChild(wrap);
     row.appendChild(valueEl);
+
+    // Add gain reduction meter for compressor controls
+    if (control.id.includes('compressor') && control.id !== 'compressorBypass' && control.id !== 'compressorSidechain') {
+      const meterContainer = document.createElement('div');
+      meterContainer.className = 'gain-reduction-meter';
+      const meterBar = document.createElement('div');
+      meterBar.className = 'gain-reduction-bar';
+      meterContainer.appendChild(meterBar);
+      row.appendChild(meterContainer);
+    }
+
+    // Add threshold indicator for compressor threshold control
+    if (control.id === 'compressorThreshold') {
+      const thresholdIndicator = document.createElement('div');
+      thresholdIndicator.className = 'threshold-indicator';
+      row.appendChild(thresholdIndicator);
+    }
 
     sectionEl.appendChild(row);
 
@@ -109,6 +149,8 @@ export class UIControls {
   getInputValue(control, input) {
     if (control.type === 'select') {
       return input.value;
+    } else if (control.type === 'checkbox') {
+      return input.checked;
     }
     const numeric = parseFloat(input.value);
     if (!Number.isFinite(numeric)) {
@@ -122,7 +164,9 @@ export class UIControls {
     const entry = this.controls.get(control.id);
     let normalizedValue = value;
     
-    if (control.type !== 'select') {
+    if (control.type === 'checkbox') {
+      normalizedValue = Boolean(value);
+    } else if (control.type !== 'select') {
       const min = Number(control.min);
       const max = Number(control.max);
       normalizedValue = clamp(typeof value === 'number' ? value : parseFloat(value), min, max);
@@ -133,10 +177,17 @@ export class UIControls {
     if (entry) {
       if (control.type === 'select') {
         entry.input.value = String(normalizedValue);
+      } else if (control.type === 'checkbox') {
+        entry.input.checked = normalizedValue;
+        entry.valueEl.textContent = normalizedValue ? 'ON' : 'OFF';
       } else {
         entry.input.value = String(normalizedValue);
+        entry.valueEl.textContent = this.formatControlValue(control, normalizedValue);
       }
-      entry.valueEl.textContent = this.formatControlValue(control, normalizedValue);
+      
+      if (control.type !== 'checkbox') {
+        entry.valueEl.textContent = this.formatControlValue(control, normalizedValue);
+      }
       
       // Add visual feedback animation
       entry.row.style.transform = 'scale(1.02)';
@@ -210,5 +261,140 @@ export class UIControls {
         entry.row.classList.remove('midi-learning');
       }
     });
+  }
+
+  // Update gain reduction meters for compressor visualization
+  updateGainReductionMeters() {
+    if (!this.app.audio || !this.app.audio.compressor) return;
+    
+    const gainReduction = this.app.audio.getGainReduction();
+    const reductionPercent = Math.min(Math.abs(gainReduction) / 20, 1) * 100; // Scale to 0-100%
+    
+    this.controls.forEach(entry => {
+      if (entry.control.id.includes('compressor') && entry.control.id !== 'compressorBypass' && entry.control.id !== 'compressorSidechain') {
+        const meterBar = entry.row.querySelector('.gain-reduction-bar');
+        if (meterBar) {
+          meterBar.style.width = `${reductionPercent}%`;
+        }
+      }
+    });
+  }
+
+  // Start gain reduction meter animation
+  startGainReductionAnimation() {
+    const updateMeters = () => {
+      this.updateGainReductionMeters();
+      this.updateCompressorStatus();
+      requestAnimationFrame(updateMeters);
+    };
+    updateMeters();
+  }
+
+  // Update compressor status indicator
+  updateCompressorStatus() {
+    const statusIndicator = document.getElementById('compressorStatus');
+    if (!statusIndicator || !this.app.audio || !this.app.audio.compressor) return;
+    
+    const gainReduction = this.app.audio.getGainReduction();
+    const isCompressing = Math.abs(gainReduction) > 0.1;
+    
+    statusIndicator.classList.toggle('active', isCompressing);
+    statusIndicator.classList.toggle('compressing', isCompressing && Math.abs(gainReduction) > 3);
+    
+    // Update gain reduction display
+    const gainReductionDisplay = document.getElementById('gainReductionDisplay');
+    if (gainReductionDisplay) {
+      gainReductionDisplay.textContent = `${gainReduction.toFixed(1)} dB`;
+  setupPatternChainingControls() {
+    // Pattern chaining toggle
+    const chainingToggle = document.getElementById('patternChainingToggle');
+    const chainingStatus = document.getElementById('chainingStatus');
+    
+    if (chainingToggle) {
+      chainingToggle.addEventListener('change', (e) => {
+        const enabled = e.target.checked;
+        if (this.app.patternChain) {
+          if (enabled) {
+            this.app.patternChain.startChaining();
+            chainingStatus.textContent = 'On';
+            chainingStatus.style.color = '#49a9ff';
+          } else {
+            this.app.patternChain.stopChaining();
+            chainingStatus.textContent = 'Off';
+            chainingStatus.style.color = '#9a9aac';
+          }
+        }
+      });
+    }
+
+    // Chain length slider
+    const chainLengthSlider = document.getElementById('chainLengthSlider');
+    const chainLengthValue = document.getElementById('chainLengthValue');
+    
+    if (chainLengthSlider) {
+      chainLengthSlider.addEventListener('input', (e) => {
+        const length = parseInt(e.target.value);
+        chainLengthValue.textContent = length;
+        if (this.app.patternChain) {
+          this.app.patternChain.setChainLength(length);
+          // Update chain position slider max
+          const chainPositionSlider = document.getElementById('chainPositionSlider');
+          if (chainPositionSlider) {
+            chainPositionSlider.max = length - 1;
+            this.updateChainPositionDisplay();
+          }
+        }
+      });
+    }
+
+    // Variation intensity slider
+    const variationIntensitySlider = document.getElementById('variationIntensitySlider');
+    const variationIntensityValue = document.getElementById('variationIntensityValue');
+    
+    if (variationIntensitySlider) {
+      variationIntensitySlider.addEventListener('input', (e) => {
+        const intensity = parseFloat(e.target.value);
+        variationIntensityValue.textContent = Math.round(intensity * 100) + '%';
+        if (this.app.patternChain) {
+          this.app.patternChain.setVariationIntensity(intensity);
+        }
+      });
+    }
+
+    // Transition mode select
+    const transitionModeSelect = document.getElementById('transitionModeSelect');
+    const transitionModeValue = document.getElementById('transitionModeValue');
+    
+    if (transitionModeSelect) {
+      transitionModeSelect.addEventListener('change', (e) => {
+        const mode = e.target.value;
+        transitionModeValue.textContent = mode;
+        if (this.app.patternChain) {
+          this.app.patternChain.setTransitionMode(mode);
+        }
+      });
+    }
+
+    // Chain position slider (read-only, shows current position)
+    const chainPositionSlider = document.getElementById('chainPositionSlider');
+    const chainPositionValue = document.getElementById('chainPositionValue');
+    
+    if (chainPositionSlider) {
+      // Update position display periodically
+      setInterval(() => {
+        this.updateChainPositionDisplay();
+      }, 100);
+    }
+  }
+
+  updateChainPositionDisplay() {
+    const chainPositionSlider = document.getElementById('chainPositionSlider');
+    const chainPositionValue = document.getElementById('chainPositionValue');
+    
+    if (this.app.patternChain && chainPositionSlider && chainPositionValue) {
+      const status = this.app.patternChain.getChainStatus();
+      chainPositionSlider.value = status.chainPosition;
+      chainPositionValue.textContent = `${status.chainPosition + 1}/${status.chainLength}`;
+    }
   }
 }

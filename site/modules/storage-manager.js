@@ -58,4 +58,32 @@ export class StorageManager {
       return {};
     }
   }
+
+  savePresetHistory(history) {
+    try {
+      const existingHistory = this.loadPresetHistory();
+      const updatedHistory = [...existingHistory, history].slice(-50); // Keep last 50 entries
+      localStorage.setItem(this.keys.presetHistory, JSON.stringify(updatedHistory));
+    } catch (err) {
+      console.warn('Unable to save preset history', err);
+    }
+  }
+
+  loadPresetHistory() {
+    try {
+      const raw = localStorage.getItem(this.keys.presetHistory);
+      return raw ? JSON.parse(raw) : [];
+    } catch (err) {
+      console.warn('Unable to load preset history', err);
+      return [];
+    }
+  }
+
+  clearPresetHistory() {
+    try {
+      localStorage.removeItem(this.keys.presetHistory);
+    } catch (err) {
+      console.warn('Unable to clear preset history', err);
+    }
+  }
 }
