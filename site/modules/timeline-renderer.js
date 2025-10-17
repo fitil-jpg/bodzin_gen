@@ -44,6 +44,7 @@ export class TimelineRenderer {
     }
     
     this.setupResizeObserver();
+    this.setupCanvasEvents();
     this.syncCanvas();
   }
 
@@ -302,6 +303,32 @@ export class TimelineRenderer {
         this.ctx.fill();
       });
     }
+    
+    // Draw curve editor button
+    this.drawCurveEditorButton(track, trackY, trackAreaHeight, stepWidth, ratio);
+  }
+
+  drawCurveEditorButton(track, trackY, trackAreaHeight, stepWidth, ratio) {
+    const buttonX = this.canvas.width - 30 * ratio;
+    const buttonY = trackY + trackAreaHeight / 2;
+    const buttonSize = 20 * ratio;
+    
+    // Button background
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.ctx.fillRect(buttonX - buttonSize/2, buttonY - buttonSize/2, buttonSize, buttonSize);
+    
+    // Button border
+    this.ctx.strokeStyle = track.color;
+    this.ctx.lineWidth = 1 * ratio;
+    this.ctx.strokeRect(buttonX - buttonSize/2, buttonY - buttonSize/2, buttonSize, buttonSize);
+    
+    // Button icon (curve symbol)
+    this.ctx.strokeStyle = track.color;
+    this.ctx.lineWidth = 2 * ratio;
+    this.ctx.beginPath();
+    this.ctx.moveTo(buttonX - buttonSize/3, buttonY + buttonSize/4);
+    this.ctx.quadraticCurveTo(buttonX, buttonY - buttonSize/4, buttonX + buttonSize/3, buttonY + buttonSize/4);
+    this.ctx.stroke();
   }
 
   drawPatternVariationIndicator(track, trackY, ratio) {
@@ -466,5 +493,42 @@ export class TimelineRenderer {
   updateCurrentStep(step) {
     this.currentStep = step;
     this.draw();
+  }
+
+  setupCanvasEvents() {
+    if (!this.canvas) return;
+    
+    this.canvas.addEventListener('click', (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * this.deviceRatio;
+      const y = (e.clientY - rect.top) * this.deviceRatio;
+      
+      this.handleCanvasClick(x, y);
+    });
+  }
+
+  handleCanvasClick(x, y) {
+    if (!this.app.automation?.tracks) return;
+    
+    const stepWidth = this.canvas.width / 16; // STEP_COUNT
+    const trackHeight = this.canvas.height / Math.max(this.app.automation.tracks.length, 1);
+    
+    this.app.automation.tracks.forEach((track, trackIndex) => {
+      const trackY = trackIndex * trackHeight;
+      const trackAreaHeight = trackHeight - 4 * this.deviceRatio;
+      
+      // Check if click is in curve editor button area
+      const buttonX = this.canvas.width - 30 * this.deviceRatio;
+      const buttonY = trackY + trackAreaHeight / 2;
+      const buttonSize = 20 * this.deviceRatio;
+      
+      if (x >= buttonX - buttonSize/2 && x <= buttonX + buttonSize/2 &&
+          y >= buttonY - buttonSize/2 && y <= buttonY + buttonSize/2) {
+        // Open curve editor for this track
+        if (this.app.curveEditor) {
+          this.app.curveEditor.show(track.id);
+        }
+      }
+    });
   }
 }

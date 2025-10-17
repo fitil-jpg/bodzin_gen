@@ -7,6 +7,7 @@ import { TimelineRenderer } from './modules/timeline-renderer.js';
 import { MidiHandler } from './modules/midi-handler.js';
 import { StorageManager } from './modules/storage-manager.js';
 import { StatusManager } from './modules/status-manager.js';
+import { CurveEditor } from './modules/curve-editor.js';
 import { LFOManager } from './modules/lfo-manager.js';
 import { EQVisualizer } from './modules/eq-visualizer.js';
 
@@ -42,6 +43,7 @@ function createApp() {
     midi: null,
     storage: null,
     status: null,
+    curveEditor: null,
     lfo: null,
     communityPresets: null,
     searchFilter: null,
@@ -90,6 +92,7 @@ async function initializeApp(app) {
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);
+  app.curveEditor = new CurveEditor(app);
   app.lfo = new LFOManager(app).initialize();
   app.communityPresets = new CommunityPresetManager(app);
   app.presetVersioning = new PresetVersioning();
@@ -104,6 +107,8 @@ async function initializeApp(app) {
   // Initialize timeline
   app.timeline.initialize();
 
+  // Initialize curve editor
+  app.curveEditor.initialize();
   // Initialize community presets
   app.communityPresets.initialize();
 
@@ -187,6 +192,7 @@ function setupButtons(app) {
   const presetHistoryBtn = document.getElementById('presetHistoryButton');
   const exportMixBtn = document.getElementById('exportMixButton');
   const exportStemsBtn = document.getElementById('exportStemsButton');
+  const curveEditorBtn = document.getElementById('curveEditorButton');
   const midiToggle = document.getElementById('midiLearnToggle');
   
   // Morphing buttons
@@ -213,6 +219,7 @@ function setupButtons(app) {
   presetHistoryBtn?.addEventListener('click', () => showPresetHistory(app));
   exportMixBtn?.addEventListener('click', () => exportMix(app));
   exportStemsBtn?.addEventListener('click', () => exportStems(app));
+  curveEditorBtn?.addEventListener('click', () => app.curveEditor.show());
   
   // Add pattern chain export/import buttons
   const exportChainBtn = document.getElementById('exportChainButton');
@@ -857,6 +864,60 @@ function updateSectionLabel(app, step, sectionOverride) {
 }
 
 function applyAutomationForStep(app, step, time) {
+  if (!app.automation?.tracks) return;
+  
+  // Apply automation for each track
+  app.automation.tracks.forEach(track => {
+    if (track.values && track.values[step] !== undefined) {
+      const value = track.values[step];
+      applyTrackAutomation(app, track.id, value);
+    }
+  });
+}
+
+function applyTrackAutomation(app, trackId, value) {
+  // Apply automation to audio parameters based on track ID
+  switch (trackId) {
+    case 'leadFilter':
+      if (app.audio?.leadFilter) {
+        app.audio.leadFilter.frequency.rampTo(value * 20000 + 20, 0.1);
+      }
+      break;
+    case 'fxSend':
+      if (app.audio?.fxSend) {
+        app.audio.fxSend.gain.rampTo(value * 20 - 20, 0.1);
+      }
+      break;
+    case 'bassFilter':
+      if (app.audio?.bassFilter) {
+        app.audio.bassFilter.frequency.rampTo(value * 20000 + 20, 0.1);
+      }
+      break;
+    case 'reverbDecay':
+      if (app.audio?.reverb) {
+        app.audio.reverb.decay = value * 10 + 0.1;
+      }
+      break;
+    case 'delayFeedback':
+      if (app.audio?.delay) {
+        app.audio.delay.feedback.rampTo(value, 0.1);
+      }
+      break;
+    case 'bassDrive':
+      if (app.audio?.bassDrive) {
+        app.audio.bassDrive.distortion = value;
+      }
+      break;
+    case 'leadResonance':
+      if (app.audio?.leadResonance) {
+        app.audio.leadResonance.Q.rampTo(value * 50 + 0.1, 0.1);
+      }
+      break;
+    case 'masterVolume':
+      if (app.audio?.master) {
+        app.audio.master.volume.rampTo(value * 20 - 20, 0.1);
+      }
+      break;
   // Apply LFO modulation
   if (app.lfo) {
     app.lfo.applyModulation();
