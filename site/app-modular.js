@@ -100,6 +100,15 @@ function createApp() {
 }
 
 function setupUserInteractionHandler(app) {
+  // Check if browser supports required audio APIs
+  if (!window.AudioContext && !window.webkitAudioContext) {
+    showUnsupportedBrowserMessage();
+    return;
+  }
+  
+  // Show audio permission request UI
+  showAudioPermissionRequest(app);
+  
   // Function to handle first user interaction
   const handleFirstInteraction = async () => {
     if (app.audioContextStarted) return;
@@ -107,7 +116,7 @@ function setupUserInteractionHandler(app) {
     try {
       // Start the audio context
       if (Tone.context.state !== 'running') {
-        await Tone.start();
+        await app.audio.startAudioContext();
         app.audioContextStarted = true;
         console.log('Audio context started successfully');
         
@@ -117,6 +126,8 @@ function setupUserInteractionHandler(app) {
         // Initialize waveform analyser now that audio context is running
         initializeWaveformAnalyser(app);
         
+        // Hide permission request and show ready status
+        hideAudioPermissionRequest();
         app.status.set('Audio ready - click Start to begin');
       }
     } catch (error) {
@@ -139,6 +150,258 @@ function setupUserInteractionHandler(app) {
   }
 }
 
+function showAudioPermissionRequest(app) {
+  // Create permission request overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'audio-permission-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    backdrop-filter: blur(10px);
+    animation: fadeIn 0.3s ease-out;
+  `;
+  
+  // Add CSS animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes slideIn {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    #audio-permission-overlay .btn-primary {
+      animation: pulse 2s infinite;
+    }
+  `;
+  document.head.appendChild(style);
+  
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    border: 1px solid #333;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 450px;
+    text-align: center;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+    animation: slideIn 0.4s ease-out;
+    position: relative;
+  `;
+  
+  const icon = document.createElement('div');
+  icon.innerHTML = '🔊';
+  icon.style.cssText = `
+    font-size: 64px;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 4px 8px rgba(73, 169, 255, 0.3));
+  `;
+  
+  const title = document.createElement('h2');
+  title.textContent = 'Audio Permission Required';
+  title.style.cssText = `
+    color: #fff;
+    margin: 0 0 16px 0;
+    font-size: 28px;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  `;
+  
+  const message = document.createElement('p');
+  message.textContent = 'This application needs permission to play audio. Please click "Allow Audio" to continue.';
+  message.style.cssText = `
+    color: #ccc;
+    margin: 0 0 32px 0;
+    line-height: 1.6;
+    font-size: 16px;
+  `;
+  
+  const button = document.createElement('button');
+  button.textContent = 'Allow Audio';
+  button.className = 'btn btn-primary';
+  button.style.cssText = `
+    padding: 14px 32px;
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 8px;
+    min-width: 160px;
+  `;
+  
+  const loadingSpinner = document.createElement('div');
+  loadingSpinner.style.cssText = `
+    display: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ffffff40;
+    border-top: 2px solid #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+  `;
+  
+  // Add spinner animation
+  const spinnerStyle = document.createElement('style');
+  spinnerStyle.textContent = `
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `;
+  document.head.appendChild(spinnerStyle);
+  
+  button.addEventListener('click', async () => {
+    try {
+      // Show loading state
+      button.style.display = 'none';
+      loadingSpinner.style.display = 'block';
+      message.textContent = 'Requesting audio permission...';
+      
+      // Request audio permission explicitly
+      await requestAudioPermission(app);
+      overlay.remove();
+    } catch (error) {
+      console.error('Audio permission denied:', error);
+      message.textContent = 'Audio permission was denied. Please refresh the page and try again.';
+      message.style.color = '#ff6b6b';
+      button.style.display = 'block';
+      loadingSpinner.style.display = 'none';
+      button.textContent = 'Try Again';
+    }
+  });
+  
+  dialog.appendChild(icon);
+  dialog.appendChild(title);
+  dialog.appendChild(message);
+  dialog.appendChild(loadingSpinner);
+  dialog.appendChild(button);
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+}
+
+function hideAudioPermissionRequest() {
+  const overlay = document.getElementById('audio-permission-overlay');
+  if (overlay) {
+    overlay.remove();
+  }
+}
+
+function showUnsupportedBrowserMessage() {
+  const overlay = document.createElement('div');
+  overlay.id = 'unsupported-browser-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  `;
+  
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+    border: 1px solid #333;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 450px;
+    text-align: center;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+  `;
+  
+  const icon = document.createElement('div');
+  icon.innerHTML = '⚠️';
+  icon.style.cssText = `
+    font-size: 64px;
+    margin-bottom: 20px;
+  `;
+  
+  const title = document.createElement('h2');
+  title.textContent = 'Unsupported Browser';
+  title.style.cssText = `
+    color: #fff;
+    margin: 0 0 16px 0;
+    font-size: 28px;
+    font-weight: 700;
+  `;
+  
+  const message = document.createElement('p');
+  message.textContent = 'Your browser does not support the required audio features. Please use a modern browser like Chrome, Firefox, Safari, or Edge.';
+  message.style.cssText = `
+    color: #ccc;
+    margin: 0 0 32px 0;
+    line-height: 1.6;
+    font-size: 16px;
+  `;
+  
+  dialog.appendChild(icon);
+  dialog.appendChild(title);
+  dialog.appendChild(message);
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+}
+
+async function requestAudioPermission(app) {
+  try {
+    // Method 1: Try to create and start an audio context directly
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Try to resume the context (this will trigger permission request in some browsers)
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+    
+    // Create a short audio buffer to ensure permission is granted
+    const buffer = audioContext.createBuffer(1, 1, 22050);
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start();
+    
+    // Wait a moment to ensure the audio plays
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Close the temporary context
+    await audioContext.close();
+    
+    // Now start the app's audio context
+    await app.audio.startAudioContext();
+    
+  } catch (error) {
+    // Method 2: If direct audio context fails, try with Tone.js
+    console.log('Direct audio context failed, trying Tone.js approach...');
+    
+    try {
+      // Start Tone.js directly - this should trigger browser permission
+      await Tone.start();
+      
+      // Now start the app's audio context
+      await app.audio.startAudioContext();
+      
+    } catch (toneError) {
+      console.error('Both audio permission methods failed:', toneError);
+      throw new Error('Unable to get audio permission. Please check your browser settings and try again.');
+    }
 // Best-effort autoplay attempt to restore browser prompt behavior
 async function attemptAutoStartAudio(app) {
   try {

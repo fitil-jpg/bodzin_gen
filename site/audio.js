@@ -12,17 +12,29 @@ export class AudioModule {
 
   async init() {
     try {
-      // Initialize Tone.js
+      // Don't start Tone.js here - wait for user interaction
+      // This will be done in setupUserInteractionHandler after permission is granted
+      
+      this.isInitialized = true;
+      console.log('Audio module initialized (waiting for user permission)');
+    } catch (error) {
+      console.error('Failed to initialize audio:', error);
+      throw error;
+    }
+  }
+
+  async startAudioContext() {
+    try {
+      // Start Tone.js audio context
       await Tone.start();
       
-      // Create master gain node
+      // Create master gain node after audio context is running
       this.master = new Tone.Gain(0.8);
       this.master.toDestination();
       
-      this.isInitialized = true;
-      console.log('Audio module initialized');
+      console.log('Audio context started and master gain created');
     } catch (error) {
-      console.error('Failed to initialize audio:', error);
+      console.error('Failed to start audio context:', error);
       throw error;
     }
   }
@@ -36,7 +48,7 @@ export class AudioModule {
   }
 
   isReady() {
-    return this.isInitialized && Tone.context.state === 'running';
+    return this.isInitialized && Tone.context.state === 'running' && this.master !== null;
   }
 
   destroy() {
