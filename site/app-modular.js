@@ -42,6 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
   window.bodzinApp = appInstance;
   window.communityPresetManager = appInstance.communityPresets;
   
+  // Attempt to start audio automatically on load to trigger browser prompt
+  // If blocked by autoplay policies, fallback handlers below will handle it
+  attemptAutoStartAudio(appInstance);
+
   // Add user interaction handler to enable audio context
   setupUserInteractionHandler(appInstance);
 });
@@ -132,6 +136,25 @@ function setupUserInteractionHandler(app) {
   const startBtn = document.getElementById('startButton');
   if (startBtn) {
     startBtn.addEventListener('click', handleFirstInteraction, { once: true });
+  }
+}
+
+// Best-effort autoplay attempt to restore browser prompt behavior
+async function attemptAutoStartAudio(app) {
+  try {
+    if (Tone.context.state !== 'running') {
+      await Tone.start();
+      // Some browsers may allow start immediately; ensure we initialize if so
+      if (Tone.context.state === 'running') {
+        app.audioContextStarted = true;
+        await app.audio.initializeAudio();
+        initializeWaveformAnalyser(app);
+        app.status.set('Audio ready - click Start to begin');
+      }
+    }
+  } catch (e) {
+    // Autoplay likely blocked by browser; user gesture handler will take over
+    console.log('Autoplay blocked; waiting for user interaction');
   }
 }
 
