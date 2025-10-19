@@ -1,4 +1,4 @@
-# bodzin_gen
+# Bodzin Generator Toolkit
 
 A web-based music generator inspired by Stephan Bodzin's style, featuring advanced pattern generation and mathematical integration.
 

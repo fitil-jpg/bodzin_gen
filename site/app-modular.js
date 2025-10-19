@@ -19,6 +19,10 @@ import { PatternMorphing } from './modules/pattern-morphing.js';
 import { MobileGestures } from './modules/mobile-gestures.js';
 import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
+import { MusicTheoryEngine } from './modules/music-theory-engine.js';
+import { WolframConnector } from './modules/wolfram-connector.js';
+import { ProceduralPatternGenerator } from './modules/procedural-pattern-generator.js';
+import { ProceduralMusicUI } from './modules/procedural-music-ui.js';
 import { WolframUI } from './modules/wolfram-ui.js';
 import { WolframPatternManager } from './modules/wolfram-pattern-manager.js';
 import { HarmonicAnalysis } from './modules/harmonic-analysis.js';
@@ -96,6 +100,12 @@ function createApp() {
     scaleManager: null,
     keyManager: null,
     chordProgressionManager: null,
+    
+    // Procedural Music Theory modules
+    musicTheory: null,
+    wolfram: null,
+    proceduralPatterns: null,
+    proceduralMusicUI: null,
     
     // State
     controlState: {},
@@ -465,6 +475,18 @@ async function initializeApp(app) {
   app.mobileGestures = new MobileGestures(app);
   app.presetManager = new PresetManager(app);
   app.presetLibraryUI = new PresetLibraryUI(app);
+  
+  // Initialize Procedural Music Theory modules
+  app.musicTheory = new MusicTheoryEngine();
+  app.wolfram = new WolframConnector();
+  app.proceduralPatterns = new ProceduralPatternGenerator(app);
+  app.proceduralMusicUI = new ProceduralMusicUI(app);
+  
+  // Initialize procedural music theory
+  await initializeProceduralMusicTheory(app);
+  
+  // Add procedural music theory button to UI
+  addProceduralMusicButton(app);
   app.wolframPatterns = new WolframPatternManager(app);
   app.wolframUI = new WolframUI(app);
   
@@ -1846,3 +1868,177 @@ function morphToPattern(app, targetPatternId) {
   
   morphStep();
 }
+
+// Procedural Music Theory Integration Functions
+
+async function initializeProceduralMusicTheory(app) {
+  try {
+    // Initialize Wolfram connector
+    await app.wolfram.initialize();
+    
+    // Initialize procedural pattern generator
+    await app.proceduralPatterns.initialize();
+    
+    // Set up UI connections
+    app.proceduralMusicUI.setPatternGenerator(app.proceduralPatterns);
+    app.proceduralMusicUI.setMusicTheory(app.musicTheory);
+    app.proceduralMusicUI.setWolfram(app.wolfram);
+    
+    console.log('Procedural Music Theory initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize Procedural Music Theory:', error);
+  }
+}
+
+function addProceduralMusicButton(app) {
+  // Find the control panel or create a new section
+  const controlPanel = document.querySelector('.control-panel') || document.querySelector('.controls') || document.body;
+  
+  if (!controlPanel) {
+    console.warn('Could not find control panel to add procedural music button');
+    return;
+  }
+  
+  // Create procedural music theory button
+  const proceduralBtn = document.createElement('button');
+  proceduralBtn.id = 'procedural-music-btn';
+  proceduralBtn.textContent = '🎵 Procedural Music Theory';
+  proceduralBtn.className = 'btn btn-outline';
+  proceduralBtn.style.cssText = `
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  `;
+  
+  // Add hover effects
+  proceduralBtn.addEventListener('mouseenter', () => {
+    proceduralBtn.style.transform = 'translateY(-2px)';
+    proceduralBtn.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+  });
+  
+  proceduralBtn.addEventListener('mouseleave', () => {
+    proceduralBtn.style.transform = 'translateY(0)';
+    proceduralBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+  });
+  
+  // Add click handler
+  proceduralBtn.addEventListener('click', () => {
+    app.proceduralMusicUI.show();
+  });
+  
+  // Add to control panel
+  controlPanel.appendChild(proceduralBtn);
+  
+  // Add keyboard shortcut (Ctrl/Cmd + M)
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
+      e.preventDefault();
+      app.proceduralMusicUI.show();
+    }
+  });
+}
+
+// Export procedural patterns to existing pattern system
+function exportProceduralPatterns(app) {
+  if (!app.proceduralPatterns) return;
+  
+  const patterns = app.proceduralPatterns.getPatterns();
+  
+  // Convert procedural patterns to automation format
+  const automationTracks = [];
+  
+  // Map procedural patterns to automation tracks
+  Object.entries(patterns).forEach(([instrument, pattern]) => {
+    if (pattern.pattern && pattern.pattern.length > 0) {
+      // Find corresponding automation track
+      const trackId = getAutomationTrackIdForInstrument(instrument);
+      if (trackId) {
+        const automationTrack = app.automation.tracks.find(t => t.id === trackId);
+        if (automationTrack) {
+          // Convert pattern to automation values
+          const values = pattern.pattern.map(beat => {
+            if (beat === 0) return 0;
+            if (beat === 0.5) return 0.3; // Ghost note
+            return 0.7 + (beat - 1) * 0.3; // Scale to 0.7-1.0 range
+          });
+          
+          automationTrack.values = values;
+        }
+      }
+    }
+  });
+  
+  // Update timeline
+  if (app.timeline) {
+    app.timeline.draw();
+  }
+  
+  app.status.set('Procedural patterns exported to automation');
+}
+
+function getAutomationTrackIdForInstrument(instrument) {
+  const mapping = {
+    'kick': 'leadFilter', // Map to a suitable track
+    'snare': 'fxSend',
+    'hihat': 'bassFilter',
+    'bass': 'bassDrive',
+    'lead': 'leadResonance',
+    'fx': 'reverbDecay'
+  };
+  
+  return mapping[instrument];
+}
+
+// Import procedural patterns from existing automation
+function importProceduralPatterns(app) {
+  if (!app.proceduralPatterns) return;
+  
+  const patterns = {};
+  
+  // Convert automation tracks to procedural patterns
+  app.automation.tracks.forEach(track => {
+    const instrument = getInstrumentForAutomationTrack(track.id);
+    if (instrument) {
+      patterns[instrument] = {
+        pattern: track.values.map(value => {
+          if (value === 0) return 0;
+          if (value < 0.4) return 0.5; // Ghost note
+          return 1; // Full hit
+        }),
+        velocity: track.values.map(value => Math.max(0.1, value)),
+        timing: new Array(track.values.length).fill(0),
+        accent: track.values.map(value => value)
+      };
+    }
+  });
+  
+  // Import patterns
+  app.proceduralPatterns.importPatterns({ patterns });
+  
+  app.status.set('Automation patterns imported to procedural system');
+}
+
+function getInstrumentForAutomationTrack(trackId) {
+  const mapping = {
+    'leadFilter': 'kick',
+    'fxSend': 'snare',
+    'bassFilter': 'hihat',
+    'bassDrive': 'bass',
+    'leadResonance': 'lead',
+    'reverbDecay': 'fx'
+  };
+  
+  return mapping[trackId];
+}
+
+// Make functions available globally
+window.exportProceduralPatterns = (app) => exportProceduralPatterns(app);
+window.importProceduralPatterns = (app) => importProceduralPatterns(app);
