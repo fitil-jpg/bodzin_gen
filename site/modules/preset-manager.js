@@ -67,6 +67,13 @@ export class PresetManager {
         description: 'Your custom presets',
         color: '#dda0dd',
         icon: '👤'
+      },
+      {
+        id: 'wolfram',
+        name: 'Wolfram Patterns',
+        description: 'Mathematically generated patterns',
+        color: '#4CAF50',
+        icon: '🧮'
       }
     ];
 
@@ -456,6 +463,11 @@ export class PresetManager {
       this.app.timeline.render();
     }
 
+    // Apply Wolfram patterns
+    if (preset.wolframPatterns && this.app.wolframPatterns) {
+      this.app.wolframPatterns.importPatterns(preset.wolframPatterns);
+    }
+
     this.currentPreset = preset;
     this.app.presetName = preset.name;
     this.app.status.updateStatus(`Loaded preset: ${preset.name}`);
@@ -472,7 +484,8 @@ export class PresetManager {
       author: 'User',
       tags,
       controls: { ...this.app.controlState },
-      automation: { ...this.app.automation }
+      automation: { ...this.app.automation },
+      wolframPatterns: this.app.wolframPatterns ? this.app.wolframPatterns.exportPatterns() : {}
     };
 
     return this.savePreset(presetData);

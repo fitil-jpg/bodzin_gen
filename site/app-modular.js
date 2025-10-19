@@ -19,6 +19,8 @@ import { PatternMorphing } from './modules/pattern-morphing.js';
 import { MobileGestures } from './modules/mobile-gestures.js';
 import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
+import { WolframUI } from './modules/wolfram-ui.js';
+import { WolframPatternManager } from './modules/wolfram-pattern-manager.js';
 
 import { 
   STEP_COUNT, 
@@ -71,6 +73,8 @@ function createApp() {
     presetManager: null,
     presetLibraryUI: null,
     patternVariation: null,
+    wolframUI: null,
+    wolframPatterns: null,
     
     // State
     controlState: {},
@@ -440,8 +444,8 @@ async function initializeApp(app) {
   app.mobileGestures = new MobileGestures(app);
   app.presetManager = new PresetManager(app);
   app.presetLibraryUI = new PresetLibraryUI(app);
-  app.presetManager = new PresetManager(app);
-  app.presetLibraryUI = new PresetLibraryUI(app);
+  app.wolframPatterns = new WolframPatternManager(app);
+  app.wolframUI = new WolframUI(app);
 
   // Initialize timeline
   app.timeline.initialize();
@@ -532,6 +536,7 @@ function setupButtons(app) {
   const exportMixBtn = document.getElementById('exportMixButton');
   const exportStemsBtn = document.getElementById('exportStemsButton');
   const curveEditorBtn = document.getElementById('curveEditorButton');
+  const wolframBtn = document.getElementById('wolframButton');
   const midiToggle = document.getElementById('midiLearnToggle');
   
   // Morphing buttons
@@ -559,6 +564,7 @@ function setupButtons(app) {
   exportMixBtn?.addEventListener('click', () => exportMix(app));
   exportStemsBtn?.addEventListener('click', () => exportStems(app));
   curveEditorBtn?.addEventListener('click', () => app.curveEditor.show());
+  wolframBtn?.addEventListener('click', () => app.wolframUI.toggle());
   
   // Add pattern chain export/import buttons
   const exportChainBtn = document.getElementById('exportChainButton');

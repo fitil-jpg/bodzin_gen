@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Wolfram Integration Demo - Bodzin Generator Toolkit</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f0f12;
+      --panel-bg: #18181d;
+      --accent: #4CAF50;
+      --border: #2a2a33;
+      --text: #f1f1f4;
+      --muted: #9a9aac;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Inter", "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.15), transparent 50%),
+        radial-gradient(circle at 80% 10%, rgba(255, 73, 175, 0.12), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      padding: 2rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      background: rgba(24, 24, 29, 0.9);
+      backdrop-filter: blur(8px);
+    }
+
+    .header h1 {
+      margin: 0 0 1rem 0;
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, #4CAF50, #2196F3);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.1rem;
+    }
+
+    .container {
+      flex: 1;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .demo-section {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .demo-section h2 {
+      margin: 0 0 1.5rem 0;
+      color: var(--accent);
+      font-size: 1.5rem;
+    }
+
+    .pattern-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .pattern-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .pattern-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .pattern-card h3 {
+      margin: 0 0 1rem 0;
+      color: var(--text);
+      font-size: 1.2rem;
+    }
+
+    .pattern-card p {
+      margin: 0 0 1rem 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .pattern-visualization {
+      width: 100%;
+      height: 100px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pattern-line {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+      transform: translateY(-50%);
+      opacity: 0.8;
+    }
+
+    .pattern-points {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+
+    .pattern-point {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: var(--accent);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: transparent;
+      color: var(--accent);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+    }
+
+    .btn:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .btn-primary:hover {
+      background: #45a049;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .feature-card h3 {
+      margin: 0 0 0.5rem 0;
+      color: var(--text);
+    }
+
+    .feature-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .code-block {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: var(--text);
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--muted);
+      text-decoration: none;
+      margin-bottom: 2rem;
+      transition: color 0.3s ease;
+    }
+
+    .back-link:hover {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🧮 Wolfram Integration</h1>
+    <p>Mathematical pattern generation for procedural music creation</p>
+  </div>
+
+  <div class="container">
+    <a href="index.html" class="back-link">
+      ← Back to Main App
+    </a>
+
+    <div class="demo-section">
+      <h2>Mathematical Pattern Generators</h2>
+      <p>Explore various mathematical functions and algorithms to generate unique automation patterns for your music.</p>
+      
+      <div class="pattern-grid">
+        <div class="pattern-card">
+          <h3>Fibonacci Sequence</h3>
+          <p>Patterns based on the famous Fibonacci number sequence, creating natural, organic progressions.</p>
+          <div class="pattern-visualization" id="fibonacci-viz">
+            <div class="pattern-line"></div>
+            <div class="pattern-points" id="fibonacci-points"></div>
+          </div>
+          <button class="btn" onclick="generatePattern('fibonacci')">Generate</button>
+        </div>
+
+        <div class="pattern-card">
+          <h3>Golden Ratio</h3>
+          <p>Harmonic patterns using the golden ratio (φ ≈ 1.618) for naturally pleasing progressions.</p>
+          <div class="pattern-visualization" id="golden-ratio-viz">
+            <div class="pattern-line"></div>
+            <div class="pattern-points" id="golden-ratio-points"></div>
+          </div>
+          <button class="btn" onclick="generatePattern('goldenRatio')">Generate</button>
+        </div>
+
+        <div class="pattern-card">
+          <h3>Mandelbrot Set</h3>
+          <p>Fractal patterns derived from the Mandelbrot set, creating complex, self-similar structures.</p>
+          <div class="pattern-visualization" id="mandelbrot-viz">
+            <div class="pattern-line"></div>
+            <div class="pattern-points" id="mandelbrot-points"></div>
+          </div>
+          <button class="btn" onclick="generatePattern('mandelbrot')">Generate</button>
+        </div>
+
+        <div class="pattern-card">
+          <h3>Lorenz Attractor</h3>
+          <p>Chaotic patterns from the Lorenz attractor, creating unpredictable yet structured progressions.</p>
+          <div class="pattern-visualization" id="lorenz-viz">
+            <div class="pattern-line"></div>
+            <div class="pattern-points" id="lorenz-points"></div>
+          </div>
+          <button class="btn" onclick="generatePattern('lorenz')">Generate</button>
+        </div>
+
+        <div class="pattern-card">
+          <h3>Fourier Series</h3>
+          <p>Complex harmonic patterns using multiple sine wave frequencies combined together.</p>
+          <div class="pattern-visualization" id="fourier-viz">
+            <div class="pattern-line"></div>
+            <div class="pattern-points" id="fourier-points"></div>
+          </div>
+          <button class="btn" onclick="generatePattern('fourier')">Generate</button>
+        </div>
+
+        <div class="pattern-card">
+          <h3>Cellular Automaton</h3>
+          <p>Patterns generated using cellular automaton rules, creating emergent complex behaviors.</p>
+          <div class="pattern-visualization" id="cellular-viz">
+            <div class="pattern-line"></div>
+            <div class="pattern-points" id="cellular-points"></div>
+          </div>
+          <button class="btn" onclick="generatePattern('cellular')">Generate</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-section">
+      <h2>Key Features</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🔢</div>
+          <h3>Mathematical Precision</h3>
+          <p>Generate patterns using proven mathematical algorithms and functions</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎨</div>
+          <h3>Infinite Variations</h3>
+          <p>Create endless variations by adjusting parameters and combining patterns</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎵</div>
+          <h3>Musical Integration</h3>
+          <p>Seamlessly apply patterns to automation tracks and musical parameters</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Real-time Generation</h3>
+          <p>Generate and apply patterns instantly without complex setup</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔄</div>
+          <h3>Pattern Morphing</h3>
+          <p>Blend between different patterns for smooth transitions</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💾</div>
+          <h3>Preset Integration</h3>
+          <p>Save and load Wolfram patterns as part of your presets</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-section">
+      <h2>Usage Example</h2>
+      <p>Here's how to use the Wolfram integration in your projects:</p>
+      
+      <div class="code-block">
+// Generate a Fibonacci pattern
+const wolframManager = new WolframPatternManager(app);
+await wolframManager.createPattern('my-fibonacci', 'My Fibonacci', 'fibonacci', {
+  start: 0.2,
+  end: 0.8,
+  scale: 0.6
+});
+
+// Apply to automation
+wolframManager.applyPatternToAutomation('my-fibonacci');
+
+// Create variations
+const variations = await wolframManager.generatePatternVariations('my-fibonacci', 3);
+
+// Morph between patterns
+const morphed = await wolframManager.morphPatterns('pattern1', 'pattern2', 0.5);
+      </div>
+    </div>
+
+    <div class="demo-section">
+      <h2>Available Pattern Types</h2>
+      <ul style="color: var(--muted); line-height: 1.8;">
+        <li><strong>Sequential:</strong> Fibonacci, Prime Numbers, Golden Ratio</li>
+        <li><strong>Fractals:</strong> Mandelbrot Set, Julia Set</li>
+        <li><strong>Chaos Theory:</strong> Lorenz Attractor, Logistic Map, Chaos Maps</li>
+        <li><strong>Harmonic:</strong> Sine Wave, Cosine Wave, Fourier Series</li>
+        <li><strong>Mathematical:</strong> Exponential, Logarithmic, Polynomial</li>
+        <li><strong>Wavelets:</strong> Morlet, Mexican Hat, Gaussian</li>
+        <li><strong>Cellular:</strong> Cellular Automaton (Rule 30, 110, etc.)</li>
+      </ul>
+    </div>
+
+    <div class="demo-section" style="text-align: center;">
+      <h2>Ready to Explore?</h2>
+      <p>Open the main application and click the 🧮 Wolfram button to start generating mathematical patterns!</p>
+      <a href="index.html" class="btn btn-primary">Open Main App</a>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import the Wolfram integration
+    import { WolframIntegration } from './modules/wolfram-integration.js';
+
+    // Initialize Wolfram integration
+    const wolfram = new WolframIntegration();
+
+    // Pattern generation functions
+    window.generatePattern = async function(patternType) {
+      try {
+        const values = await wolfram.generateWolframPattern(patternType, 16, {
+          start: 0.1,
+          end: 0.9
+        });
+        
+        if (values) {
+          visualizePattern(patternType, values);
+        }
+      } catch (error) {
+        console.error('Error generating pattern:', error);
+      }
+    };
+
+    function visualizePattern(patternType, values) {
+      const container = document.getElementById(`${patternType}-viz`);
+      const pointsContainer = document.getElementById(`${patternType}-points`);
+      
+      if (!container || !pointsContainer) return;
+
+      // Clear existing points
+      pointsContainer.innerHTML = '';
+
+      // Create SVG path
+      const width = container.offsetWidth;
+      const height = container.offsetHeight;
+      
+      // Create points
+      values.forEach((value, index) => {
+        const x = (index / (values.length - 1)) * width;
+        const y = height - (value * height);
+        
+        const point = document.createElement('div');
+        point.className = 'pattern-point';
+        point.style.left = `${x}px`;
+        point.style.top = `${y}px`;
+        pointsContainer.appendChild(point);
+      });
+
+      // Create connecting lines
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      path.setAttribute('width', width);
+      path.setAttribute('height', height);
+      path.style.position = 'absolute';
+      path.style.top = '0';
+      path.style.left = '0';
+      path.style.pointerEvents = 'none';
+      
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      let pathData = '';
+      
+      values.forEach((value, index) => {
+        const x = (index / (values.length - 1)) * width;
+        const y = height - (value * height);
+        
+        if (index === 0) {
+          pathData += `M ${x} ${y}`;
+        } else {
+          pathData += ` L ${x} ${y}`;
+        }
+      });
+      
+      line.setAttribute('d', pathData);
+      line.setAttribute('stroke', '#4CAF50');
+      line.setAttribute('stroke-width', '2');
+      line.setAttribute('fill', 'none');
+      line.setAttribute('opacity', '0.8');
+      
+      path.appendChild(line);
+      container.appendChild(path);
+    }
+
+    // Generate initial patterns
+    setTimeout(() => {
+      generatePattern('fibonacci');
+      generatePattern('goldenRatio');
+      generatePattern('mandelbrot');
+      generatePattern('lorenz');
+      generatePattern('fourier');
+      generatePattern('cellular');
+    }, 500);
+  </script>
+</body>
+</html>
