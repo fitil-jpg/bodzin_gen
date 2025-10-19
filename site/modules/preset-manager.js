@@ -456,6 +456,19 @@ export class PresetManager {
       this.app.timeline.render();
     }
 
+    // Apply scale and key management settings
+    if (preset.scaleSettings && this.app.scaleManager) {
+      this.app.scaleManager.importScale(preset.scaleSettings);
+    }
+    
+    if (preset.keySettings && this.app.keyManager) {
+      this.app.keyManager.importKey(preset.keySettings);
+    }
+    
+    if (preset.chordProgressionSettings && this.app.chordProgressionManager) {
+      this.app.chordProgressionManager.importProgression(preset.chordProgressionSettings);
+    }
+
     this.currentPreset = preset;
     this.app.presetName = preset.name;
     this.app.status.updateStatus(`Loaded preset: ${preset.name}`);
@@ -472,7 +485,10 @@ export class PresetManager {
       author: 'User',
       tags,
       controls: { ...this.app.controlState },
-      automation: { ...this.app.automation }
+      automation: { ...this.app.automation },
+      scaleSettings: this.app.scaleManager ? this.app.scaleManager.exportScale() : null,
+      keySettings: this.app.keyManager ? this.app.keyManager.exportKey() : null,
+      chordProgressionSettings: this.app.chordProgressionManager ? this.app.chordProgressionManager.exportProgression() : null
     };
 
     return this.savePreset(presetData);
