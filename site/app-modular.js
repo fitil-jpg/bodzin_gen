@@ -19,6 +19,7 @@ import { PatternMorphing } from './modules/pattern-morphing.js';
 import { MobileGestures } from './modules/mobile-gestures.js';
 import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
+import { KeySignatureManager } from './modules/key-signature-manager.js';
 
 import { 
   STEP_COUNT, 
@@ -71,6 +72,7 @@ function createApp() {
     presetManager: null,
     presetLibraryUI: null,
     patternVariation: null,
+    keySignature: null,
     
     // State
     controlState: {},
@@ -428,6 +430,7 @@ async function initializeApp(app) {
   app.audio = new AudioEngine().initialize();
   app.patternChain = new PatternChainManager(app.audio);
   app.patternVariation = new PatternVariationManager(app);
+  app.keySignature = new KeySignatureManager(app);
   app.uiControls = new UIControls(app);
   app.timeline = new TimelineRenderer(app);
   app.midi = new MidiHandler(app);

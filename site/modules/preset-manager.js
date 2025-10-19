@@ -62,6 +62,13 @@ export class PresetManager {
         icon: '🌊'
       },
       {
+        id: 'key-signature',
+        name: 'Key Signatures',
+        description: 'Musical key and scale presets',
+        color: '#ff9f43',
+        icon: '🎼'
+      },
+      {
         id: 'user',
         name: 'User Presets',
         description: 'Your custom presets',
@@ -362,6 +369,97 @@ export class PresetManager {
       },
       automation: this.createDefaultAutomation()
     });
+
+    // Key signature presets
+    this.addPreset({
+      id: 'c-major-classic',
+      name: 'C Major Classic',
+      category: 'key-signature',
+      description: 'Classic C major with I-V-vi-IV progression',
+      author: 'Bodzin Generator',
+      tags: ['major', 'classic', 'pop'],
+      controls: {},
+      automation: this.createDefaultAutomation(),
+      keySignature: {
+        key: 'C',
+        scale: 'major',
+        chordProgression: 'I-V-vi-IV',
+        octave: 4,
+        enabled: true
+      }
+    });
+
+    this.addPreset({
+      id: 'a-minor-melancholy',
+      name: 'A Minor Melancholy',
+      category: 'key-signature',
+      description: 'Melancholic A minor with i-VI-VII-i progression',
+      author: 'Bodzin Generator',
+      tags: ['minor', 'melancholy', 'emotional'],
+      controls: {},
+      automation: this.createDefaultAutomation(),
+      keySignature: {
+        key: 'Am',
+        scale: 'minor',
+        chordProgression: 'i-VI-VII-i',
+        octave: 4,
+        enabled: true
+      }
+    });
+
+    this.addPreset({
+      id: 'g-major-bright',
+      name: 'G Major Bright',
+      category: 'key-signature',
+      description: 'Bright G major with pentatonic scale',
+      author: 'Bodzin Generator',
+      tags: ['major', 'bright', 'pentatonic'],
+      controls: {},
+      automation: this.createDefaultAutomation(),
+      keySignature: {
+        key: 'G',
+        scale: 'pentatonicMajor',
+        chordProgression: 'I-V-vi-IV',
+        octave: 4,
+        enabled: true
+      }
+    });
+
+    this.addPreset({
+      id: 'd-dorian-mystical',
+      name: 'D Dorian Mystical',
+      category: 'key-signature',
+      description: 'Mystical D dorian mode',
+      author: 'Bodzin Generator',
+      tags: ['dorian', 'mystical', 'modal'],
+      controls: {},
+      automation: this.createDefaultAutomation(),
+      keySignature: {
+        key: 'D',
+        scale: 'dorian',
+        chordProgression: 'i-iv-VII',
+        octave: 4,
+        enabled: true
+      }
+    });
+
+    this.addPreset({
+      id: 'f-major-warm',
+      name: 'F Major Warm',
+      category: 'key-signature',
+      description: 'Warm F major with jazz progression',
+      author: 'Bodzin Generator',
+      tags: ['major', 'warm', 'jazz'],
+      controls: {},
+      automation: this.createDefaultAutomation(),
+      keySignature: {
+        key: 'F',
+        scale: 'major',
+        chordProgression: 'I-vi-ii-V',
+        octave: 4,
+        enabled: true
+      }
+    });
   }
 
   addPreset(presetData) {
@@ -456,6 +554,11 @@ export class PresetManager {
       this.app.timeline.render();
     }
 
+    // Apply key signature settings
+    if (preset.keySignature && this.app.keySignature) {
+      this.app.keySignature.importSettings(preset.keySignature);
+    }
+
     this.currentPreset = preset;
     this.app.presetName = preset.name;
     this.app.status.updateStatus(`Loaded preset: ${preset.name}`);
@@ -472,7 +575,8 @@ export class PresetManager {
       author: 'User',
       tags,
       controls: { ...this.app.controlState },
-      automation: { ...this.app.automation }
+      automation: { ...this.app.automation },
+      keySignature: this.app.keySignature ? this.app.keySignature.exportSettings() : null
     };
 
     return this.savePreset(presetData);
