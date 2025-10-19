@@ -712,6 +712,29 @@ export class AudioEngine {
   }
 
   generateBassPattern() {
+    // Use key signature if available
+    if (this.app && this.app.keySignature && this.app.keySignature.enabled) {
+      const keySignature = this.app.keySignature;
+      const harmonicPattern = keySignature.generateHarmonicPattern(4);
+      const pattern = new Array(16).fill(null);
+      
+      // Map harmonic progression to 16 steps
+      const chordsPerStep = Math.ceil(16 / harmonicPattern.length);
+      
+      for (let i = 0; i < 16; i++) {
+        const chordIndex = Math.floor(i / chordsPerStep) % harmonicPattern.length;
+        const chord = harmonicPattern[chordIndex];
+        
+        if (chord && chord.notes && chord.notes.length > 0) {
+          // Use root note for bass
+          pattern[i] = chord.notes[0];
+        }
+      }
+      
+      return pattern;
+    }
+
+    // Fallback to default pattern
     const notes = ['C2', 'D2', 'E2', 'F2', 'G2', 'A2', 'B2', 'C3'];
     const pattern = new Array(16).fill(null);
     
@@ -734,6 +757,40 @@ export class AudioEngine {
   }
 
   generateLeadPattern() {
+    // Use key signature if available
+    if (this.app && this.app.keySignature && this.app.keySignature.enabled) {
+      const keySignature = this.app.keySignature;
+      const harmonicPattern = keySignature.generateHarmonicPattern(4);
+      const pattern = new Array(16).fill(null);
+      
+      // Map harmonic progression to 16 steps
+      for (let i = 0; i < 16; i += 4) {
+        if (Math.random() < 0.8) {
+          const chordIndex = Math.floor(i / 4) % harmonicPattern.length;
+          const chord = harmonicPattern[chordIndex];
+          
+          if (chord && chord.notes) {
+            pattern[i] = chord.notes;
+          }
+        }
+      }
+      
+      // Add some melodic fills
+      for (let i = 2; i < 16; i += 4) {
+        if (Math.random() < 0.4) {
+          const chordIndex = Math.floor(i / 4) % harmonicPattern.length;
+          const chord = harmonicPattern[chordIndex];
+          
+          if (chord && chord.notes && chord.notes.length > 0) {
+            pattern[i] = [chord.notes[0]]; // Use root note for fills
+          }
+        }
+      }
+      
+      return pattern;
+    }
+
+    // Fallback to default pattern
     const chordProgressions = [
       [['E4', 'G4', 'B4'], ['A4', 'C5'], ['B4', 'D5'], ['E5', 'G5']],
       [['C4', 'E4', 'G4'], ['D4', 'F4', 'A4'], ['E4', 'G4', 'B4'], ['F4', 'A4', 'C5']],
@@ -748,18 +805,62 @@ export class AudioEngine {
       if (Math.random() < 0.8) {
         const chordIndex = Math.floor(i / 4) % progression.length;
         pattern[i] = progression[chordIndex];
+    // Use scale manager if available, otherwise fallback to hardcoded progressions
+    if (this.app && this.app.scaleManager) {
+      const scaleInfo = this.app.scaleManager.getCurrentScale();
+      const progression = this.app.scaleManager.generateChordProgression(4, 4);
+      
+      const pattern = new Array(16).fill(null);
+      
+      // Lead typically plays on every 4th beat
+      for (let i = 0; i < 16; i += 4) {
+        if (Math.random() < 0.8) {
+          const chordIndex = Math.floor(i / 4) % progression.length;
+          const chord = progression[chordIndex];
+          if (chord && chord.notes) {
+            pattern[i] = chord.notes.map(note => note.fullNote);
+          }
+        }
       }
-    }
-    
-    // Add some melodic fills
-    for (let i = 2; i < 16; i += 4) {
-      if (Math.random() < 0.4) {
-        const singleNote = progression[Math.floor(i / 4) % progression.length][0];
-        pattern[i] = [singleNote];
+      
+      // Add some melodic fills using scale notes
+      for (let i = 2; i < 16; i += 4) {
+        if (Math.random() < 0.4) {
+          const randomNote = this.app.scaleManager.getRandomScaleNote(4);
+          pattern[i] = [randomNote.fullNote];
+        }
       }
+      
+      return pattern;
+    } else {
+      // Fallback to original hardcoded progressions
+      const chordProgressions = [
+        [['E4', 'G4', 'B4'], ['A4', 'C5'], ['B4', 'D5'], ['E5', 'G5']],
+        [['C4', 'E4', 'G4'], ['D4', 'F4', 'A4'], ['E4', 'G4', 'B4'], ['F4', 'A4', 'C5']],
+        [['G4', 'B4', 'D5'], ['A4', 'C5', 'E5'], ['B4', 'D5', 'F5'], ['C5', 'E5', 'G5']]
+      ];
+      
+      const progression = chordProgressions[Math.floor(Math.random() * chordProgressions.length)];
+      const pattern = new Array(16).fill(null);
+      
+      // Lead typically plays on every 4th beat
+      for (let i = 0; i < 16; i += 4) {
+        if (Math.random() < 0.8) {
+          const chordIndex = Math.floor(i / 4) % progression.length;
+          pattern[i] = progression[chordIndex];
+        }
+      }
+      
+      // Add some melodic fills
+      for (let i = 2; i < 16; i += 4) {
+        if (Math.random() < 0.4) {
+          const singleNote = progression[Math.floor(i / 4) % progression.length][0];
+          pattern[i] = [singleNote];
+        }
+      }
+      
+      return pattern;
     }
-    
-    return pattern;
   }
 
   generateFxPattern() {
@@ -776,69 +877,58 @@ export class AudioEngine {
     return pattern;
   }
 
-  // Mathematical pattern generators (Euclidean / Wolfram ECA)
-  generateKickPatternMath() {
-    const hits = generateEuclideanPattern(16, 4, 0);
-    const velocities = mapPatternToVelocities(hits, { base: 0.95, spread: 0.08 });
-    // Accents on strong beats
-    velocities[0] = 1;
-    velocities[8] = Math.max(velocities[8], 0.9);
-    return velocities;
-  }
-
-  generateSnarePatternMath() {
-    // Two evenly spaced hits, rotated to typical backbeats (steps 3 and 11)
-    const hits = generateEuclideanPattern(16, 2, 3);
-    return mapPatternToVelocities(hits, { base: 0.9, spread: 0.05, ghostChance: 0.2, ghostMin: 0.12, ghostMax: 0.35 });
-  }
-
-  generateHatPatternMath() {
-    // Derive hats from ECA, sampling multiple columns for density
-    const hits = generateECAPattern({ rule: 90, steps: 16, width: 16, columns: [2,4,6,8,10,12,14] });
-    return mapPatternToVelocities(hits, { base: 0.6, spread: 0.25 });
-  }
-
-  generateBassPatternMath() {
-    // Use ECA to gate notes from a pool
-    const hits = generateECAPattern({ rule: 110, steps: 16, width: 16, columns: [8] });
-    const notes = ['C2', 'D2', 'E2', 'F2', 'G2', 'A2', 'B1', 'C2'];
-    const seq = mapPatternToNotes(hits, notes, { rest: null, cycle: true });
-    // Ensure strong beats are not empty if everything was gated out
-    const strongBeats = [0, 4, 8, 12];
-    strongBeats.forEach(beat => {
-      if (!seq[beat]) {
-        seq[beat] = notes[(beat / 4) % notes.length];
-      }
-    });
-    return seq;
-  }
-
-  generateLeadPatternMath() {
-    // Gate chord hits with ECA; place chords on 4-step boundaries
-    const chordProgressions = [
-      [['E4', 'G4', 'B4'], ['A4', 'C5'], ['B4', 'D5'], ['E5', 'G5']],
-      [['C4', 'E4', 'G4'], ['D4', 'F4', 'A4'], ['E4', 'G4', 'B4'], ['F4', 'A4', 'C5']],
-      [['G4', 'B4', 'D5'], ['A4', 'C5', 'E5'], ['B4', 'D5', 'F5'], ['C5', 'E5', 'G5']]
-    ];
-    const progression = chordProgressions[Math.floor(Math.random() * chordProgressions.length)];
-    const hits = generateECAPattern({ rule: 150, steps: 16, width: 16, columns: [Math.floor(Math.random()*16)] });
-    const pattern = new Array(16).fill(null);
-    for (let i = 0; i < 16; i++) {
-      if (!hits[i]) continue;
-      const chordIndex = Math.floor(i / 4) % progression.length;
-      const chord = progression[chordIndex];
-      // Choose 1-2 notes from chord
-      const sliceSize = Math.random() < 0.5 ? 1 : 2;
-      const shuffled = [...chord].sort(() => Math.random() - 0.5);
-      pattern[i] = shuffled.slice(0, sliceSize);
+  // Generate bass pattern using scale manager
+  generateBassPattern() {
+    if (this.app && this.app.scaleManager) {
+      const bassLine = this.app.scaleManager.generateBassLine(16, 2);
+      const pattern = new Array(16).fill(null);
+      
+      bassLine.forEach((note, index) => {
+        if (note && Math.random() < 0.8) {
+          pattern[index] = [note.fullNote];
+        }
+      });
+      
+      return pattern;
+    } else {
+      // Fallback to original bass pattern generation
+      return this.generateOriginalBassPattern();
     }
+  }
+
+  // Original bass pattern generation (fallback)
+  generateOriginalBassPattern() {
+    const pattern = new Array(16).fill(null);
+    const bassNotes = ['C2', 'E2', 'G2', 'A2'];
+    
+    for (let i = 0; i < 16; i += 2) {
+      if (Math.random() < 0.7) {
+        const noteIndex = Math.floor(i / 2) % bassNotes.length;
+        pattern[i] = [bassNotes[noteIndex]];
+      }
+    }
+    
     return pattern;
   }
 
-  generateFxPatternMath() {
-    // Evenly distribute four hits and rotate to off-beats 3,7,11,15
-    const hits = generateEuclideanPattern(16, 4, 3);
-    return hits.map(v => (v ? 1 : 0));
+  // Generate melody using scale manager
+  generateMelodyPattern(length = 8) {
+    if (this.app && this.app.scaleManager) {
+      const melody = this.app.scaleManager.generateMelodyPattern(length, 4);
+      return melody.map(note => note ? [note.fullNote] : null);
+    } else {
+      // Fallback to random notes
+      const pattern = new Array(length).fill(null);
+      const notes = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
+      
+      for (let i = 0; i < length; i++) {
+        if (Math.random() < 0.6) {
+          pattern[i] = [notes[Math.floor(Math.random() * notes.length)]];
+        }
+      }
+      
+      return pattern;
+    }
   }
 }
   // Envelope Follower Controls
@@ -1168,22 +1258,18 @@ export class AudioEngine {
         break;
         
       case 'bass':
-        // Use a simple bass pattern for probability triggers
-        const bassNotes = ['C2', 'G1', 'A1', 'D2'];
-        const noteIndex = this.currentStep % bassNotes.length;
-        const note = bassNotes[noteIndex];
-        if (note) {
-          this.instruments.bass.triggerAttackRelease(note, '8n', time, velocity);
+        // Use key signature for bass notes if available
+        const bassNote = this.getMusicalNote('bass', this.currentStep);
+        if (bassNote) {
+          this.instruments.bass.triggerAttackRelease(bassNote, '8n', time, velocity);
         }
         break;
         
       case 'lead':
-        // Use a simple lead pattern for probability triggers
-        const leadNotes = [['E4', 'B4'], ['G4'], ['A4'], ['B4', 'D5']];
-        const leadIndex = this.currentStep % leadNotes.length;
-        const notes = leadNotes[leadIndex];
-        if (notes && notes.length) {
-          notes.forEach(note => {
+        // Use key signature for lead notes if available
+        const leadNotes = this.getMusicalNotes('lead', this.currentStep);
+        if (leadNotes && leadNotes.length) {
+          leadNotes.forEach(note => {
             this.instruments.lead.triggerAttackRelease(note, '16n', time, velocity);
           });
         }
@@ -1200,6 +1286,64 @@ export class AudioEngine {
    */
   getProbabilityManager() {
     return this.probabilityManager;
+  }
+
+  /**
+   * Get musical note for an instrument based on key signature
+   * @param {string} instrument - Instrument name
+   * @param {number} step - Current step
+   * @returns {string|null} Note name or null
+   */
+  getMusicalNote(instrument, step) {
+    // Check if we have access to the app and key signature
+    if (!this.app || !this.app.keySignature || !this.app.keySignature.enabled) {
+      return this.getDefaultNote(instrument, step);
+    }
+
+    // Get current pattern variation
+    const currentPattern = this.app.patternVariation?.getCurrentPattern();
+    if (!currentPattern || !currentPattern.musicalPatterns) {
+      return this.getDefaultNote(instrument, step);
+    }
+
+    const musicalPatterns = currentPattern.musicalPatterns;
+    const pattern = musicalPatterns[instrument]?.pattern;
+    
+    if (!pattern || step >= pattern.length) {
+      return this.getDefaultNote(instrument, step);
+    }
+
+    return pattern[step];
+  }
+
+  /**
+   * Get musical notes for an instrument based on key signature
+   * @param {string} instrument - Instrument name
+   * @param {number} step - Current step
+   * @returns {Array|null} Array of note names or null
+   */
+  getMusicalNotes(instrument, step) {
+    const note = this.getMusicalNote(instrument, step);
+    return note ? [note] : null;
+  }
+
+  /**
+   * Get default note when key signature is not available
+   * @param {string} instrument - Instrument name
+   * @param {number} step - Current step
+   * @returns {string|null} Default note name
+   */
+  getDefaultNote(instrument, step) {
+    switch (instrument) {
+      case 'bass':
+        const bassNotes = ['C2', 'G1', 'A1', 'D2'];
+        return bassNotes[step % bassNotes.length];
+      case 'lead':
+        const leadNotes = ['E4', 'G4', 'A4', 'B4'];
+        return leadNotes[step % leadNotes.length];
+      default:
+        return null;
+    }
   }
 
   /**

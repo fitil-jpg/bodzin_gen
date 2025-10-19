@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedural Music Theory Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #2a2a2a;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #333;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #F44336; }
+        .info { color: #2196F3; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Procedural Music Theory Test</h1>
+    
+    <div class="test-section">
+        <h2>Music Theory Engine Test</h2>
+        <button onclick="testMusicTheory()">Test Music Theory Engine</button>
+        <div id="musicTheoryResult" class="test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Wolfram Connector Test</h2>
+        <button onclick="testWolfram()">Test Wolfram Connector</button>
+        <div id="wolframResult" class="test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Procedural Pattern Generator Test</h2>
+        <button onclick="testPatternGenerator()">Test Pattern Generator</button>
+        <div id="patternGeneratorResult" class="test-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Integration Test</h2>
+        <button onclick="testIntegration()">Test Full Integration</button>
+        <div id="integrationResult" class="test-result"></div>
+    </div>
+
+    <script type="module">
+        import { MusicTheoryEngine } from './modules/music-theory-engine.js';
+        import { WolframConnector } from './modules/wolfram-connector.js';
+        import { ProceduralPatternGenerator } from './modules/procedural-pattern-generator.js';
+
+        window.testMusicTheory = async function() {
+            const resultDiv = document.getElementById('musicTheoryResult');
+            try {
+                const musicTheory = new MusicTheoryEngine();
+                
+                // Test scale generation
+                const majorScale = musicTheory.scales.get('major');
+                const notes = majorScale.getNotes(60);
+                
+                // Test chord generation
+                const majorChord = musicTheory.chords.get('major');
+                const chordNotes = majorChord.getNotes(60);
+                
+                // Test progression generation
+                const progression = musicTheory.progressions.get('iiV7I');
+                const chords = progression.getChords(0, 'major');
+                
+                // Test melody generation
+                const melody = musicTheory.generateMelody(majorScale, 8, 'random');
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✓ Music Theory Engine loaded successfully</div>
+                    <div class="info">Major Scale (C): ${notes.join(', ')}</div>
+                    <div class="info">Major Chord (C): ${chordNotes.join(', ')}</div>
+                    <div class="info">ii-V-I Progression: ${chords.length} chords generated</div>
+                    <div class="info">Random Melody: ${melody.join(', ')}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Error: ${error.message}</div>`;
+            }
+        };
+
+        window.testWolfram = async function() {
+            const resultDiv = document.getElementById('wolframResult');
+            try {
+                const wolfram = new WolframConnector();
+                await wolfram.initialize();
+                
+                // Test offline fallback
+                const result = await wolfram.executeWolframCode('Scale[Major, 0]');
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✓ Wolfram Connector loaded successfully</div>
+                    <div class="info">Connection Status: ${wolfram.isConnected ? 'Connected' : 'Offline Mode'}</div>
+                    <div class="info">Test Result: ${JSON.stringify(result, null, 2)}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Error: ${error.message}</div>`;
+            }
+        };
+
+        window.testPatternGenerator = async function() {
+            const resultDiv = document.getElementById('patternGeneratorResult');
+            try {
+                // Create mock app object
+                const mockApp = {
+                    musicTheory: new MusicTheoryEngine(),
+                    wolfram: new WolframConnector()
+                };
+                
+                const generator = new ProceduralPatternGenerator(mockApp);
+                await generator.initialize();
+                
+                // Test pattern generation
+                generator.setStyle('bodzin');
+                generator.setComplexity(0.7);
+                generator.setRandomness(0.5);
+                
+                const patterns = generator.getPatterns();
+                const kickPattern = generator.getPattern('kick');
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✓ Procedural Pattern Generator loaded successfully</div>
+                    <div class="info">Current Style: ${generator.currentStyle}</div>
+                    <div class="info">Complexity: ${generator.complexity}</div>
+                    <div class="info">Randomness: ${generator.randomness}</div>
+                    <div class="info">Generated Patterns: ${Object.keys(patterns).join(', ')}</div>
+                    <div class="info">Kick Pattern: ${kickPattern.pattern.join(', ')}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Error: ${error.message}</div>`;
+            }
+        };
+
+        window.testIntegration = async function() {
+            const resultDiv = document.getElementById('integrationResult');
+            try {
+                // Test full integration
+                const musicTheory = new MusicTheoryEngine();
+                const wolfram = new WolframConnector();
+                await wolfram.initialize();
+                
+                const mockApp = {
+                    musicTheory: musicTheory,
+                    wolfram: wolfram
+                };
+                
+                const generator = new ProceduralPatternGenerator(mockApp);
+                await generator.initialize();
+                
+                // Test different styles
+                const styles = ['bodzin', 'ambient', 'cinematic', 'jazz', 'experimental'];
+                const results = [];
+                
+                for (const style of styles) {
+                    generator.setStyle(style);
+                    const patterns = generator.getPatterns();
+                    results.push(`${style}: ${Object.keys(patterns).length} patterns`);
+                }
+                
+                // Test export/import
+                const exportData = generator.exportPatterns();
+                generator.importPatterns(exportData);
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✓ Full Integration Test Passed</div>
+                    <div class="info">Music Theory Engine: ✓</div>
+                    <div class="info">Wolfram Connector: ✓</div>
+                    <div class="info">Pattern Generator: ✓</div>
+                    <div class="info">Style Tests: ${results.join('<br>')}</div>
+                    <div class="info">Export/Import: ✓</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">✗ Integration Error: ${error.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>
