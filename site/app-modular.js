@@ -19,6 +19,12 @@ import { PatternMorphing } from './modules/pattern-morphing.js';
 import { MobileGestures } from './modules/mobile-gestures.js';
 import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
+import { HarmonicAnalysis } from './modules/harmonic-analysis.js';
+import { ScaleKeyManager } from './modules/scale-key-manager.js';
+import { ChordProgressionEngine } from './modules/chord-progression-engine.js';
+import { MusicTheoryUtils } from './modules/music-theory-utils.js';
+import { HarmonicAnalysisUI } from './modules/harmonic-analysis-ui.js';
+import { PatternHarmonicIntegration } from './modules/pattern-harmonic-integration.js';
 import { ScaleManager } from './modules/scale-manager.js';
 import { KeyManager } from './modules/key-manager.js';
 import { ChordProgressionManager } from './modules/chord-progression-manager.js';
@@ -75,6 +81,13 @@ function createApp() {
     presetLibraryUI: null,
     patternVariation: null,
     
+    // Harmonic Analysis modules
+    harmonicAnalysis: null,
+    scaleKeyManager: null,
+    chordProgressionEngine: null,
+    musicTheoryUtils: null,
+    harmonicAnalysisUI: null,
+    patternHarmonicIntegration: null,
     // Scale and Key Management
     scaleManager: null,
     keyManager: null,
@@ -448,6 +461,19 @@ async function initializeApp(app) {
   app.mobileGestures = new MobileGestures(app);
   app.presetManager = new PresetManager(app);
   app.presetLibraryUI = new PresetLibraryUI(app);
+  
+  // Initialize harmonic analysis modules
+  app.musicTheoryUtils = new MusicTheoryUtils();
+  app.scaleKeyManager = new ScaleKeyManager();
+  app.harmonicAnalysis = new HarmonicAnalysis();
+  app.chordProgressionEngine = new ChordProgressionEngine(app.scaleKeyManager);
+  app.harmonicAnalysisUI = new HarmonicAnalysisUI(app);
+  app.patternHarmonicIntegration = new PatternHarmonicIntegration(app);
+  
+  // Connect harmonic integration to pattern variation manager
+  if (app.patternVariation) {
+    app.patternVariation.setHarmonicIntegration(app.patternHarmonicIntegration);
+  }
   app.presetManager = new PresetManager(app);
   app.presetLibraryUI = new PresetLibraryUI(app);
   
@@ -572,6 +598,10 @@ function setupButtons(app) {
   exportMixBtn?.addEventListener('click', () => exportMix(app));
   exportStemsBtn?.addEventListener('click', () => exportStems(app));
   curveEditorBtn?.addEventListener('click', () => app.curveEditor.show());
+  
+  // Harmonic Analysis button
+  const harmonicAnalysisBtn = document.getElementById('harmonicAnalysisButton');
+  harmonicAnalysisBtn?.addEventListener('click', () => app.harmonicAnalysisUI.toggle());
   
   // Add pattern chain export/import buttons
   const exportChainBtn = document.getElementById('exportChainButton');
