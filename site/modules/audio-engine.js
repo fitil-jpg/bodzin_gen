@@ -10,6 +10,10 @@ import {
 import { setBusLevel, clamp } from '../utils/helpers.js';
 import { createToneEnvelopeFollower } from './envelope-follower.js';
 import { ProbabilityManager } from './probability-manager.js';
+import { ScaleKeyManager } from './scale-key-manager.js';
+import { NoteGenerationEngine } from './note-generation-engine.js';
+import { ChordProgressionManager } from './chord-progression-manager.js';
+import { MelodyGenerator } from './melody-generator.js';
 import { 
   generateEuclideanPattern, 
   generateECAPattern, 
@@ -32,6 +36,24 @@ export class AudioEngine {
     this.useMathPatterns = false; // Enable Euclidean/ECA-based generators
     this.currentStep = 0;
     this.currentSection = null;
+    
+    // Scale-aware generation modules
+    this.scaleKeyManager = new ScaleKeyManager();
+    this.noteGenerationEngine = new NoteGenerationEngine(this.scaleKeyManager);
+    this.chordProgressionManager = new ChordProgressionManager(this.scaleKeyManager);
+    this.melodyGenerator = new MelodyGenerator(this.scaleKeyManager);
+    
+    // Scale-aware generation settings
+    this.scaleAwareGeneration = {
+      enabled: false,
+      currentKey: 'C',
+      currentScale: 'major',
+      generationStyle: 'classical',
+      mood: 'balanced',
+      harmonicComplexity: 0.6,
+      melodicComplexity: 0.5,
+      rhythmComplexity: 0.5
+    };
   }
 
   initialize() {
@@ -1421,6 +1443,200 @@ export class AudioEngine {
    */
   resetProbabilitySettings() {
     this.probabilityManager.resetToDefaults();
+  }
+
+  // Scale-aware generation methods
+  enableScaleAwareGeneration(enabled = true) {
+    this.scaleAwareGeneration.enabled = enabled;
+    if (enabled) {
+      this.updateScaleAwarePatterns();
+    }
+  }
+
+  setScaleAndKey(key, scale) {
+    this.scaleKeyManager.setKey(key);
+    this.scaleKeyManager.setScale(scale);
+    this.scaleAwareGeneration.currentKey = key;
+    this.scaleAwareGeneration.currentScale = scale;
+    
+    if (this.scaleAwareGeneration.enabled) {
+      this.updateScaleAwarePatterns();
+    }
+  }
+
+  setGenerationStyle(style, mood = 'balanced') {
+    this.scaleAwareGeneration.generationStyle = style;
+    this.scaleAwareGeneration.mood = mood;
+    
+    if (this.scaleAwareGeneration.enabled) {
+      this.updateScaleAwarePatterns();
+    }
+  }
+
+  setGenerationComplexity(settings) {
+    this.scaleAwareGeneration = { ...this.scaleAwareGeneration, ...settings };
+    
+    if (this.scaleAwareGeneration.enabled) {
+      this.updateScaleAwarePatterns();
+    }
+  }
+
+  updateScaleAwarePatterns() {
+    if (!this.scaleAwareGeneration.enabled) return;
+
+    // Update note generation engine settings
+    this.noteGenerationEngine.updateSettings({
+      octaveRange: { min: 2, max: 6 },
+      noteDensity: this.scaleAwareGeneration.melodicComplexity,
+      rhythmComplexity: this.scaleAwareGeneration.rhythmComplexity,
+      harmonicComplexity: this.scaleAwareGeneration.harmonicComplexity,
+      melodicContour: this.getMelodicContourFromMood(this.scaleAwareGeneration.mood)
+    });
+
+    // Generate new patterns
+    this.generateScaleAwarePatterns();
+  }
+
+  generateScaleAwarePatterns() {
+    if (!this.sequences) return;
+
+    // Generate bass pattern
+    const bassPattern = this.noteGenerationEngine.generateBassPattern(STEP_COUNT, 'root_fifth');
+    this.updateSequencePattern('bass', bassPattern);
+
+    // Generate lead melody
+    const leadPattern = this.noteGenerationEngine.generateLeadMelody(STEP_COUNT, 'melodic');
+    this.updateSequencePattern('lead', leadPattern);
+
+    // Generate chord progression
+    const chordProgression = this.chordProgressionManager.generateProgression(4, this.scaleAwareGeneration.generationStyle, this.scaleAwareGeneration.mood);
+    this.updateChordProgression(chordProgression);
+  }
+
+  updateSequencePattern(instrument, pattern) {
+    if (!this.sequences || !this.sequences.byInstrument[instrument]) return;
+
+    const sequence = this.sequences.byInstrument[instrument];
+    const newPattern = pattern.map(step => {
+      if (step && step.note) {
+        return step.note;
+      }
+      return null;
+    });
+
+    sequence.values = newPattern;
+  }
+
+  updateChordProgression(progression) {
+    // Store chord progression for use in other parts of the system
+    this.currentChordProgression = progression;
+    
+    // Update lead pattern to be more harmonically aware
+    if (this.scaleAwareGeneration.enabled) {
+      const harmonicLeadPattern = this.melodyGenerator.generateMelodyOverChords(progression, STEP_COUNT);
+      this.updateSequencePattern('lead', harmonicLeadPattern);
+    }
+  }
+
+  getMelodicContourFromMood(mood) {
+    const moodContours = {
+      'happy': 'ascending',
+      'sad': 'descending',
+      'energetic': 'random',
+      'calm': 'balanced',
+      'mysterious': 'valley',
+      'dramatic': 'arch'
+    };
+    return moodContours[mood] || 'balanced';
+  }
+
+  // Generate scale-aware pattern variations
+  generateScaleAwareVariations(instrument, count = 3) {
+    if (!this.scaleAwareGeneration.enabled) return [];
+
+    const currentPattern = this.sequences?.byInstrument[instrument]?.values || [];
+    const variations = [];
+
+    for (let i = 0; i < count; i++) {
+      let variation;
+      
+      switch (instrument) {
+        case 'bass':
+          variation = this.noteGenerationEngine.generateBassPattern(STEP_COUNT);
+          break;
+        case 'lead':
+          variation = this.noteGenerationEngine.generateLeadMelody(STEP_COUNT);
+          break;
+        default:
+          variation = this.noteGenerationEngine.generateLeadMelody(STEP_COUNT);
+      }
+
+      variations.push(variation.map(step => step ? step.note : null));
+    }
+
+    return variations;
+  }
+
+  // Get scale information for UI
+  getScaleInfo() {
+    return {
+      key: this.scaleKeyManager.getCurrentKey(),
+      scale: this.scaleKeyManager.getCurrentScale(),
+      availableKeys: this.scaleKeyManager.getAvailableKeys(),
+      availableScales: this.scaleKeyManager.getAvailableScales(),
+      scaleNotes: this.scaleKeyManager.getScaleNotesRange(3, 5)
+    };
+  }
+
+  // Get chord progression information
+  getChordProgressionInfo() {
+    return {
+      currentProgression: this.chordProgressionManager.getCurrentProgression(),
+      commonProgressions: this.scaleKeyManager.getCommonProgressions(),
+      cadenceTypes: this.chordProgressionManager.cadenceTypes
+    };
+  }
+
+  // Generate melody based on current chord progression
+  generateMelodyOverChords(length = 16) {
+    if (!this.currentChordProgression) return [];
+
+    return this.melodyGenerator.generateMelodyOverChords(this.currentChordProgression, length);
+  }
+
+  // Export scale-aware configuration
+  exportScaleAwareConfiguration() {
+    return {
+      scaleAwareGeneration: this.scaleAwareGeneration,
+      scaleKey: this.scaleKeyManager.exportConfiguration(),
+      noteGeneration: this.noteGenerationEngine.exportConfiguration(),
+      chordProgression: this.chordProgressionManager.exportConfiguration(),
+      melody: this.melodyGenerator.exportConfiguration(),
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  // Import scale-aware configuration
+  importScaleAwareConfiguration(config) {
+    if (config.scaleAwareGeneration) {
+      this.scaleAwareGeneration = { ...this.scaleAwareGeneration, ...config.scaleAwareGeneration };
+    }
+    if (config.scaleKey) {
+      this.scaleKeyManager.importConfiguration(config.scaleKey);
+    }
+    if (config.noteGeneration) {
+      this.noteGenerationEngine.importConfiguration(config.noteGeneration);
+    }
+    if (config.chordProgression) {
+      this.chordProgressionManager.importConfiguration(config.chordProgression);
+    }
+    if (config.melody) {
+      this.melodyGenerator.importConfiguration(config.melody);
+    }
+
+    if (this.scaleAwareGeneration.enabled) {
+      this.updateScaleAwarePatterns();
+    }
   }
 }
   // Sidechain compression methods
