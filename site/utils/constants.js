@@ -1616,6 +1616,169 @@ export const CONTROL_SCHEMA = [
     ]
   },
   {
+    group: 'Scale & Key Management',
+    description: 'Musical scale and key selection for intelligent note generation.',
+    controls: [
+      {
+        id: 'scaleAwareEnabled',
+        label: 'Scale-Aware Generation',
+        type: 'select',
+        options: [
+          { value: false, label: 'Off' },
+          { value: true, label: 'On' }
+        ],
+        default: false,
+        apply: (value, app) => {
+          if (app.audio) {
+            app.audio.enableScaleAwareGeneration(value);
+          }
+        }
+      },
+      {
+        id: 'musicalKey',
+        label: 'Key',
+        type: 'select',
+        options: [
+          { value: 'C', label: 'C' },
+          { value: 'C#', label: 'C#' },
+          { value: 'Db', label: 'Db' },
+          { value: 'D', label: 'D' },
+          { value: 'D#', label: 'D#' },
+          { value: 'Eb', label: 'Eb' },
+          { value: 'E', label: 'E' },
+          { value: 'F', label: 'F' },
+          { value: 'F#', label: 'F#' },
+          { value: 'Gb', label: 'Gb' },
+          { value: 'G', label: 'G' },
+          { value: 'G#', label: 'G#' },
+          { value: 'Ab', label: 'Ab' },
+          { value: 'A', label: 'A' },
+          { value: 'A#', label: 'A#' },
+          { value: 'Bb', label: 'Bb' },
+          { value: 'B', label: 'B' }
+        ],
+        default: 'C',
+        apply: (value, app) => {
+          if (app.audio && app.audio.scaleAwareGeneration.enabled) {
+            const currentScale = app.audio.scaleAwareGeneration.currentScale;
+            app.audio.setScaleAndKey(value, currentScale);
+          }
+        }
+      },
+      {
+        id: 'musicalScale',
+        label: 'Scale',
+        type: 'select',
+        options: [
+          { value: 'major', label: 'Major' },
+          { value: 'minor', label: 'Natural Minor' },
+          { value: 'harmonic_minor', label: 'Harmonic Minor' },
+          { value: 'melodic_minor', label: 'Melodic Minor' },
+          { value: 'dorian', label: 'Dorian' },
+          { value: 'phrygian', label: 'Phrygian' },
+          { value: 'lydian', label: 'Lydian' },
+          { value: 'mixolydian', label: 'Mixolydian' },
+          { value: 'locrian', label: 'Locrian' },
+          { value: 'pentatonic_major', label: 'Pentatonic Major' },
+          { value: 'pentatonic_minor', label: 'Pentatonic Minor' },
+          { value: 'blues', label: 'Blues Scale' },
+          { value: 'chromatic', label: 'Chromatic' }
+        ],
+        default: 'major',
+        apply: (value, app) => {
+          if (app.audio && app.audio.scaleAwareGeneration.enabled) {
+            const currentKey = app.audio.scaleAwareGeneration.currentKey;
+            app.audio.setScaleAndKey(currentKey, value);
+          }
+        }
+      },
+      {
+        id: 'generationStyle',
+        label: 'Generation Style',
+        type: 'select',
+        options: [
+          { value: 'classical', label: 'Classical' },
+          { value: 'jazz', label: 'Jazz' },
+          { value: 'pop', label: 'Pop' },
+          { value: 'electronic', label: 'Electronic' }
+        ],
+        default: 'classical',
+        apply: (value, app) => {
+          if (app.audio && app.audio.scaleAwareGeneration.enabled) {
+            const currentMood = app.audio.scaleAwareGeneration.mood;
+            app.audio.setGenerationStyle(value, currentMood);
+          }
+        }
+      },
+      {
+        id: 'musicalMood',
+        label: 'Musical Mood',
+        type: 'select',
+        options: [
+          { value: 'balanced', label: 'Balanced' },
+          { value: 'happy', label: 'Happy' },
+          { value: 'sad', label: 'Sad' },
+          { value: 'energetic', label: 'Energetic' },
+          { value: 'calm', label: 'Calm' },
+          { value: 'mysterious', label: 'Mysterious' },
+          { value: 'dramatic', label: 'Dramatic' }
+        ],
+        default: 'balanced',
+        apply: (value, app) => {
+          if (app.audio && app.audio.scaleAwareGeneration.enabled) {
+            const currentStyle = app.audio.scaleAwareGeneration.generationStyle;
+            app.audio.setGenerationStyle(currentStyle, value);
+          }
+        }
+      },
+      {
+        id: 'harmonicComplexity',
+        label: 'Harmonic Complexity',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.6,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.audio && app.audio.scaleAwareGeneration.enabled) {
+            app.audio.setGenerationComplexity({ harmonicComplexity: value });
+          }
+        }
+      },
+      {
+        id: 'melodicComplexity',
+        label: 'Melodic Complexity',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.5,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.audio && app.audio.scaleAwareGeneration.enabled) {
+            app.audio.setGenerationComplexity({ melodicComplexity: value });
+          }
+        }
+      },
+      {
+        id: 'rhythmComplexity',
+        label: 'Rhythm Complexity',
+        type: 'range',
+        min: 0,
+        max: 1,
+        step: 0.01,
+        default: 0.5,
+        format: value => `${Math.round(value * 100)}%`,
+        apply: (value, app) => {
+          if (app.audio && app.audio.scaleAwareGeneration.enabled) {
+            app.audio.setGenerationComplexity({ rhythmComplexity: value });
+          }
+        }
+      }
+    ]
+  },
+  {
     group: 'Pattern Variations',
     description: 'A/B pattern switching and variation controls.',
     controls: [
