@@ -84,6 +84,7 @@ function createApp() {
     mobileGestures: null,
     presetManager: null,
     presetLibraryUI: null,
+    scaleManager: null,
     presetManager: null,
     presetLibraryUI: null,
     patternVariation: null,
@@ -463,6 +464,7 @@ async function initializeApp(app) {
   app.storage = new StorageManager();
   app.status = new StatusManager();
   app.audio = new AudioEngine().initialize();
+  app.scaleManager = new ScaleManager();
   app.patternChain = new PatternChainManager(app.audio);
   app.patternVariation = new PatternVariationManager(app);
   app.keySignature = new KeySignatureManager(app);
@@ -523,6 +525,10 @@ async function initializeApp(app) {
 
   // Configure transport
   app.audio.configureTransport();
+  // Connect scale manager to audio engine
+  if (app.audio && app.scaleManager && app.audio.setScaleManager) {
+    app.audio.setScaleManager(app.scaleManager);
+  }
 
   // Load stored state
   const storedControls = app.storage.loadControlState();

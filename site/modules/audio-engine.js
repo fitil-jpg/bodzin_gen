@@ -122,6 +122,10 @@ export class AudioEngine {
     return this;
   }
 
+  setScaleManager(scaleManager) {
+    this.scaleManager = scaleManager;
+  }
+
   createEffects() {
     // Enhanced delay with more parameters
     const delay = new Tone.FeedbackDelay('8n', 0.38);
@@ -539,13 +543,15 @@ export class AudioEngine {
 
     const bassSeq = new Tone.Sequence((time, note) => {
       if (note) {
-        instruments.bass.triggerAttackRelease(note, '8n', time, 0.9);
+        const qNote = this.quantizeNoteIfNeeded(note);
+        instruments.bass.triggerAttackRelease(qNote, '8n', time, 0.9);
       }
     }, bassPattern, '16n');
 
     const leadSeq = new Tone.Sequence((time, notes) => {
       if (notes && notes.length) {
-        notes.forEach(note => instruments.lead.triggerAttackRelease(note, '16n', time, 0.8));
+        const qNotes = this.quantizeNoteIfNeeded(notes);
+        qNotes.forEach(note => instruments.lead.triggerAttackRelease(note, '16n', time, 0.8));
       }
     }, leadPattern, '16n');
 
@@ -576,6 +582,11 @@ export class AudioEngine {
       groups,
       byInstrument: sequencesByInstrument
     };
+  }
+
+  quantizeNoteIfNeeded(noteOrChord) {
+    if (!this.scaleManager) return Array.isArray(noteOrChord) ? [...noteOrChord] : noteOrChord;
+    return this.scaleManager.quantizeNote(noteOrChord);
   }
 
   configureTransport() {
