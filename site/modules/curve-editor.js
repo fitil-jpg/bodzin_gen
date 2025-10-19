@@ -26,6 +26,7 @@ export class CurveEditor {
     this.curveTension = 0.5;
     this.particles = [];
     this.lastParticleTime = 0;
+    this.wolframAvailable = false;
     
     // Initialize curve math and presets
     this.curveMath = new CurveMath();
@@ -54,6 +55,7 @@ export class CurveEditor {
     this.setupEventListeners();
     this.setupCanvas();
     this.curveAnimation.initialize();
+    this.checkWolframAvailability();
   }
 
   createUI() {
@@ -171,6 +173,39 @@ export class CurveEditor {
               <button id="curve-paste" class="btn btn-outline">Paste</button>
               <button id="curve-export" class="btn btn-outline">Export</button>
               <button id="curve-import" class="btn btn-outline">Import</button>
+
+              <div class="data-fit" style="margin-top: 12px;">
+                <h3>Data Fit</h3>
+                <div class="property-group">
+                  <label for="curve-fit-data">Data (JSON or CSV x,y per line):</label>
+                  <textarea id="curve-fit-data" rows="4" placeholder='Examples:\n[0.1, 0.5, 0.9]\n[[0,0.1],[1,0.5],[2,0.9]]\n0,0.1\n1,0.5\n2,0.9'></textarea>
+                </div>
+                <div class="property-group">
+                  <label for="curve-fit-method">Method:</label>
+                  <select id="curve-fit-method">
+                    <option value="polynomial" selected>Polynomial</option>
+                    <option value="linear">Linear</option>
+                    <option value="movingAverage">Moving Average</option>
+                    <option value="gaussian">Gaussian</option>
+                  </select>
+                </div>
+                <div class="property-group">
+                  <label for="curve-fit-degree">Degree (for polynomial):</label>
+                  <input type="number" id="curve-fit-degree" min="1" max="8" step="1" value="3" />
+                </div>
+                <div class="property-group">
+                  <label for="curve-fit-smoothing">Smoothing (0.0 - 2.0):</label>
+                  <input type="number" id="curve-fit-smoothing" min="0" max="2" step="0.1" value="1.0" />
+                </div>
+                <div class="property-group">
+                  <label for="curve-fit-length">Output Length:</label>
+                  <input type="number" id="curve-fit-length" min="2" max="512" step="1" value="16" />
+                </div>
+                <div class="property-group" style="display:flex; gap:8px; flex-wrap: wrap;">
+                  <button id="curve-fit-local" class="btn">Fit (Local)</button>
+                  <button id="curve-fit-wolfram" class="btn btn-outline" title="Requires server Wolfram integration">Fit (Wolfram)</button>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -268,6 +303,16 @@ export class CurveEditor {
 
     // Canvas events
     this.setupCanvasEvents();
+
+    // Data-fit buttons
+    const localBtn = document.getElementById('curve-fit-local');
+    const wolframBtn = document.getElementById('curve-fit-wolfram');
+    if (localBtn) {
+      localBtn.addEventListener('click', () => this.requestCurveFit(false));
+    }
+    if (wolframBtn) {
+      wolframBtn.addEventListener('click', () => this.requestCurveFit(true));
+    }
   }
 
   setupCanvasEvents() {
@@ -342,6 +387,14 @@ export class CurveEditor {
     
     this.draw();
     document.body.style.overflow = 'hidden';
+
+    // Update Wolfram button state
+    const wolframBtn = document.getElementById('curve-fit-wolfram');
+    if (wolframBtn) {
+      wolframBtn.disabled = !this.wolframAvailable;
+      wolframBtn.classList.toggle('btn-outline', !this.wolframAvailable);
+      wolframBtn.title = this.wolframAvailable ? 'Use Wolfram Cloud fitting' : 'Wolfram unavailable (server not configured)';
+    }
   }
 
   hide() {
@@ -621,6 +674,122 @@ export class CurveEditor {
     }
     
     this.currentTrack.values = values;
+  }
+
+  async checkWolframAvailability() {
+    try {
+      const resp = await fetch('/api/wolfram/status');
+      if (!resp.ok) {
+        this.wolframAvailable = false;
+      } else {
+        const json = await resp.json();
+        this.wolframAvailable = Boolean(json && json.available);
+      }
+    } catch (_) {
+      this.wolframAvailable = false;
+    }
+  }
+
+  parseFitData(input) {
+    if (!input) return null;
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed[0])) {
+          // [[x,y], ...]
+          const x = parsed.map(p => Number(p[0]));
+          const y = parsed.map(p => Number(p[1]));
+          if (x.every(Number.isFinite) && y.every(Number.isFinite)) return { x, y };
+        } else {
+          // [y, ...]
+          const y = parsed.map(Number);
+          if (y.every(Number.isFinite)) {
+            const x = y.map((_, i) => i);
+            return { x, y };
+          }
+        }
+      }
+    } catch (_) {
+      // Not JSON; try CSV lines
+    }
+    // CSV: lines of "x,y" or single column of y
+    const lines = trimmed.split(/\n+/).map(l => l.trim()).filter(Boolean);
+    const xy = [];
+    let singleCol = true;
+    for (const line of lines) {
+      const parts = line.split(/[,\s]+/).filter(Boolean);
+      if (parts.length >= 2) {
+        singleCol = false;
+        const xi = Number(parts[0]);
+        const yi = Number(parts[1]);
+        if (Number.isFinite(xi) && Number.isFinite(yi)) xy.push([xi, yi]);
+      } else if (parts.length === 1) {
+        const yi = Number(parts[0]);
+        if (Number.isFinite(yi)) xy.push([xy.length, yi]);
+      }
+    }
+    if (!xy.length) return null;
+    if (singleCol) {
+      const x = xy.map(p => p[0]);
+      const y = xy.map(p => p[1]);
+      return { x, y };
+    }
+    const x = xy.map(p => p[0]);
+    const y = xy.map(p => p[1]);
+    return { x, y };
+  }
+
+  async requestCurveFit(useWolfram) {
+    if (!this.currentTrack) return;
+    const textarea = document.getElementById('curve-fit-data');
+    if (!textarea) return;
+    const parsed = this.parseFitData(textarea.value);
+    if (!parsed) {
+      alert('Please enter data as JSON ([y...] or [[x,y]...]) or CSV (one y per line or "x,y" per line).');
+      return;
+    }
+    const method = document.getElementById('curve-fit-method')?.value || 'polynomial';
+    const degree = parseInt(document.getElementById('curve-fit-degree')?.value) || 3;
+    const smoothing = parseFloat(document.getElementById('curve-fit-smoothing')?.value) || 1.0;
+    const length = parseInt(document.getElementById('curve-fit-length')?.value) || this.gridSize || 16;
+
+    try {
+      const resp = await fetch('/api/curves/fit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          x: parsed.x,
+          y: parsed.y,
+          method,
+          degree,
+          smoothing,
+          length,
+          useWolfram: Boolean(useWolfram)
+        })
+      });
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(text || 'Request failed');
+      }
+      const result = await resp.json();
+      if (!result || !Array.isArray(result.values)) {
+        throw new Error('Invalid response');
+      }
+      this.currentTrack.values = result.values.map(v => Math.min(Math.max(Number(v) || 0, 0), 1));
+      this.gridSize = this.currentTrack.values.length;
+      this.updateBreakpointsFromValues();
+      this.draw();
+      if (this.app.timeline) this.app.timeline.draw();
+      if (this.app.status) {
+        this.app.status.set(`Curve fit applied (${result.source || 'local'}:${result.method || method})`);
+      }
+    } catch (err) {
+      console.error('Curve fit failed', err);
+      alert('Curve fit failed: ' + err.message);
+      if (this.app.status) this.app.status.set('Curve fit failed');
+    }
   }
 
   interpolateValue(start, end, t) {

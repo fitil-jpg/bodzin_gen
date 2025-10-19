@@ -1,112 +1,88 @@
 # Bodzin Generator Toolkit
 
-A comprehensive web-based music generator inspired by Stephan Bodzin's style, featuring advanced procedural music theory and Wolfram Language integration.
+A web-based music generator inspired by Stephan Bodzin's style, featuring advanced pattern generation and mathematical integration.
 
 ## Features
 
 ### Core Functionality
-- **Real-time Audio Engine**: Built with Tone.js for professional audio processing
-- **Pattern Variations**: Advanced pattern morphing and variation system
-- **Automation System**: Comprehensive automation with curve editing
-- **Preset Management**: Save, load, and share presets with versioning
-- **MIDI Support**: Full MIDI input/output support
-- **Mobile Gestures**: Touch-friendly interface for mobile devices
+- **Real-time Audio Engine**: Built with Web Audio API and Tone.js
+- **Automation System**: 16-step automation tracks with curve editing
+- **Pattern Variations**: A/B/C pattern system with morphing capabilities
+- **Preset Management**: Save, load, and share presets
+- **MIDI Integration**: Full MIDI learn and control support
 
-### Procedural Music Theory (NEW!)
-- **Advanced Music Theory Engine**: Comprehensive scale, chord, and progression system
-- **Wolfram Language Integration**: Advanced analysis and generation using Wolfram Cloud API
-- **Procedural Pattern Generation**: AI-powered pattern generation with multiple styles
-- **Real-time Analysis**: Harmonic analysis, voice leading, and tension analysis
-- **Style System**: Multiple musical styles (Bodzin, Ambient, Cinematic, Jazz, Experimental)
-- **Pattern Export/Import**: Seamless integration with existing automation system
+### Wolfram Integration 🧮
+- **Mathematical Pattern Generation**: Generate patterns using mathematical functions
+- **Fractal Patterns**: Mandelbrot Set, Julia Set, and other fractal-based patterns
+- **Chaos Theory**: Lorenz Attractor, Logistic Map, and chaos-based patterns
+- **Harmonic Analysis**: Fourier Series, Wavelet transforms, and spectral patterns
+- **Sequential Patterns**: Fibonacci, Prime Numbers, Golden Ratio sequences
+- **Cellular Automata**: Rule-based pattern generation
+- **Pattern Morphing**: Blend between different mathematical patterns
+- **Preset Integration**: Save Wolfram patterns as part of your presets
 
-## Quick Start
+### Pattern Types Available
+- **Sequential**: Fibonacci, Prime Numbers, Golden Ratio
+- **Fractals**: Mandelbrot Set, Julia Set
+- **Chaos Theory**: Lorenz Attractor, Logistic Map, Chaos Maps
+- **Harmonic**: Sine Wave, Cosine Wave, Fourier Series
+- **Mathematical**: Exponential, Logarithmic, Polynomial
+- **Wavelets**: Morlet, Mexican Hat, Gaussian
+- **Cellular**: Cellular Automaton (Rule 30, 110, etc.)
 
-### Option 1: Python Server (Recommended)
-```bash
-cd site
-python3 server.py
+## Getting Started
+
+1. Open `site/index.html` in a modern web browser
+2. Click "Start" to begin audio playback
+3. Use the automation timeline to create patterns
+4. Click the 🧮 Wolfram button to access mathematical pattern generation
+5. Visit `demo-wolfram.html` for a comprehensive demo of Wolfram features
+
+## File Structure
+
 ```
-Then open: http://localhost:8000
-
-### Option 2: Node.js Server
-```bash
-cd site
-npm install
-node server.js
-```
-Then open: http://localhost:8000
-
-### Option 3: Start Server Script
-```bash
-cd site
-chmod +x start-server.sh
-./start-server.sh
+site/
+├── index.html              # Main application
+├── demo-wolfram.html       # Wolfram integration demo
+├── app-modular.js          # Main application logic
+├── modules/
+│   ├── wolfram-integration.js      # Wolfram API and mathematical functions
+│   ├── wolfram-pattern-manager.js  # Pattern management and storage
+│   ├── wolfram-ui.js              # User interface for Wolfram features
+│   └── ...                        # Other modules
+└── utils/
+    ├── constants.js        # Application constants
+    └── helpers.js          # Utility functions
 ```
 
-## Procedural Music Theory Usage
+## Wolfram Integration Usage
 
-1. **Open Interface**: Click the "🎵 Procedural Music Theory" button
-2. **Select Style**: Choose from Bodzin, Ambient, Cinematic, Jazz, or Experimental
-3. **Adjust Parameters**: Use complexity and randomness sliders
-4. **Generate Patterns**: Click "Generate New Patterns"
-5. **Export to Sequencer**: Use "Export Patterns" to apply to main sequencer
+```javascript
+// Generate a Fibonacci pattern
+const wolframManager = new WolframPatternManager(app);
+await wolframManager.createPattern('my-fibonacci', 'My Fibonacci', 'fibonacci', {
+  start: 0.2,
+  end: 0.8,
+  scale: 0.6
+});
 
-### Wolfram Integration
+// Apply to automation
+wolframManager.applyPatternToAutomation('my-fibonacci');
 
-For advanced analysis and generation:
-1. Get a Wolfram Cloud API key
-2. Enter it in the Settings tab
-3. Use the Wolfram tab for advanced music theory computations
+// Create variations
+const variations = await wolframManager.generatePatternVariations('my-fibonacci', 3);
 
-## Architecture
+// Morph between patterns
+const morphed = await wolframManager.morphPatterns('pattern1', 'pattern2', 0.5);
+```
 
-### Core Modules
-- `audio-engine.js`: Audio processing and synthesis
-- `ui-controls.js`: User interface controls
-- `timeline-renderer.js`: Visual timeline representation
-- `pattern-variation-manager.js`: Pattern morphing system
-- `preset-manager.js`: Preset save/load system
+## Browser Compatibility
 
-### Procedural Music Theory Modules
-- `music-theory-engine.js`: Core music theory algorithms
-- `wolfram-connector.js`: Wolfram Language integration
-- `procedural-pattern-generator.js`: Advanced pattern generation
-- `procedural-music-ui.js`: User interface for music theory
-
-## Documentation
-
-- [Procedural Music Theory Guide](PROCEDURAL_MUSIC_THEORY.md)
-- [Pattern Variations System](PATTERN_VARIATIONS_README.md)
-- [Preset Versioning](PRESET_VERSIONING.md)
-
-## Requirements
-
-- Modern web browser with Web Audio API support
-- Internet connection (for Wolfram integration)
-- Python 3.x or Node.js (for local server)
-
-## Browser Support
-
-- Chrome 66+
-- Firefox 60+
-- Safari 11.1+
-- Edge 79+
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+- Chrome 80+
+- Firefox 75+
+- Safari 13+
+- Edge 80+
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Credits
-
-- **Stephan Bodzin**: Musical inspiration
-- **Tone.js**: Audio framework
-- **Wolfram Research**: Advanced music theory computation
-- **Community**: Contributors and testers
+MIT License - see LICENSE file for details.
