@@ -19,6 +19,7 @@ import { PatternMorphing } from './modules/pattern-morphing.js';
 import { MobileGestures } from './modules/mobile-gestures.js';
 import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
+import { WolframClient } from './modules/wolfram-client.js';
 
 import { 
   STEP_COUNT, 
@@ -442,6 +443,8 @@ async function initializeApp(app) {
   app.presetLibraryUI = new PresetLibraryUI(app);
   app.presetManager = new PresetManager(app);
   app.presetLibraryUI = new PresetLibraryUI(app);
+  // Integrations
+  app.wolfram = new WolframClient(app);
 
   // Initialize timeline
   app.timeline.initialize();
@@ -532,6 +535,7 @@ function setupButtons(app) {
   const exportMixBtn = document.getElementById('exportMixButton');
   const exportStemsBtn = document.getElementById('exportStemsButton');
   const curveEditorBtn = document.getElementById('curveEditorButton');
+  const wolframComposeBtn = document.getElementById('wolframComposeButton');
   const midiToggle = document.getElementById('midiLearnToggle');
   
   // Morphing buttons
@@ -559,6 +563,26 @@ function setupButtons(app) {
   exportMixBtn?.addEventListener('click', () => exportMix(app));
   exportStemsBtn?.addEventListener('click', () => exportStems(app));
   curveEditorBtn?.addEventListener('click', () => app.curveEditor.show());
+  wolframComposeBtn?.addEventListener('click', async () => {
+    try {
+      app.status.set('Generating with Wolfram...');
+      const result = await app.wolfram.compose({
+        bpm: Tone?.Transport?.bpm?.value || 124,
+        seed: Date.now()
+      });
+      const ok = app.wolfram.applyToApp(result);
+      if (ok) {
+        app.status.set('Applied Wolfram composition');
+        // Ensure transport is running to hear changes
+        await ensureTransportRunning(app);
+      } else {
+        app.status.set('No composition applied');
+      }
+    } catch (err) {
+      console.error(err);
+      app.status.set('Wolfram generation failed');
+    }
+  });
   
   // Add pattern chain export/import buttons
   const exportChainBtn = document.getElementById('exportChainButton');
