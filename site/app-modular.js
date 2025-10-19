@@ -19,6 +19,9 @@ import { PatternMorphing } from './modules/pattern-morphing.js';
 import { MobileGestures } from './modules/mobile-gestures.js';
 import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
+import { ScaleManager } from './modules/scale-manager.js';
+import { KeyManager } from './modules/key-manager.js';
+import { ChordProgressionManager } from './modules/chord-progression-manager.js';
 
 import { 
   STEP_COUNT, 
@@ -71,6 +74,11 @@ function createApp() {
     presetManager: null,
     presetLibraryUI: null,
     patternVariation: null,
+    
+    // Scale and Key Management
+    scaleManager: null,
+    keyManager: null,
+    chordProgressionManager: null,
     
     // State
     controlState: {},
@@ -442,6 +450,11 @@ async function initializeApp(app) {
   app.presetLibraryUI = new PresetLibraryUI(app);
   app.presetManager = new PresetManager(app);
   app.presetLibraryUI = new PresetLibraryUI(app);
+  
+  // Initialize Scale and Key Management
+  app.scaleManager = new ScaleManager();
+  app.keyManager = new KeyManager();
+  app.chordProgressionManager = new ChordProgressionManager();
 
   // Initialize timeline
   app.timeline.initialize();
