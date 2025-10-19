@@ -10,6 +10,12 @@ import {
 import { setBusLevel, clamp } from '../utils/helpers.js';
 import { createToneEnvelopeFollower } from './envelope-follower.js';
 import { ProbabilityManager } from './probability-manager.js';
+import { 
+  generateEuclideanPattern, 
+  generateECAPattern, 
+  mapPatternToVelocities, 
+  mapPatternToNotes 
+} from './pattern-math.js';
 
 export class AudioEngine {
   constructor() {
@@ -23,6 +29,7 @@ export class AudioEngine {
     this.lfos = null;
     this.probabilityManager = new ProbabilityManager();
     this.useProbabilityTriggers = false;
+    this.useMathPatterns = false; // Enable Euclidean/ECA-based generators
     this.currentStep = 0;
     this.currentSection = null;
   }
@@ -604,15 +611,15 @@ export class AudioEngine {
     const drums = this.sequences.groups.drums;
     
     // Randomize kick pattern (more sparse, emphasis on 1 and 9)
-    const kickPattern = this.generateKickPattern();
+    const kickPattern = this.useMathPatterns ? this.generateKickPatternMath() : this.generateKickPattern();
     drums[0].events = kickPattern.map((hit, i) => ({ time: i * 0.25, value: hit }));
     
     // Randomize snare pattern (typically on 2 and 4, but add variation)
-    const snarePattern = this.generateSnarePattern();
+    const snarePattern = this.useMathPatterns ? this.generateSnarePatternMath() : this.generateSnarePattern();
     drums[1].events = snarePattern.map((hit, i) => ({ time: i * 0.25, value: hit }));
     
     // Randomize hi-hat pattern (more complex, varying velocities)
-    const hatPattern = this.generateHatPattern();
+    const hatPattern = this.useMathPatterns ? this.generateHatPatternMath() : this.generateHatPattern();
     drums[2].events = hatPattern.map((vel, i) => ({ time: i * 0.25, value: vel }));
   }
 
@@ -620,7 +627,7 @@ export class AudioEngine {
     if (!this.sequences || !this.sequences.groups.bass) return;
 
     const bass = this.sequences.groups.bass[0];
-    const bassPattern = this.generateBassPattern();
+    const bassPattern = this.useMathPatterns ? this.generateBassPatternMath() : this.generateBassPattern();
     bass.events = bassPattern.map((note, i) => ({ time: i * 0.25, value: note }));
   }
 
@@ -628,7 +635,7 @@ export class AudioEngine {
     if (!this.sequences || !this.sequences.groups.lead) return;
 
     const lead = this.sequences.groups.lead[0];
-    const leadPattern = this.generateLeadPattern();
+    const leadPattern = this.useMathPatterns ? this.generateLeadPatternMath() : this.generateLeadPattern();
     lead.events = leadPattern.map((notes, i) => ({ time: i * 0.25, value: notes }));
   }
 
@@ -636,7 +643,7 @@ export class AudioEngine {
     if (!this.sequences || !this.sequences.groups.fx) return;
 
     const fx = this.sequences.groups.fx[0];
-    const fxPattern = this.generateFxPattern();
+    const fxPattern = this.useMathPatterns ? this.generateFxPatternMath() : this.generateFxPattern();
     fx.events = fxPattern.map((trigger, i) => ({ time: i * 0.25, value: trigger }));
   }
 
@@ -645,6 +652,13 @@ export class AudioEngine {
     this.randomizeBass();
     this.randomizeLead();
     this.randomizeFx();
+  }
+
+  /**
+   * Enable or disable mathematical pattern generation (Euclidean/ECA)
+   */
+  setMathPatternsEnabled(enabled) {
+    this.useMathPatterns = Boolean(enabled);
   }
 
   // Pattern generation methods
@@ -760,6 +774,71 @@ export class AudioEngine {
     });
     
     return pattern;
+  }
+
+  // Mathematical pattern generators (Euclidean / Wolfram ECA)
+  generateKickPatternMath() {
+    const hits = generateEuclideanPattern(16, 4, 0);
+    const velocities = mapPatternToVelocities(hits, { base: 0.95, spread: 0.08 });
+    // Accents on strong beats
+    velocities[0] = 1;
+    velocities[8] = Math.max(velocities[8], 0.9);
+    return velocities;
+  }
+
+  generateSnarePatternMath() {
+    // Two evenly spaced hits, rotated to typical backbeats (steps 3 and 11)
+    const hits = generateEuclideanPattern(16, 2, 3);
+    return mapPatternToVelocities(hits, { base: 0.9, spread: 0.05, ghostChance: 0.2, ghostMin: 0.12, ghostMax: 0.35 });
+  }
+
+  generateHatPatternMath() {
+    // Derive hats from ECA, sampling multiple columns for density
+    const hits = generateECAPattern({ rule: 90, steps: 16, width: 16, columns: [2,4,6,8,10,12,14] });
+    return mapPatternToVelocities(hits, { base: 0.6, spread: 0.25 });
+  }
+
+  generateBassPatternMath() {
+    // Use ECA to gate notes from a pool
+    const hits = generateECAPattern({ rule: 110, steps: 16, width: 16, columns: [8] });
+    const notes = ['C2', 'D2', 'E2', 'F2', 'G2', 'A2', 'B1', 'C2'];
+    const seq = mapPatternToNotes(hits, notes, { rest: null, cycle: true });
+    // Ensure strong beats are not empty if everything was gated out
+    const strongBeats = [0, 4, 8, 12];
+    strongBeats.forEach(beat => {
+      if (!seq[beat]) {
+        seq[beat] = notes[(beat / 4) % notes.length];
+      }
+    });
+    return seq;
+  }
+
+  generateLeadPatternMath() {
+    // Gate chord hits with ECA; place chords on 4-step boundaries
+    const chordProgressions = [
+      [['E4', 'G4', 'B4'], ['A4', 'C5'], ['B4', 'D5'], ['E5', 'G5']],
+      [['C4', 'E4', 'G4'], ['D4', 'F4', 'A4'], ['E4', 'G4', 'B4'], ['F4', 'A4', 'C5']],
+      [['G4', 'B4', 'D5'], ['A4', 'C5', 'E5'], ['B4', 'D5', 'F5'], ['C5', 'E5', 'G5']]
+    ];
+    const progression = chordProgressions[Math.floor(Math.random() * chordProgressions.length)];
+    const hits = generateECAPattern({ rule: 150, steps: 16, width: 16, columns: [Math.floor(Math.random()*16)] });
+    const pattern = new Array(16).fill(null);
+    for (let i = 0; i < 16; i++) {
+      if (!hits[i]) continue;
+      const chordIndex = Math.floor(i / 4) % progression.length;
+      const chord = progression[chordIndex];
+      // Choose 1-2 notes from chord
+      const sliceSize = Math.random() < 0.5 ? 1 : 2;
+      const shuffled = [...chord].sort(() => Math.random() - 0.5);
+      pattern[i] = shuffled.slice(0, sliceSize);
+    }
+    return pattern;
+  }
+
+  generateFxPatternMath() {
+    // Evenly distribute four hits and rotate to off-beats 3,7,11,15
+    const hits = generateEuclideanPattern(16, 4, 3);
+    return hits.map(v => (v ? 1 : 0));
   }
 }
   // Envelope Follower Controls
