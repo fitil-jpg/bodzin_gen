@@ -119,6 +119,9 @@ export class AudioEngine {
 
     this.connectBuses();
     this.audioInitialized = true;
+
+    // Initialize musical scale caches after audio setup
+    this.recomputeScaleCaches();
     return this;
   }
 
@@ -503,16 +506,11 @@ export class AudioEngine {
       0.75, 0.3, 0.55, 0.35
     ];
     const bassPattern = [
-      'C2', null, 'G1', null,
-      'C2', 'D2', null, 'G1',
-      'C2', null, 'A1', null,
-      'C2', 'D2', null, 'G1'
+      // Seed with scale-aware defaults at init time
+      ...this.generateBassPattern()
     ];
     const leadPattern = [
-      ['E4', 'B4'], null, ['G4'], null,
-      ['A4'], null, ['B4', 'D5'], null,
-      ['E5'], null, ['G4'], null,
-      ['A4', 'C5'], null, ['B4'], null
+      ...this.generateLeadPattern()
     ];
     const fxPattern = [
       0, 0, 0, 0,
@@ -770,22 +768,28 @@ export class AudioEngine {
     // Fallback to default pattern
     const notes = ['C2', 'D2', 'E2', 'F2', 'G2', 'A2', 'B2', 'C3'];
     const pattern = new Array(16).fill(null);
-    
-    // Bass typically plays on strong beats
-    const strongBeats = [0, 4, 8, 12];
-    strongBeats.forEach(beat => {
-      if (Math.random() < 0.8) {
-        pattern[beat] = notes[Math.floor(Math.random() * notes.length)];
-      }
-    });
-    
-    // Add some off-beat notes
-    for (let i = 1; i < 16; i += 2) {
-      if (Math.random() < 0.3) {
-        pattern[i] = notes[Math.floor(Math.random() * notes.length)];
+    const degrees = this.degreesProgression || pickDegreesProgression(this.scaleType);
+    const baseOctave = 2; // around C2 for bass
+    // Place roots on strong beats
+    for (let step = 0; step < 16; step += 4) {
+      if (Math.random() < 0.9) {
+        const degree = degrees[(step / 4) % degrees.length];
+        let midi = getScaleDegreeMidi(this.musicalKey, this.scaleType, degree, baseOctave);
+        midi = constrainToRange(midi, this.scaleCache.bassRange.minMidi, this.scaleCache.bassRange.maxMidi);
+        pattern[step] = midiToNote(midi);
       }
     }
-    
+    // Add passing/off-beat notes quantized to scale
+    for (let i = 1; i < 16; i += 2) {
+      if (Math.random() < 0.35) {
+        const prev = pattern[i - 1];
+        const prevMidi = prev ? noteToMidi(prev) : getScaleDegreeMidi(this.musicalKey, this.scaleType, degrees[Math.floor((i - 1) / 4) % degrees.length], baseOctave);
+        let candidate = prevMidi + (Math.random() < 0.5 ? 2 : -2); // approx whole-step move
+        candidate = quantizeMidiToScale(candidate, this.musicalKey, this.scaleType);
+        candidate = constrainToRange(candidate, this.scaleCache.bassRange.minMidi, this.scaleCache.bassRange.maxMidi);
+        pattern[i] = midiToNote(candidate);
+      }
+    }
     return pattern;
   }
 
@@ -832,8 +836,8 @@ export class AudioEngine {
     
     const progression = chordProgressions[Math.floor(Math.random() * chordProgressions.length)];
     const pattern = new Array(16).fill(null);
-    
-    // Lead typically plays on every 4th beat
+    const degrees = this.degreesProgression || pickDegreesProgression(this.scaleType);
+    const baseOctave = 4; // around C4 for lead
     for (let i = 0; i < 16; i += 4) {
       if (Math.random() < 0.8) {
         const chordIndex = Math.floor(i / 4) % progression.length;
@@ -894,6 +898,74 @@ export class AudioEngine {
       
       return pattern;
     }
+  }
+
+  // --- Key/Scale helpers ---
+  recomputeScaleCaches() {
+    const bassMin = this.scaleCache?.bassRange?.minMidi ?? (noteToMidi('G1') || 31);
+    const bassMax = this.scaleCache?.bassRange?.maxMidi ?? (noteToMidi('C3') || 48);
+    const leadMin = this.scaleCache?.leadRange?.minMidi ?? (noteToMidi('C4') || 60);
+    const leadMax = this.scaleCache?.leadRange?.maxMidi ?? (noteToMidi('A5') || 81);
+
+    this.scaleCache.bassNotes = buildScaleNotesInRange(this.musicalKey, this.scaleType, bassMin, bassMax)
+      .map(midi => midiToNote(midi));
+    this.scaleCache.leadNotes = buildScaleNotesInRange(this.musicalKey, this.scaleType, leadMin, leadMax)
+      .map(midi => midiToNote(midi));
+
+    this.degreesProgression = pickDegreesProgression(this.scaleType);
+  }
+
+  setMusicalKey(key) {
+    this.musicalKey = key;
+    this.recomputeScaleCaches();
+    this.refreshScaleAwarePatterns();
+  }
+
+  setScaleType(scaleType) {
+    this.scaleType = scaleType;
+    this.recomputeScaleCaches();
+    this.refreshScaleAwarePatterns();
+  }
+
+  refreshScaleAwarePatterns() {
+    if (!this.sequences || !this.sequences.groups) return;
+    // Regenerate bass and lead using new key/scale
+    this.randomizeBass();
+    this.randomizeLead();
+  }
+
+  getScaleAwareBassNoteForStep(step) {
+    const degrees = this.degreesProgression || [1, 5, 6, 4];
+    const baseOctave = 2;
+    const quarter = Math.floor(step / 4);
+    const degree = degrees[quarter % degrees.length];
+    let midi = getScaleDegreeMidi(this.musicalKey, this.scaleType, degree, baseOctave);
+    if (step % 4 !== 0) {
+      // Passing tone around chord root
+      const delta = step % 2 === 1 ? 2 : -2;
+      midi = quantizeMidiToScale(midi + delta, this.musicalKey, this.scaleType);
+    }
+    midi = constrainToRange(midi, this.scaleCache.bassRange.minMidi, this.scaleCache.bassRange.maxMidi);
+    return midiToNote(midi);
+  }
+
+  getScaleAwareLeadNotesForStep(step) {
+    const degrees = this.degreesProgression || [1, 5, 6, 4];
+    const baseOctave = 4;
+    const quarter = Math.floor(step / 4);
+    const degree = degrees[quarter % degrees.length];
+    if (step % 4 === 0) {
+      const triad = buildDiatonicTriad(this.musicalKey, this.scaleType, degree, baseOctave)
+        .map(m => constrainToRange(m, this.scaleCache.leadRange.minMidi, this.scaleCache.leadRange.maxMidi))
+        .map(midiToNote);
+      return triad;
+    }
+    if (step % 4 === 2) {
+      let midi = getScaleDegreeMidi(this.musicalKey, this.scaleType, degree, baseOctave);
+      midi = constrainToRange(midi, this.scaleCache.leadRange.minMidi, this.scaleCache.leadRange.maxMidi);
+      return [midiToNote(midi)];
+    }
+    return null;
   }
 
   generateFxPattern() {
