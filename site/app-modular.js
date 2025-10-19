@@ -25,6 +25,9 @@ import { ChordProgressionEngine } from './modules/chord-progression-engine.js';
 import { MusicTheoryUtils } from './modules/music-theory-utils.js';
 import { HarmonicAnalysisUI } from './modules/harmonic-analysis-ui.js';
 import { PatternHarmonicIntegration } from './modules/pattern-harmonic-integration.js';
+import { ScaleManager } from './modules/scale-manager.js';
+import { KeyManager } from './modules/key-manager.js';
+import { ChordProgressionManager } from './modules/chord-progression-manager.js';
 
 import { 
   STEP_COUNT, 
@@ -85,6 +88,10 @@ function createApp() {
     musicTheoryUtils: null,
     harmonicAnalysisUI: null,
     patternHarmonicIntegration: null,
+    // Scale and Key Management
+    scaleManager: null,
+    keyManager: null,
+    chordProgressionManager: null,
     
     // State
     controlState: {},
@@ -467,6 +474,13 @@ async function initializeApp(app) {
   if (app.patternVariation) {
     app.patternVariation.setHarmonicIntegration(app.patternHarmonicIntegration);
   }
+  app.presetManager = new PresetManager(app);
+  app.presetLibraryUI = new PresetLibraryUI(app);
+  
+  // Initialize Scale and Key Management
+  app.scaleManager = new ScaleManager();
+  app.keyManager = new KeyManager();
+  app.chordProgressionManager = new ChordProgressionManager();
 
   // Initialize timeline
   app.timeline.initialize();

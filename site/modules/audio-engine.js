@@ -720,32 +720,62 @@ export class AudioEngine {
   }
 
   generateLeadPattern() {
-    const chordProgressions = [
-      [['E4', 'G4', 'B4'], ['A4', 'C5'], ['B4', 'D5'], ['E5', 'G5']],
-      [['C4', 'E4', 'G4'], ['D4', 'F4', 'A4'], ['E4', 'G4', 'B4'], ['F4', 'A4', 'C5']],
-      [['G4', 'B4', 'D5'], ['A4', 'C5', 'E5'], ['B4', 'D5', 'F5'], ['C5', 'E5', 'G5']]
-    ];
-    
-    const progression = chordProgressions[Math.floor(Math.random() * chordProgressions.length)];
-    const pattern = new Array(16).fill(null);
-    
-    // Lead typically plays on every 4th beat
-    for (let i = 0; i < 16; i += 4) {
-      if (Math.random() < 0.8) {
-        const chordIndex = Math.floor(i / 4) % progression.length;
-        pattern[i] = progression[chordIndex];
+    // Use scale manager if available, otherwise fallback to hardcoded progressions
+    if (this.app && this.app.scaleManager) {
+      const scaleInfo = this.app.scaleManager.getCurrentScale();
+      const progression = this.app.scaleManager.generateChordProgression(4, 4);
+      
+      const pattern = new Array(16).fill(null);
+      
+      // Lead typically plays on every 4th beat
+      for (let i = 0; i < 16; i += 4) {
+        if (Math.random() < 0.8) {
+          const chordIndex = Math.floor(i / 4) % progression.length;
+          const chord = progression[chordIndex];
+          if (chord && chord.notes) {
+            pattern[i] = chord.notes.map(note => note.fullNote);
+          }
+        }
       }
-    }
-    
-    // Add some melodic fills
-    for (let i = 2; i < 16; i += 4) {
-      if (Math.random() < 0.4) {
-        const singleNote = progression[Math.floor(i / 4) % progression.length][0];
-        pattern[i] = [singleNote];
+      
+      // Add some melodic fills using scale notes
+      for (let i = 2; i < 16; i += 4) {
+        if (Math.random() < 0.4) {
+          const randomNote = this.app.scaleManager.getRandomScaleNote(4);
+          pattern[i] = [randomNote.fullNote];
+        }
       }
+      
+      return pattern;
+    } else {
+      // Fallback to original hardcoded progressions
+      const chordProgressions = [
+        [['E4', 'G4', 'B4'], ['A4', 'C5'], ['B4', 'D5'], ['E5', 'G5']],
+        [['C4', 'E4', 'G4'], ['D4', 'F4', 'A4'], ['E4', 'G4', 'B4'], ['F4', 'A4', 'C5']],
+        [['G4', 'B4', 'D5'], ['A4', 'C5', 'E5'], ['B4', 'D5', 'F5'], ['C5', 'E5', 'G5']]
+      ];
+      
+      const progression = chordProgressions[Math.floor(Math.random() * chordProgressions.length)];
+      const pattern = new Array(16).fill(null);
+      
+      // Lead typically plays on every 4th beat
+      for (let i = 0; i < 16; i += 4) {
+        if (Math.random() < 0.8) {
+          const chordIndex = Math.floor(i / 4) % progression.length;
+          pattern[i] = progression[chordIndex];
+        }
+      }
+      
+      // Add some melodic fills
+      for (let i = 2; i < 16; i += 4) {
+        if (Math.random() < 0.4) {
+          const singleNote = progression[Math.floor(i / 4) % progression.length][0];
+          pattern[i] = [singleNote];
+        }
+      }
+      
+      return pattern;
     }
-    
-    return pattern;
   }
 
   generateFxPattern() {
@@ -760,6 +790,60 @@ export class AudioEngine {
     });
     
     return pattern;
+  }
+
+  // Generate bass pattern using scale manager
+  generateBassPattern() {
+    if (this.app && this.app.scaleManager) {
+      const bassLine = this.app.scaleManager.generateBassLine(16, 2);
+      const pattern = new Array(16).fill(null);
+      
+      bassLine.forEach((note, index) => {
+        if (note && Math.random() < 0.8) {
+          pattern[index] = [note.fullNote];
+        }
+      });
+      
+      return pattern;
+    } else {
+      // Fallback to original bass pattern generation
+      return this.generateOriginalBassPattern();
+    }
+  }
+
+  // Original bass pattern generation (fallback)
+  generateOriginalBassPattern() {
+    const pattern = new Array(16).fill(null);
+    const bassNotes = ['C2', 'E2', 'G2', 'A2'];
+    
+    for (let i = 0; i < 16; i += 2) {
+      if (Math.random() < 0.7) {
+        const noteIndex = Math.floor(i / 2) % bassNotes.length;
+        pattern[i] = [bassNotes[noteIndex]];
+      }
+    }
+    
+    return pattern;
+  }
+
+  // Generate melody using scale manager
+  generateMelodyPattern(length = 8) {
+    if (this.app && this.app.scaleManager) {
+      const melody = this.app.scaleManager.generateMelodyPattern(length, 4);
+      return melody.map(note => note ? [note.fullNote] : null);
+    } else {
+      // Fallback to random notes
+      const pattern = new Array(length).fill(null);
+      const notes = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
+      
+      for (let i = 0; i < length; i++) {
+        if (Math.random() < 0.6) {
+          pattern[i] = [notes[Math.floor(Math.random() * notes.length)]];
+        }
+      }
+      
+      return pattern;
+    }
   }
 }
   // Envelope Follower Controls

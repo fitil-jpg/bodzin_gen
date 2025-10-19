@@ -354,6 +354,254 @@ export const SECTION_SEQUENCE_ACTIVITY = {
 
 export const CONTROL_SCHEMA = [
   {
+    group: 'Scale & Key Management',
+    description: 'Musical scale and key management for chord progressions.',
+    controls: [
+      {
+        id: 'scaleType',
+        label: 'Scale Type',
+        type: 'select',
+        options: [
+          { value: 'major', label: 'Major' },
+          { value: 'natural_minor', label: 'Natural Minor' },
+          { value: 'harmonic_minor', label: 'Harmonic Minor' },
+          { value: 'melodic_minor', label: 'Melodic Minor' },
+          { value: 'dorian', label: 'Dorian' },
+          { value: 'phrygian', label: 'Phrygian' },
+          { value: 'lydian', label: 'Lydian' },
+          { value: 'mixolydian', label: 'Mixolydian' },
+          { value: 'locrian', label: 'Locrian' },
+          { value: 'major_pentatonic', label: 'Major Pentatonic' },
+          { value: 'minor_pentatonic', label: 'Minor Pentatonic' },
+          { value: 'blues', label: 'Blues' },
+          { value: 'major_blues', label: 'Major Blues' },
+          { value: 'whole_tone', label: 'Whole Tone' },
+          { value: 'diminished', label: 'Diminished' },
+          { value: 'augmented', label: 'Augmented' },
+          { value: 'chromatic', label: 'Chromatic' },
+          { value: 'phrygian_dominant', label: 'Phrygian Dominant' },
+          { value: 'double_harmonic', label: 'Double Harmonic' },
+          { value: 'hungarian_minor', label: 'Hungarian Minor' }
+        ],
+        default: 'major',
+        apply: (value, app) => {
+          if (app.scaleManager) {
+            app.scaleManager.setScaleType(value);
+          }
+        }
+      },
+      {
+        id: 'keySignature',
+        label: 'Key Signature',
+        type: 'select',
+        options: [
+          { value: 'C', label: 'C' },
+          { value: 'G', label: 'G' },
+          { value: 'D', label: 'D' },
+          { value: 'A', label: 'A' },
+          { value: 'E', label: 'E' },
+          { value: 'B', label: 'B' },
+          { value: 'F#', label: 'F#' },
+          { value: 'C#', label: 'C#' },
+          { value: 'F', label: 'F' },
+          { value: 'Bb', label: 'Bb' },
+          { value: 'Eb', label: 'Eb' },
+          { value: 'Ab', label: 'Ab' },
+          { value: 'Db', label: 'Db' },
+          { value: 'Gb', label: 'Gb' },
+          { value: 'Cb', label: 'Cb' }
+        ],
+        default: 'C',
+        apply: (value, app) => {
+          if (app.keyManager) {
+            app.keyManager.setKey(value);
+          }
+          if (app.scaleManager) {
+            app.scaleManager.setKey(value);
+          }
+        }
+      },
+      {
+        id: 'keyMode',
+        label: 'Key Mode',
+        type: 'select',
+        options: [
+          { value: 'major', label: 'Major' },
+          { value: 'minor', label: 'Minor' }
+        ],
+        default: 'major',
+        apply: (value, app) => {
+          if (app.keyManager) {
+            app.keyManager.setMode(value);
+          }
+        }
+      },
+      {
+        id: 'scaleOctave',
+        label: 'Scale Octave',
+        type: 'range',
+        min: 2,
+        max: 6,
+        step: 1,
+        default: 4,
+        format: value => `Octave ${value}`,
+        apply: (value, app) => {
+          if (app.scaleManager) {
+            app.scaleManager.setOctave(value);
+          }
+        }
+      },
+      {
+        id: 'transposeKey',
+        label: 'Transpose Key',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 1,
+        default: 0,
+        format: value => value === 0 ? 'No Transpose' : `${value > 0 ? '+' : ''}${value} semitones`,
+        apply: (value, app) => {
+          if (app.keyManager && value !== 0) {
+            app.keyManager.transposeBySemitones(value);
+          }
+        }
+      },
+      {
+        id: 'switchToRelative',
+        label: 'Switch to Relative',
+        type: 'button',
+        apply: (value, app) => {
+          if (app.keyManager) {
+            app.keyManager.switchToRelativeKey();
+          }
+        }
+      },
+      {
+        id: 'switchToParallel',
+        label: 'Switch to Parallel',
+        type: 'button',
+        apply: (value, app) => {
+          if (app.keyManager) {
+            app.keyManager.switchToParallelKey();
+          }
+        }
+      }
+    ]
+  },
+  {
+    group: 'Chord Progression Tools',
+    description: 'Advanced chord progression generation and management.',
+    controls: [
+      {
+        id: 'progressionType',
+        label: 'Progression Type',
+        type: 'select',
+        options: [
+          { value: 'major_2_5_1', label: 'II-V-I (Major)' },
+          { value: 'major_1_6_4_5', label: 'I-vi-IV-V' },
+          { value: 'major_1_5_6_4', label: 'I-V-vi-IV' },
+          { value: 'major_1_4_5', label: 'I-IV-V' },
+          { value: 'major_2_5_1_6', label: 'II-V-I-vi' },
+          { value: 'minor_2_5_1', label: 'II-V-i (Minor)' },
+          { value: 'minor_1_6_4_5', label: 'i-vi-IV-V' },
+          { value: 'minor_1_4_5', label: 'i-iv-V' },
+          { value: 'minor_1_5_6_4', label: 'i-V-vi-IV' },
+          { value: 'electronic_1_5_6_4', label: 'I-V-vi-IV (Electronic)' },
+          { value: 'electronic_minor_1_5_6_4', label: 'i-V-vi-IV (Minor Electronic)' },
+          { value: 'electronic_1_4_1_5', label: 'I-IV-I-V' },
+          { value: 'electronic_1_6_2_5', label: 'I-vi-ii-V' },
+          { value: 'dorian_1_4_1_5', label: 'I-IV-I-V (Dorian)' },
+          { value: 'phrygian_1_2_3_4', label: 'i-II-III-iv (Phrygian)' },
+          { value: 'lydian_1_2_1_5', label: 'I-II-I-V (Lydian)' },
+          { value: 'mixolydian_1_4_1_5', label: 'I-IV-I-v (Mixolydian)' }
+        ],
+        default: 'major_1_6_4_5',
+        apply: (value, app) => {
+          if (app.chordProgressionManager) {
+            app.chordProgressionManager.generateProgression(value);
+          }
+        }
+      },
+      {
+        id: 'progressionLength',
+        label: 'Progression Length',
+        type: 'range',
+        min: 2,
+        max: 8,
+        step: 1,
+        default: 4,
+        format: value => `${value} chords`,
+        apply: (value, app) => {
+          if (app.chordProgressionManager) {
+            app.chordProgressionManager.generateRandomProgression(value);
+          }
+        }
+      },
+      {
+        id: 'generateRandomProgression',
+        label: 'Generate Random',
+        type: 'button',
+        apply: (value, app) => {
+          if (app.chordProgressionManager) {
+            app.chordProgressionManager.generateRandomProgression();
+          }
+        }
+      },
+      {
+        id: 'transposeProgression',
+        label: 'Transpose Progression',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 1,
+        default: 0,
+        format: value => value === 0 ? 'No Transpose' : `${value > 0 ? '+' : ''}${value} semitones`,
+        apply: (value, app) => {
+          if (app.chordProgressionManager && value !== 0) {
+            app.chordProgressionManager.transposeProgression(value);
+          }
+        }
+      },
+      {
+        id: 'progressionOctave',
+        label: 'Progression Octave',
+        type: 'range',
+        min: 2,
+        max: 6,
+        step: 1,
+        default: 4,
+        format: value => `Octave ${value}`,
+        apply: (value, app) => {
+          if (app.chordProgressionManager) {
+            app.chordProgressionManager.setOctave(value);
+          }
+        }
+      },
+      {
+        id: 'analyzeProgression',
+        label: 'Analyze Progression',
+        type: 'button',
+        apply: (value, app) => {
+          if (app.chordProgressionManager) {
+            const analysis = app.chordProgressionManager.analyzeProgression();
+            console.log('Progression Analysis:', analysis);
+          }
+        }
+      },
+      {
+        id: 'exportProgression',
+        label: 'Export Progression',
+        type: 'button',
+        apply: (value, app) => {
+          if (app.chordProgressionManager) {
+            const exported = app.chordProgressionManager.exportProgression();
+            console.log('Exported Progression:', exported);
+          }
+        }
+      }
+    ]
+  },
+  {
     group: 'Transport',
     description: 'Tempo and groove foundation.',
     controls: [
