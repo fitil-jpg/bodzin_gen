@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Key Signature Test - Bodzin Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select, input {
+            padding: 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #333;
+            color: #fff;
+        }
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .output {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .note-display {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 5px;
+            margin: 10px 0;
+        }
+        .note {
+            background: #4CAF50;
+            color: white;
+            padding: 8px;
+            text-align: center;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .chord-display {
+            margin: 10px 0;
+        }
+        .chord {
+            background: #2196F3;
+            color: white;
+            padding: 8px;
+            margin: 5px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        h1, h2 {
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎼 Key Signature Test - Bodzin Generator</h1>
+    
+    <div class="container">
+        <div class="panel">
+            <h2>Key Signature Controls</h2>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="musicalKey">Musical Key:</label>
+                    <select id="musicalKey">
+                        <option value="C">C Major</option>
+                        <option value="G">G Major</option>
+                        <option value="D">D Major</option>
+                        <option value="A">A Major</option>
+                        <option value="E">E Major</option>
+                        <option value="B">B Major</option>
+                        <option value="F#">F# Major</option>
+                        <option value="F">F Major</option>
+                        <option value="Bb">Bb Major</option>
+                        <option value="Eb">Eb Major</option>
+                        <option value="Ab">Ab Major</option>
+                        <option value="Db">Db Major</option>
+                        <option value="Am">A Minor</option>
+                        <option value="Em">E Minor</option>
+                        <option value="Bm">B Minor</option>
+                        <option value="F#m">F# Minor</option>
+                        <option value="C#m">C# Minor</option>
+                        <option value="G#m">G# Minor</option>
+                        <option value="D#m">D# Minor</option>
+                        <option value="Dm">D Minor</option>
+                        <option value="Gm">G Minor</option>
+                        <option value="Cm">C Minor</option>
+                        <option value="Fm">F Minor</option>
+                        <option value="Bbm">Bb Minor</option>
+                        <option value="Ebm">Eb Minor</option>
+                        <option value="Abm">Ab Minor</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="scaleType">Scale Type:</label>
+                    <select id="scaleType">
+                        <option value="major">Major</option>
+                        <option value="minor">Minor</option>
+                        <option value="harmonicMinor">Harmonic Minor</option>
+                        <option value="melodicMinor">Melodic Minor</option>
+                        <option value="dorian">Dorian</option>
+                        <option value="phrygian">Phrygian</option>
+                        <option value="lydian">Lydian</option>
+                        <option value="mixolydian">Mixolydian</option>
+                        <option value="locrian">Locrian</option>
+                        <option value="pentatonicMajor">Pentatonic Major</option>
+                        <option value="pentatonicMinor">Pentatonic Minor</option>
+                        <option value="blues">Blues</option>
+                        <option value="chromatic">Chromatic</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="chordProgression">Chord Progression:</label>
+                    <select id="chordProgression">
+                        <option value="I-V-vi-IV">I-V-vi-IV (Pop)</option>
+                        <option value="vi-IV-I-V">vi-IV-I-V (Pop Alt)</option>
+                        <option value="I-vi-IV-V">I-vi-IV-V (Classic)</option>
+                        <option value="ii-V-I">ii-V-I (Jazz)</option>
+                        <option value="I-IV-V">I-IV-V (Blues)</option>
+                        <option value="I-vi-ii-V">I-vi-ii-V (Jazz)</option>
+                        <option value="vi-V-IV-V">vi-V-IV-V (Pop)</option>
+                        <option value="I-V-vi-iii-IV">I-V-vi-iii-IV (Extended)</option>
+                        <option value="i-iv-V">i-iv-V (Minor)</option>
+                        <option value="i-VI-VII-i">i-VI-VII-i (Minor)</option>
+                        <option value="i-iv-VII">i-iv-VII (Minor)</option>
+                        <option value="i-V-iv-i">i-V-iv-i (Minor)</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="octave">Octave:</label>
+                    <input type="range" id="octave" min="3" max="6" value="4">
+                    <span id="octaveValue">4</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="patternType">Melodic Pattern:</label>
+                    <select id="patternType">
+                        <option value="random">Random</option>
+                        <option value="ascending">Ascending</option>
+                        <option value="descending">Descending</option>
+                        <option value="arpeggio">Arpeggio</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="patternLength">Pattern Length:</label>
+                    <input type="range" id="patternLength" min="4" max="16" value="8">
+                    <span id="patternLengthValue">8</span>
+                </div>
+            </div>
+            
+            <button onclick="updateKeySignature()">Update Key Signature</button>
+            <button onclick="generatePattern()">Generate Pattern</button>
+            <button onclick="testChordProgression()">Test Chord Progression</button>
+        </div>
+        
+        <div class="panel">
+            <h2>Output</h2>
+            
+            <h3>Scale Notes:</h3>
+            <div id="scaleNotes" class="note-display"></div>
+            
+            <h3>Melodic Pattern:</h3>
+            <div id="melodicPattern" class="note-display"></div>
+            
+            <h3>Chord Progression:</h3>
+            <div id="chordProgression" class="chord-display"></div>
+            
+            <h3>Debug Output:</h3>
+            <div id="debugOutput" class="output"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { KeySignatureManager } from './site/modules/key-signature-manager.js';
+        
+        // Create a mock app object
+        const mockApp = {
+            keySignature: null
+        };
+        
+        // Initialize key signature manager
+        const keySignatureManager = new KeySignatureManager(mockApp);
+        mockApp.keySignature = keySignatureManager;
+        
+        // Update octave display
+        document.getElementById('octave').addEventListener('input', (e) => {
+            document.getElementById('octaveValue').textContent = e.target.value;
+        });
+        
+        // Update pattern length display
+        document.getElementById('patternLength').addEventListener('input', (e) => {
+            document.getElementById('patternLengthValue').textContent = e.target.value;
+        });
+        
+        // Update key signature
+        window.updateKeySignature = function() {
+            const key = document.getElementById('musicalKey').value;
+            const scale = document.getElementById('scaleType').value;
+            const progression = document.getElementById('chordProgression').value;
+            const octave = parseInt(document.getElementById('octave').value);
+            
+            keySignatureManager.updateKeySignature(key, scale);
+            keySignatureManager.setChordProgression(progression);
+            keySignatureManager.setOctave(octave);
+            
+            displayResults();
+        };
+        
+        // Generate pattern
+        window.generatePattern = function() {
+            const patternType = document.getElementById('patternType').value;
+            const patternLength = parseInt(document.getElementById('patternLength').value);
+            
+            keySignatureManager.melodicPatternType = patternType;
+            keySignatureManager.melodicPatternLength = patternLength;
+            
+            displayResults();
+        };
+        
+        // Test chord progression
+        window.testChordProgression = function() {
+            const key = document.getElementById('musicalKey').value;
+            const scale = document.getElementById('scaleType').value;
+            const progression = document.getElementById('chordProgression').value;
+            
+            keySignatureManager.updateKeySignature(key, scale);
+            const chords = keySignatureManager.generateHarmonicPattern(4);
+            
+            displayChordProgression(chords);
+        };
+        
+        // Display results
+        function displayResults() {
+            const keySignature = keySignatureManager.getCurrentKeySignature();
+            
+            // Display scale notes
+            const scaleNotesDiv = document.getElementById('scaleNotes');
+            scaleNotesDiv.innerHTML = '';
+            if (keySignature.scaleNotes) {
+                keySignature.scaleNotes.forEach(note => {
+                    const noteDiv = document.createElement('div');
+                    noteDiv.className = 'note';
+                    noteDiv.textContent = note;
+                    scaleNotesDiv.appendChild(noteDiv);
+                });
+            }
+            
+            // Display melodic pattern
+            const melodicPattern = keySignatureManager.generateMelodicPattern(
+                keySignatureManager.melodicPatternLength || 8,
+                keySignatureManager.melodicPatternType || 'random'
+            );
+            const melodicDiv = document.getElementById('melodicPattern');
+            melodicDiv.innerHTML = '';
+            melodicPattern.forEach(note => {
+                const noteDiv = document.createElement('div');
+                noteDiv.className = 'note';
+                noteDiv.textContent = note;
+                melodicDiv.appendChild(noteDiv);
+            });
+            
+            // Display debug info
+            const debugDiv = document.getElementById('debugOutput');
+            debugDiv.textContent = JSON.stringify(keySignature, null, 2);
+        }
+        
+        // Display chord progression
+        function displayChordProgression(chords) {
+            const chordDiv = document.getElementById('chordProgression');
+            chordDiv.innerHTML = '';
+            chords.forEach((chord, index) => {
+                const chordElement = document.createElement('div');
+                chordElement.className = 'chord';
+                chordElement.innerHTML = `
+                    <strong>${chord.romanNumeral}</strong><br>
+                    ${chord.root} ${chord.type}<br>
+                    ${chord.notes.join(' ')}
+                `;
+                chordDiv.appendChild(chordElement);
+            });
+        }
+        
+        // Initialize with default values
+        updateKeySignature();
+    </script>
+</body>
+</html>
