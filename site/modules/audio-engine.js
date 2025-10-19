@@ -10,6 +10,12 @@ import {
 import { setBusLevel, clamp } from '../utils/helpers.js';
 import { createToneEnvelopeFollower } from './envelope-follower.js';
 import { ProbabilityManager } from './probability-manager.js';
+import { 
+  generateEuclideanPattern, 
+  generateECAPattern, 
+  mapPatternToVelocities, 
+  mapPatternToNotes 
+} from './pattern-math.js';
 
 export class AudioEngine {
   constructor() {
@@ -23,6 +29,7 @@ export class AudioEngine {
     this.lfos = null;
     this.probabilityManager = new ProbabilityManager();
     this.useProbabilityTriggers = false;
+    this.useMathPatterns = false; // Enable Euclidean/ECA-based generators
     this.currentStep = 0;
     this.currentSection = null;
   }
@@ -604,15 +611,15 @@ export class AudioEngine {
     const drums = this.sequences.groups.drums;
     
     // Randomize kick pattern (more sparse, emphasis on 1 and 9)
-    const kickPattern = this.generateKickPattern();
+    const kickPattern = this.useMathPatterns ? this.generateKickPatternMath() : this.generateKickPattern();
     drums[0].events = kickPattern.map((hit, i) => ({ time: i * 0.25, value: hit }));
     
     // Randomize snare pattern (typically on 2 and 4, but add variation)
-    const snarePattern = this.generateSnarePattern();
+    const snarePattern = this.useMathPatterns ? this.generateSnarePatternMath() : this.generateSnarePattern();
     drums[1].events = snarePattern.map((hit, i) => ({ time: i * 0.25, value: hit }));
     
     // Randomize hi-hat pattern (more complex, varying velocities)
-    const hatPattern = this.generateHatPattern();
+    const hatPattern = this.useMathPatterns ? this.generateHatPatternMath() : this.generateHatPattern();
     drums[2].events = hatPattern.map((vel, i) => ({ time: i * 0.25, value: vel }));
   }
 
@@ -620,7 +627,7 @@ export class AudioEngine {
     if (!this.sequences || !this.sequences.groups.bass) return;
 
     const bass = this.sequences.groups.bass[0];
-    const bassPattern = this.generateBassPattern();
+    const bassPattern = this.useMathPatterns ? this.generateBassPatternMath() : this.generateBassPattern();
     bass.events = bassPattern.map((note, i) => ({ time: i * 0.25, value: note }));
   }
 
@@ -628,7 +635,7 @@ export class AudioEngine {
     if (!this.sequences || !this.sequences.groups.lead) return;
 
     const lead = this.sequences.groups.lead[0];
-    const leadPattern = this.generateLeadPattern();
+    const leadPattern = this.useMathPatterns ? this.generateLeadPatternMath() : this.generateLeadPattern();
     lead.events = leadPattern.map((notes, i) => ({ time: i * 0.25, value: notes }));
   }
 
@@ -636,7 +643,7 @@ export class AudioEngine {
     if (!this.sequences || !this.sequences.groups.fx) return;
 
     const fx = this.sequences.groups.fx[0];
-    const fxPattern = this.generateFxPattern();
+    const fxPattern = this.useMathPatterns ? this.generateFxPatternMath() : this.generateFxPattern();
     fx.events = fxPattern.map((trigger, i) => ({ time: i * 0.25, value: trigger }));
   }
 
@@ -645,6 +652,13 @@ export class AudioEngine {
     this.randomizeBass();
     this.randomizeLead();
     this.randomizeFx();
+  }
+
+  /**
+   * Enable or disable mathematical pattern generation (Euclidean/ECA)
+   */
+  setMathPatternsEnabled(enabled) {
+    this.useMathPatterns = Boolean(enabled);
   }
 
   // Pattern generation methods
