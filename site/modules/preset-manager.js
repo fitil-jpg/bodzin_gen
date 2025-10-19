@@ -67,6 +67,13 @@ export class PresetManager {
         description: 'Your custom presets',
         color: '#dda0dd',
         icon: '👤'
+      },
+      {
+        id: 'wolfram',
+        name: 'Wolfram Patterns',
+        description: 'Mathematically generated patterns',
+        color: '#4CAF50',
+        icon: '🧮'
       }
     ];
 
@@ -456,6 +463,9 @@ export class PresetManager {
       this.app.timeline.render();
     }
 
+    // Apply Wolfram patterns
+    if (preset.wolframPatterns && this.app.wolframPatterns) {
+      this.app.wolframPatterns.importPatterns(preset.wolframPatterns);
     // Apply scale and key management settings
     if (preset.scaleSettings && this.app.scaleManager) {
       this.app.scaleManager.importScale(preset.scaleSettings);
@@ -486,6 +496,7 @@ export class PresetManager {
       tags,
       controls: { ...this.app.controlState },
       automation: { ...this.app.automation },
+      wolframPatterns: this.app.wolframPatterns ? this.app.wolframPatterns.exportPatterns() : {}
       scaleSettings: this.app.scaleManager ? this.app.scaleManager.exportScale() : null,
       keySettings: this.app.keyManager ? this.app.keyManager.exportKey() : null,
       chordProgressionSettings: this.app.chordProgressionManager ? this.app.chordProgressionManager.exportProgression() : null
