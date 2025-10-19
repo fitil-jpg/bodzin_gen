@@ -24,6 +24,126 @@ export const PRESET_VERSIONS = {
   }
 };
 
+// Key Signature and Scale Management
+export const MUSICAL_KEYS = {
+  'C': { name: 'C Major', root: 'C', type: 'major', accidentals: 0 },
+  'G': { name: 'G Major', root: 'G', type: 'major', accidentals: 1 },
+  'D': { name: 'D Major', root: 'D', type: 'major', accidentals: 2 },
+  'A': { name: 'A Major', root: 'A', type: 'major', accidentals: 3 },
+  'E': { name: 'E Major', root: 'E', type: 'major', accidentals: 4 },
+  'B': { name: 'B Major', root: 'B', type: 'major', accidentals: 5 },
+  'F#': { name: 'F# Major', root: 'F#', type: 'major', accidentals: 6 },
+  'C#': { name: 'C# Major', root: 'C#', type: 'major', accidentals: 7 },
+  'F': { name: 'F Major', root: 'F', type: 'major', accidentals: -1 },
+  'Bb': { name: 'Bb Major', root: 'Bb', type: 'major', accidentals: -2 },
+  'Eb': { name: 'Eb Major', root: 'Eb', type: 'major', accidentals: -3 },
+  'Ab': { name: 'Ab Major', root: 'Ab', type: 'major', accidentals: -4 },
+  'Db': { name: 'Db Major', root: 'Db', type: 'major', accidentals: -5 },
+  'Gb': { name: 'Gb Major', root: 'Gb', type: 'major', accidentals: -6 },
+  'Cb': { name: 'Cb Major', root: 'Cb', type: 'major', accidentals: -7 },
+  'Am': { name: 'A Minor', root: 'A', type: 'minor', accidentals: 0 },
+  'Em': { name: 'E Minor', root: 'E', type: 'minor', accidentals: 1 },
+  'Bm': { name: 'B Minor', root: 'B', type: 'minor', accidentals: 2 },
+  'F#m': { name: 'F# Minor', root: 'F#', type: 'minor', accidentals: 3 },
+  'C#m': { name: 'C# Minor', root: 'C#', type: 'minor', accidentals: 4 },
+  'G#m': { name: 'G# Minor', root: 'G#', type: 'minor', accidentals: 5 },
+  'D#m': { name: 'D# Minor', root: 'D#', type: 'minor', accidentals: 6 },
+  'A#m': { name: 'A# Minor', root: 'A#', type: 'minor', accidentals: 7 },
+  'Dm': { name: 'D Minor', root: 'D', type: 'minor', accidentals: -1 },
+  'Gm': { name: 'G Minor', root: 'G', type: 'minor', accidentals: -2 },
+  'Cm': { name: 'C Minor', root: 'C', type: 'minor', accidentals: -3 },
+  'Fm': { name: 'F Minor', root: 'F', type: 'minor', accidentals: -4 },
+  'Bbm': { name: 'Bb Minor', root: 'Bb', type: 'minor', accidentals: -5 },
+  'Ebm': { name: 'Eb Minor', root: 'Eb', type: 'minor', accidentals: -6 },
+  'Abm': { name: 'Ab Minor', root: 'Ab', type: 'minor', accidentals: -7 }
+};
+
+export const SCALE_PATTERNS = {
+  major: [0, 2, 4, 5, 7, 9, 11], // W-W-H-W-W-W-H
+  minor: [0, 2, 3, 5, 7, 8, 10], // W-H-W-W-H-W-W
+  harmonicMinor: [0, 2, 3, 5, 7, 8, 11], // W-H-W-W-H-A2-H
+  melodicMinor: [0, 2, 3, 5, 7, 9, 11], // W-H-W-W-W-W-H (ascending)
+  dorian: [0, 2, 3, 5, 7, 9, 10], // W-H-W-W-W-H-W
+  phrygian: [0, 1, 3, 5, 7, 8, 10], // H-W-W-W-H-W-W
+  lydian: [0, 2, 4, 6, 7, 9, 11], // W-W-W-H-W-W-H
+  mixolydian: [0, 2, 4, 5, 7, 9, 10], // W-W-H-W-W-H-W
+  locrian: [0, 1, 3, 5, 6, 8, 10], // H-W-W-H-W-W-W
+  pentatonicMajor: [0, 2, 4, 7, 9], // W-W-W+H-W
+  pentatonicMinor: [0, 3, 5, 7, 10], // W+H-W-W-W+H
+  blues: [0, 3, 5, 6, 7, 10], // W+H-W-H-H-W+H
+  chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] // All semitones
+};
+
+export const CHORD_PROGRESSIONS = {
+  // Common progressions in major keys
+  major: {
+    'I-V-vi-IV': ['I', 'V', 'vi', 'IV'], // C-G-Am-F
+    'vi-IV-I-V': ['vi', 'IV', 'I', 'V'], // Am-F-C-G
+    'I-vi-IV-V': ['I', 'vi', 'IV', 'V'], // C-Am-F-G
+    'ii-V-I': ['ii', 'V', 'I'], // Dm-G-C
+    'I-IV-V': ['I', 'IV', 'V'], // C-F-G
+    'I-vi-ii-V': ['I', 'vi', 'ii', 'V'], // C-Am-Dm-G
+    'vi-V-IV-V': ['vi', 'V', 'IV', 'V'], // Am-G-F-G
+    'I-V-vi-iii-IV': ['I', 'V', 'vi', 'iii', 'IV'] // C-G-Am-Em-F
+  },
+  // Common progressions in minor keys
+  minor: {
+    'i-iv-V': ['i', 'iv', 'V'], // Am-Dm-E
+    'i-VI-VII-i': ['i', 'VI', 'VII', 'i'], // Am-F-G-Am
+    'i-iv-VII': ['i', 'iv', 'VII'], // Am-Dm-G
+    'i-V-iv-i': ['i', 'V', 'iv', 'i'], // Am-E-Dm-Am
+    'i-VI-III-VII': ['i', 'VI', 'III', 'VII'], // Am-F-C-G
+    'i-iv-i-V': ['i', 'iv', 'i', 'V'], // Am-Dm-Am-E
+    'i-VII-VI-V': ['i', 'VII', 'VI', 'V'], // Am-G-F-E
+    'i-iv-V-i': ['i', 'iv', 'V', 'i'] // Am-Dm-E-Am
+  }
+};
+
+export const CHORD_TYPES = {
+  major: [0, 4, 7], // Root, Major 3rd, Perfect 5th
+  minor: [0, 3, 7], // Root, Minor 3rd, Perfect 5th
+  diminished: [0, 3, 6], // Root, Minor 3rd, Diminished 5th
+  augmented: [0, 4, 8], // Root, Major 3rd, Augmented 5th
+  sus2: [0, 2, 7], // Root, Major 2nd, Perfect 5th
+  sus4: [0, 5, 7], // Root, Perfect 4th, Perfect 5th
+  major7: [0, 4, 7, 11], // Root, Major 3rd, Perfect 5th, Major 7th
+  minor7: [0, 3, 7, 10], // Root, Minor 3rd, Perfect 5th, Minor 7th
+  dominant7: [0, 4, 7, 10], // Root, Major 3rd, Perfect 5th, Minor 7th
+  diminished7: [0, 3, 6, 9], // Root, Minor 3rd, Diminished 5th, Diminished 7th
+  halfDiminished7: [0, 3, 6, 10], // Root, Minor 3rd, Diminished 5th, Minor 7th
+  augmented7: [0, 4, 8, 10], // Root, Major 3rd, Augmented 5th, Minor 7th
+  major9: [0, 4, 7, 11, 2], // Root, Major 3rd, Perfect 5th, Major 7th, Major 9th
+  minor9: [0, 3, 7, 10, 2], // Root, Minor 3rd, Perfect 5th, Minor 7th, Major 9th
+  dominant9: [0, 4, 7, 10, 2], // Root, Major 3rd, Perfect 5th, Minor 7th, Major 9th
+  add9: [0, 4, 7, 2], // Root, Major 3rd, Perfect 5th, Major 9th
+  minorAdd9: [0, 3, 7, 2], // Root, Minor 3rd, Perfect 5th, Major 9th
+  power: [0, 7] // Root, Perfect 5th (power chord)
+};
+
+export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+export const NOTE_NAMES_FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+// MIDI note numbers for different octaves
+export const MIDI_NOTES = {
+  C0: 12, C1: 24, C2: 36, C3: 48, C4: 60, C5: 72, C6: 84, C7: 96, C8: 108,
+  D0: 14, D1: 26, D2: 38, D3: 50, D4: 62, D5: 74, D6: 86, D7: 98, D8: 110,
+  E0: 16, E1: 28, E2: 40, E3: 52, E4: 64, E5: 76, E6: 88, E7: 100, E8: 112,
+  F0: 17, F1: 29, F2: 41, F3: 53, F4: 65, F5: 77, F6: 89, F7: 101, F8: 113,
+  G0: 19, G1: 31, G2: 43, G3: 55, G4: 67, G5: 79, G6: 91, G7: 103, G8: 115,
+  A0: 21, A1: 33, A2: 45, A3: 57, A4: 69, A5: 81, A6: 93, A7: 105, A8: 117,
+  B0: 23, B1: 35, B2: 47, B3: 59, B4: 71, B5: 83, B6: 95, B7: 107, B8: 119
+};
+
+// Default key signature settings
+export const DEFAULT_KEY_SIGNATURE = {
+  key: 'C',
+  scale: 'major',
+  chordProgression: 'I-V-vi-IV',
+  octave: 4,
+  rootNote: 'C4',
+  enabled: true
+};
+
 export const SECTION_DEFINITIONS = [
   { name: 'Intro', color: 'rgba(73, 169, 255, 0.05)' },
   { name: 'Lift', color: 'rgba(255, 73, 175, 0.04)' },
@@ -354,41 +474,249 @@ export const SECTION_SEQUENCE_ACTIVITY = {
 
 export const CONTROL_SCHEMA = [
   {
-    group: 'Musical Key & Scale',
-    description: 'Set the global key and scale for note generation.',
+    group: 'Scale & Key Management',
+    description: 'Musical scale and key management for chord progressions.',
     controls: [
       {
-        id: 'musicalKey',
-        label: 'Key',
-        type: 'select',
-        options: [
-          { value: 'C', label: 'C' }, { value: 'C#', label: 'C#' }, { value: 'D', label: 'D' },
-          { value: 'D#', label: 'D#' }, { value: 'E', label: 'E' }, { value: 'F', label: 'F' },
-          { value: 'F#', label: 'F#' }, { value: 'G', label: 'G' }, { value: 'G#', label: 'G#' },
-          { value: 'A', label: 'A' }, { value: 'A#', label: 'A#' }, { value: 'B', label: 'B' }
-        ],
-        default: 'C',
-        apply: (value, app) => {
-          if (app.audio) app.audio.setMusicalKey(value);
-        }
-      },
-      {
         id: 'scaleType',
-        label: 'Scale',
+        label: 'Scale Type',
         type: 'select',
         options: [
           { value: 'major', label: 'Major' },
           { value: 'natural_minor', label: 'Natural Minor' },
-          { value: 'dorian', label: 'Dorian' },
-          { value: 'mixolydian', label: 'Mixolydian' },
           { value: 'harmonic_minor', label: 'Harmonic Minor' },
           { value: 'melodic_minor', label: 'Melodic Minor' },
+          { value: 'dorian', label: 'Dorian' },
+          { value: 'phrygian', label: 'Phrygian' },
+          { value: 'lydian', label: 'Lydian' },
+          { value: 'mixolydian', label: 'Mixolydian' },
+          { value: 'locrian', label: 'Locrian' },
           { value: 'major_pentatonic', label: 'Major Pentatonic' },
-          { value: 'minor_pentatonic', label: 'Minor Pentatonic' }
+          { value: 'minor_pentatonic', label: 'Minor Pentatonic' },
+          { value: 'blues', label: 'Blues' },
+          { value: 'major_blues', label: 'Major Blues' },
+          { value: 'whole_tone', label: 'Whole Tone' },
+          { value: 'diminished', label: 'Diminished' },
+          { value: 'augmented', label: 'Augmented' },
+          { value: 'chromatic', label: 'Chromatic' },
+          { value: 'phrygian_dominant', label: 'Phrygian Dominant' },
+          { value: 'double_harmonic', label: 'Double Harmonic' },
+          { value: 'hungarian_minor', label: 'Hungarian Minor' }
         ],
         default: 'major',
         apply: (value, app) => {
-          if (app.audio) app.audio.setScaleType(value);
+          if (app.scaleManager) {
+            app.scaleManager.setScaleType(value);
+          }
+        }
+      },
+      {
+        id: 'keySignature',
+        label: 'Key Signature',
+        type: 'select',
+        options: [
+          { value: 'C', label: 'C' },
+          { value: 'G', label: 'G' },
+          { value: 'D', label: 'D' },
+          { value: 'A', label: 'A' },
+          { value: 'E', label: 'E' },
+          { value: 'B', label: 'B' },
+          { value: 'F#', label: 'F#' },
+          { value: 'C#', label: 'C#' },
+          { value: 'F', label: 'F' },
+          { value: 'Bb', label: 'Bb' },
+          { value: 'Eb', label: 'Eb' },
+          { value: 'Ab', label: 'Ab' },
+          { value: 'Db', label: 'Db' },
+          { value: 'Gb', label: 'Gb' },
+          { value: 'Cb', label: 'Cb' }
+        ],
+        default: 'C',
+        apply: (value, app) => {
+          if (app.keyManager) {
+            app.keyManager.setKey(value);
+          }
+          if (app.scaleManager) {
+            app.scaleManager.setKey(value);
+          }
+        }
+      },
+      {
+        id: 'keyMode',
+        label: 'Key Mode',
+        type: 'select',
+        options: [
+          { value: 'major', label: 'Major' },
+          { value: 'minor', label: 'Minor' }
+        ],
+        default: 'major',
+        apply: (value, app) => {
+          if (app.keyManager) {
+            app.keyManager.setMode(value);
+          }
+        }
+      },
+      {
+        id: 'scaleOctave',
+        label: 'Scale Octave',
+        type: 'range',
+        min: 2,
+        max: 6,
+        step: 1,
+        default: 4,
+        format: value => `Octave ${value}`,
+        apply: (value, app) => {
+          if (app.scaleManager) {
+            app.scaleManager.setOctave(value);
+          }
+        }
+      },
+      {
+        id: 'transposeKey',
+        label: 'Transpose Key',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 1,
+        default: 0,
+        format: value => value === 0 ? 'No Transpose' : `${value > 0 ? '+' : ''}${value} semitones`,
+        apply: (value, app) => {
+          if (app.keyManager && value !== 0) {
+            app.keyManager.transposeBySemitones(value);
+          }
+        }
+      },
+      {
+        id: 'switchToRelative',
+        label: 'Switch to Relative',
+        type: 'button',
+        apply: (value, app) => {
+          if (app.keyManager) {
+            app.keyManager.switchToRelativeKey();
+          }
+        }
+      },
+      {
+        id: 'switchToParallel',
+        label: 'Switch to Parallel',
+        type: 'button',
+        apply: (value, app) => {
+          if (app.keyManager) {
+            app.keyManager.switchToParallelKey();
+          }
+        }
+      }
+    ]
+  },
+  {
+    group: 'Chord Progression Tools',
+    description: 'Advanced chord progression generation and management.',
+    controls: [
+      {
+        id: 'progressionType',
+        label: 'Progression Type',
+        type: 'select',
+        options: [
+          { value: 'major_2_5_1', label: 'II-V-I (Major)' },
+          { value: 'major_1_6_4_5', label: 'I-vi-IV-V' },
+          { value: 'major_1_5_6_4', label: 'I-V-vi-IV' },
+          { value: 'major_1_4_5', label: 'I-IV-V' },
+          { value: 'major_2_5_1_6', label: 'II-V-I-vi' },
+          { value: 'minor_2_5_1', label: 'II-V-i (Minor)' },
+          { value: 'minor_1_6_4_5', label: 'i-vi-IV-V' },
+          { value: 'minor_1_4_5', label: 'i-iv-V' },
+          { value: 'minor_1_5_6_4', label: 'i-V-vi-IV' },
+          { value: 'electronic_1_5_6_4', label: 'I-V-vi-IV (Electronic)' },
+          { value: 'electronic_minor_1_5_6_4', label: 'i-V-vi-IV (Minor Electronic)' },
+          { value: 'electronic_1_4_1_5', label: 'I-IV-I-V' },
+          { value: 'electronic_1_6_2_5', label: 'I-vi-ii-V' },
+          { value: 'dorian_1_4_1_5', label: 'I-IV-I-V (Dorian)' },
+          { value: 'phrygian_1_2_3_4', label: 'i-II-III-iv (Phrygian)' },
+          { value: 'lydian_1_2_1_5', label: 'I-II-I-V (Lydian)' },
+          { value: 'mixolydian_1_4_1_5', label: 'I-IV-I-v (Mixolydian)' }
+        ],
+        default: 'major_1_6_4_5',
+        apply: (value, app) => {
+          if (app.chordProgressionManager) {
+            app.chordProgressionManager.generateProgression(value);
+          }
+        }
+      },
+      {
+        id: 'progressionLength',
+        label: 'Progression Length',
+        type: 'range',
+        min: 2,
+        max: 8,
+        step: 1,
+        default: 4,
+        format: value => `${value} chords`,
+        apply: (value, app) => {
+          if (app.chordProgressionManager) {
+            app.chordProgressionManager.generateRandomProgression(value);
+          }
+        }
+      },
+      {
+        id: 'generateRandomProgression',
+        label: 'Generate Random',
+        type: 'button',
+        apply: (value, app) => {
+          if (app.chordProgressionManager) {
+            app.chordProgressionManager.generateRandomProgression();
+          }
+        }
+      },
+      {
+        id: 'transposeProgression',
+        label: 'Transpose Progression',
+        type: 'range',
+        min: -12,
+        max: 12,
+        step: 1,
+        default: 0,
+        format: value => value === 0 ? 'No Transpose' : `${value > 0 ? '+' : ''}${value} semitones`,
+        apply: (value, app) => {
+          if (app.chordProgressionManager && value !== 0) {
+            app.chordProgressionManager.transposeProgression(value);
+          }
+        }
+      },
+      {
+        id: 'progressionOctave',
+        label: 'Progression Octave',
+        type: 'range',
+        min: 2,
+        max: 6,
+        step: 1,
+        default: 4,
+        format: value => `Octave ${value}`,
+        apply: (value, app) => {
+          if (app.chordProgressionManager) {
+            app.chordProgressionManager.setOctave(value);
+          }
+        }
+      },
+      {
+        id: 'analyzeProgression',
+        label: 'Analyze Progression',
+        type: 'button',
+        apply: (value, app) => {
+          if (app.chordProgressionManager) {
+            const analysis = app.chordProgressionManager.analyzeProgression();
+            console.log('Progression Analysis:', analysis);
+          }
+        }
+      },
+      {
+        id: 'exportProgression',
+        label: 'Export Progression',
+        type: 'button',
+        apply: (value, app) => {
+          if (app.chordProgressionManager) {
+            const exported = app.chordProgressionManager.exportProgression();
+            console.log('Exported Progression:', exported);
+          }
         }
       }
     ]
@@ -1650,6 +1978,166 @@ export const CONTROL_SCHEMA = [
         label: 'LFO 1 Depth',
           if (app.audio && app.audio.buses && app.audio.buses.fx) {
             app.audio.buses.fx.gain.value = Tone.dbToGain(value);
+          }
+        }
+      }
+    ]
+  },
+  {
+    group: 'Key Signature & Scales',
+    description: 'Musical key, scale, and chord progression management.',
+    controls: [
+      {
+        id: 'keySignatureEnabled',
+        label: 'Enable Key Signature',
+        type: 'select',
+        options: [
+          { value: true, label: 'On' },
+          { value: false, label: 'Off' }
+        ],
+        default: true,
+        apply: (value, app) => {
+          if (app.keySignature) {
+            app.keySignature.setEnabled(value);
+          }
+        }
+      },
+      {
+        id: 'musicalKey',
+        label: 'Musical Key',
+        type: 'select',
+        options: [
+          { value: 'C', label: 'C Major' },
+          { value: 'G', label: 'G Major' },
+          { value: 'D', label: 'D Major' },
+          { value: 'A', label: 'A Major' },
+          { value: 'E', label: 'E Major' },
+          { value: 'B', label: 'B Major' },
+          { value: 'F#', label: 'F# Major' },
+          { value: 'F', label: 'F Major' },
+          { value: 'Bb', label: 'Bb Major' },
+          { value: 'Eb', label: 'Eb Major' },
+          { value: 'Ab', label: 'Ab Major' },
+          { value: 'Db', label: 'Db Major' },
+          { value: 'Am', label: 'A Minor' },
+          { value: 'Em', label: 'E Minor' },
+          { value: 'Bm', label: 'B Minor' },
+          { value: 'F#m', label: 'F# Minor' },
+          { value: 'C#m', label: 'C# Minor' },
+          { value: 'G#m', label: 'G# Minor' },
+          { value: 'D#m', label: 'D# Minor' },
+          { value: 'Dm', label: 'D Minor' },
+          { value: 'Gm', label: 'G Minor' },
+          { value: 'Cm', label: 'C Minor' },
+          { value: 'Fm', label: 'F Minor' },
+          { value: 'Bbm', label: 'Bb Minor' },
+          { value: 'Ebm', label: 'Eb Minor' },
+          { value: 'Abm', label: 'Ab Minor' }
+        ],
+        default: 'C',
+        apply: (value, app) => {
+          if (app.keySignature) {
+            const currentScale = app.keySignature.currentScale;
+            app.keySignature.updateKeySignature(value, currentScale);
+          }
+        }
+      },
+      {
+        id: 'scaleType',
+        label: 'Scale Type',
+        type: 'select',
+        options: [
+          { value: 'major', label: 'Major' },
+          { value: 'minor', label: 'Minor' },
+          { value: 'harmonicMinor', label: 'Harmonic Minor' },
+          { value: 'melodicMinor', label: 'Melodic Minor' },
+          { value: 'dorian', label: 'Dorian' },
+          { value: 'phrygian', label: 'Phrygian' },
+          { value: 'lydian', label: 'Lydian' },
+          { value: 'mixolydian', label: 'Mixolydian' },
+          { value: 'locrian', label: 'Locrian' },
+          { value: 'pentatonicMajor', label: 'Pentatonic Major' },
+          { value: 'pentatonicMinor', label: 'Pentatonic Minor' },
+          { value: 'blues', label: 'Blues' },
+          { value: 'chromatic', label: 'Chromatic' }
+        ],
+        default: 'major',
+        apply: (value, app) => {
+          if (app.keySignature) {
+            const currentKey = app.keySignature.currentKey;
+            app.keySignature.updateKeySignature(currentKey, value);
+          }
+        }
+      },
+      {
+        id: 'chordProgression',
+        label: 'Chord Progression',
+        type: 'select',
+        options: [
+          { value: 'I-V-vi-IV', label: 'I-V-vi-IV (Pop)' },
+          { value: 'vi-IV-I-V', label: 'vi-IV-I-V (Pop Alt)' },
+          { value: 'I-vi-IV-V', label: 'I-vi-IV-V (Classic)' },
+          { value: 'ii-V-I', label: 'ii-V-I (Jazz)' },
+          { value: 'I-IV-V', label: 'I-IV-V (Blues)' },
+          { value: 'I-vi-ii-V', label: 'I-vi-ii-V (Jazz)' },
+          { value: 'vi-V-IV-V', label: 'vi-V-IV-V (Pop)' },
+          { value: 'I-V-vi-iii-IV', label: 'I-V-vi-iii-IV (Extended)' },
+          { value: 'i-iv-V', label: 'i-iv-V (Minor)' },
+          { value: 'i-VI-VII-i', label: 'i-VI-VII-i (Minor)' },
+          { value: 'i-iv-VII', label: 'i-iv-VII (Minor)' },
+          { value: 'i-V-iv-i', label: 'i-V-iv-i (Minor)' }
+        ],
+        default: 'I-V-vi-IV',
+        apply: (value, app) => {
+          if (app.keySignature) {
+            app.keySignature.setChordProgression(value);
+          }
+        }
+      },
+      {
+        id: 'octave',
+        label: 'Octave',
+        type: 'range',
+        min: 3,
+        max: 6,
+        step: 1,
+        default: 4,
+        format: value => `Octave ${value}`,
+        apply: (value, app) => {
+          if (app.keySignature) {
+            app.keySignature.setOctave(value);
+          }
+        }
+      },
+      {
+        id: 'melodicPatternType',
+        label: 'Melodic Pattern',
+        type: 'select',
+        options: [
+          { value: 'random', label: 'Random' },
+          { value: 'ascending', label: 'Ascending' },
+          { value: 'descending', label: 'Descending' },
+          { value: 'arpeggio', label: 'Arpeggio' }
+        ],
+        default: 'random',
+        apply: (value, app) => {
+          if (app.keySignature) {
+            app.keySignature.melodicPatternType = value;
+          }
+        }
+      },
+      {
+        id: 'melodicPatternLength',
+        label: 'Pattern Length',
+        type: 'range',
+        min: 4,
+        max: 16,
+        step: 1,
+        default: 8,
+        format: value => `${value} notes`,
+        apply: (value, app) => {
+          if (app.keySignature) {
+            app.keySignature.melodicPatternLength = value;
           }
         }
       }
