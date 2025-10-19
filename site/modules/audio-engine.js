@@ -698,6 +698,29 @@ export class AudioEngine {
   }
 
   generateBassPattern() {
+    // Use key signature if available
+    if (this.app && this.app.keySignature && this.app.keySignature.enabled) {
+      const keySignature = this.app.keySignature;
+      const harmonicPattern = keySignature.generateHarmonicPattern(4);
+      const pattern = new Array(16).fill(null);
+      
+      // Map harmonic progression to 16 steps
+      const chordsPerStep = Math.ceil(16 / harmonicPattern.length);
+      
+      for (let i = 0; i < 16; i++) {
+        const chordIndex = Math.floor(i / chordsPerStep) % harmonicPattern.length;
+        const chord = harmonicPattern[chordIndex];
+        
+        if (chord && chord.notes && chord.notes.length > 0) {
+          // Use root note for bass
+          pattern[i] = chord.notes[0];
+        }
+      }
+      
+      return pattern;
+    }
+
+    // Fallback to default pattern
     const notes = ['C2', 'D2', 'E2', 'F2', 'G2', 'A2', 'B2', 'C3'];
     const pattern = new Array(16).fill(null);
     
@@ -720,6 +743,54 @@ export class AudioEngine {
   }
 
   generateLeadPattern() {
+    // Use key signature if available
+    if (this.app && this.app.keySignature && this.app.keySignature.enabled) {
+      const keySignature = this.app.keySignature;
+      const harmonicPattern = keySignature.generateHarmonicPattern(4);
+      const pattern = new Array(16).fill(null);
+      
+      // Map harmonic progression to 16 steps
+      for (let i = 0; i < 16; i += 4) {
+        if (Math.random() < 0.8) {
+          const chordIndex = Math.floor(i / 4) % harmonicPattern.length;
+          const chord = harmonicPattern[chordIndex];
+          
+          if (chord && chord.notes) {
+            pattern[i] = chord.notes;
+          }
+        }
+      }
+      
+      // Add some melodic fills
+      for (let i = 2; i < 16; i += 4) {
+        if (Math.random() < 0.4) {
+          const chordIndex = Math.floor(i / 4) % harmonicPattern.length;
+          const chord = harmonicPattern[chordIndex];
+          
+          if (chord && chord.notes && chord.notes.length > 0) {
+            pattern[i] = [chord.notes[0]]; // Use root note for fills
+          }
+        }
+      }
+      
+      return pattern;
+    }
+
+    // Fallback to default pattern
+    const chordProgressions = [
+      [['E4', 'G4', 'B4'], ['A4', 'C5'], ['B4', 'D5'], ['E5', 'G5']],
+      [['C4', 'E4', 'G4'], ['D4', 'F4', 'A4'], ['E4', 'G4', 'B4'], ['F4', 'A4', 'C5']],
+      [['G4', 'B4', 'D5'], ['A4', 'C5', 'E5'], ['B4', 'D5', 'F5'], ['C5', 'E5', 'G5']]
+    ];
+    
+    const progression = chordProgressions[Math.floor(Math.random() * chordProgressions.length)];
+    const pattern = new Array(16).fill(null);
+    
+    // Lead typically plays on every 4th beat
+    for (let i = 0; i < 16; i += 4) {
+      if (Math.random() < 0.8) {
+        const chordIndex = Math.floor(i / 4) % progression.length;
+        pattern[i] = progression[chordIndex];
     // Use scale manager if available, otherwise fallback to hardcoded progressions
     if (this.app && this.app.scaleManager) {
       const scaleInfo = this.app.scaleManager.getCurrentScale();
@@ -1173,22 +1244,18 @@ export class AudioEngine {
         break;
         
       case 'bass':
-        // Use a simple bass pattern for probability triggers
-        const bassNotes = ['C2', 'G1', 'A1', 'D2'];
-        const noteIndex = this.currentStep % bassNotes.length;
-        const note = bassNotes[noteIndex];
-        if (note) {
-          this.instruments.bass.triggerAttackRelease(note, '8n', time, velocity);
+        // Use key signature for bass notes if available
+        const bassNote = this.getMusicalNote('bass', this.currentStep);
+        if (bassNote) {
+          this.instruments.bass.triggerAttackRelease(bassNote, '8n', time, velocity);
         }
         break;
         
       case 'lead':
-        // Use a simple lead pattern for probability triggers
-        const leadNotes = [['E4', 'B4'], ['G4'], ['A4'], ['B4', 'D5']];
-        const leadIndex = this.currentStep % leadNotes.length;
-        const notes = leadNotes[leadIndex];
-        if (notes && notes.length) {
-          notes.forEach(note => {
+        // Use key signature for lead notes if available
+        const leadNotes = this.getMusicalNotes('lead', this.currentStep);
+        if (leadNotes && leadNotes.length) {
+          leadNotes.forEach(note => {
             this.instruments.lead.triggerAttackRelease(note, '16n', time, velocity);
           });
         }
@@ -1205,6 +1272,64 @@ export class AudioEngine {
    */
   getProbabilityManager() {
     return this.probabilityManager;
+  }
+
+  /**
+   * Get musical note for an instrument based on key signature
+   * @param {string} instrument - Instrument name
+   * @param {number} step - Current step
+   * @returns {string|null} Note name or null
+   */
+  getMusicalNote(instrument, step) {
+    // Check if we have access to the app and key signature
+    if (!this.app || !this.app.keySignature || !this.app.keySignature.enabled) {
+      return this.getDefaultNote(instrument, step);
+    }
+
+    // Get current pattern variation
+    const currentPattern = this.app.patternVariation?.getCurrentPattern();
+    if (!currentPattern || !currentPattern.musicalPatterns) {
+      return this.getDefaultNote(instrument, step);
+    }
+
+    const musicalPatterns = currentPattern.musicalPatterns;
+    const pattern = musicalPatterns[instrument]?.pattern;
+    
+    if (!pattern || step >= pattern.length) {
+      return this.getDefaultNote(instrument, step);
+    }
+
+    return pattern[step];
+  }
+
+  /**
+   * Get musical notes for an instrument based on key signature
+   * @param {string} instrument - Instrument name
+   * @param {number} step - Current step
+   * @returns {Array|null} Array of note names or null
+   */
+  getMusicalNotes(instrument, step) {
+    const note = this.getMusicalNote(instrument, step);
+    return note ? [note] : null;
+  }
+
+  /**
+   * Get default note when key signature is not available
+   * @param {string} instrument - Instrument name
+   * @param {number} step - Current step
+   * @returns {string|null} Default note name
+   */
+  getDefaultNote(instrument, step) {
+    switch (instrument) {
+      case 'bass':
+        const bassNotes = ['C2', 'G1', 'A1', 'D2'];
+        return bassNotes[step % bassNotes.length];
+      case 'lead':
+        const leadNotes = ['E4', 'G4', 'A4', 'B4'];
+        return leadNotes[step % leadNotes.length];
+      default:
+        return null;
+    }
   }
 
   /**

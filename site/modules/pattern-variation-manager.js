@@ -53,6 +53,8 @@ export class PatternVariationManager {
         breakpoints: definition.breakpoints || []
       })),
       sections: this.generateSectionVariation(patternId),
+      // Add musical patterns if key signature is available
+      musicalPatterns: this.generateMusicalPatterns(patternId),
       metadata: {
         createdAt: new Date().toISOString(),
         intensity: this.variationIntensity,
@@ -154,6 +156,210 @@ export class PatternVariationManager {
       'C': { energy: 0.9, complexity: 0.8, stability: 0.4 }
     };
     return characteristics[patternId] || characteristics['A'];
+  }
+
+  /**
+   * Generate musical patterns based on key signature
+   * @param {string} patternId - Pattern identifier
+   * @returns {Object} Musical patterns for different instruments
+   */
+  generateMusicalPatterns(patternId) {
+    if (!this.app.keySignature || !this.app.keySignature.enabled) {
+      return this.getDefaultMusicalPatterns(patternId);
+    }
+
+    const keySignature = this.app.keySignature;
+    const melodicPattern = keySignature.generateMelodicPattern(
+      keySignature.melodicPatternLength || 8,
+      keySignature.melodicPatternType || 'random'
+    );
+    const harmonicPattern = keySignature.generateHarmonicPattern(4);
+
+    return {
+      lead: {
+        notes: melodicPattern,
+        pattern: this.generateLeadPattern(patternId, melodicPattern),
+        type: 'melodic'
+      },
+      bass: {
+        notes: this.generateBassPattern(patternId, harmonicPattern),
+        pattern: this.generateBassPattern(patternId, harmonicPattern),
+        type: 'harmonic'
+      },
+      chords: {
+        progression: harmonicPattern,
+        pattern: this.generateChordPattern(patternId, harmonicPattern),
+        type: 'harmonic'
+      },
+      drums: {
+        notes: this.generateDrumPattern(patternId),
+        pattern: this.generateDrumPattern(patternId),
+        type: 'rhythmic'
+      }
+    };
+  }
+
+  /**
+   * Generate lead pattern based on melodic notes
+   * @param {string} patternId - Pattern identifier
+   * @param {Array} melodicNotes - Array of note names
+   * @returns {Array} Lead pattern with note triggers
+   */
+  generateLeadPattern(patternId, melodicNotes) {
+    const pattern = new Array(STEP_COUNT).fill(null);
+    
+    switch (patternId) {
+      case 'A':
+        // Sparse, melodic pattern
+        for (let i = 0; i < STEP_COUNT; i += 2) {
+          const noteIndex = Math.floor(i / 2) % melodicNotes.length;
+          pattern[i] = melodicNotes[noteIndex];
+        }
+        break;
+      case 'B':
+        // More active pattern
+        for (let i = 0; i < STEP_COUNT; i++) {
+          if (i % 3 !== 0) { // Skip every 3rd step
+            const noteIndex = i % melodicNotes.length;
+            pattern[i] = melodicNotes[noteIndex];
+          }
+        }
+        break;
+      case 'C':
+        // Dense, complex pattern
+        for (let i = 0; i < STEP_COUNT; i++) {
+          const noteIndex = (i + Math.floor(i / 4)) % melodicNotes.length;
+          pattern[i] = melodicNotes[noteIndex];
+        }
+        break;
+    }
+    
+    return pattern;
+  }
+
+  /**
+   * Generate bass pattern based on harmonic progression
+   * @param {string} patternId - Pattern identifier
+   * @param {Array} harmonicPattern - Array of chord objects
+   * @returns {Array} Bass pattern with root notes
+   */
+  generateBassPattern(patternId, harmonicPattern) {
+    const pattern = new Array(STEP_COUNT).fill(null);
+    const chordsPerStep = Math.ceil(STEP_COUNT / harmonicPattern.length);
+    
+    for (let i = 0; i < STEP_COUNT; i++) {
+      const chordIndex = Math.floor(i / chordsPerStep) % harmonicPattern.length;
+      const chord = harmonicPattern[chordIndex];
+      
+      if (chord && chord.notes && chord.notes.length > 0) {
+        // Use root note for bass
+        pattern[i] = chord.notes[0];
+      }
+    }
+    
+    return pattern;
+  }
+
+  /**
+   * Generate chord pattern based on harmonic progression
+   * @param {string} patternId - Pattern identifier
+   * @param {Array} harmonicPattern - Array of chord objects
+   * @returns {Array} Chord pattern
+   */
+  generateChordPattern(patternId, harmonicPattern) {
+    const pattern = new Array(STEP_COUNT).fill(null);
+    const chordsPerStep = Math.ceil(STEP_COUNT / harmonicPattern.length);
+    
+    for (let i = 0; i < STEP_COUNT; i++) {
+      const chordIndex = Math.floor(i / chordsPerStep) % harmonicPattern.length;
+      const chord = harmonicPattern[chordIndex];
+      
+      if (chord && chord.notes) {
+        pattern[i] = chord.notes;
+      }
+    }
+    
+    return pattern;
+  }
+
+  /**
+   * Generate drum pattern (rhythmic, not melodic)
+   * @param {string} patternId - Pattern identifier
+   * @returns {Array} Drum pattern
+   */
+  generateDrumPattern(patternId) {
+    const pattern = new Array(STEP_COUNT).fill(null);
+    
+    switch (patternId) {
+      case 'A':
+        // Basic 4/4 pattern
+        pattern[0] = 'kick';
+        pattern[4] = 'kick';
+        pattern[8] = 'kick';
+        pattern[12] = 'kick';
+        pattern[2] = 'snare';
+        pattern[6] = 'snare';
+        pattern[10] = 'snare';
+        pattern[14] = 'snare';
+        break;
+      case 'B':
+        // More complex pattern
+        pattern[0] = 'kick';
+        pattern[3] = 'kick';
+        pattern[6] = 'kick';
+        pattern[9] = 'kick';
+        pattern[12] = 'kick';
+        pattern[15] = 'kick';
+        pattern[1] = 'snare';
+        pattern[5] = 'snare';
+        pattern[9] = 'snare';
+        pattern[13] = 'snare';
+        break;
+      case 'C':
+        // Dense, complex pattern
+        for (let i = 0; i < STEP_COUNT; i++) {
+          if (i % 2 === 0) {
+            pattern[i] = 'kick';
+          } else if (i % 4 === 1) {
+            pattern[i] = 'snare';
+          } else if (i % 8 === 3) {
+            pattern[i] = 'hihat';
+          }
+        }
+        break;
+    }
+    
+    return pattern;
+  }
+
+  /**
+   * Get default musical patterns when key signature is disabled
+   * @param {string} patternId - Pattern identifier
+   * @returns {Object} Default musical patterns
+   */
+  getDefaultMusicalPatterns(patternId) {
+    return {
+      lead: {
+        notes: ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'],
+        pattern: this.generateLeadPattern(patternId, ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5']),
+        type: 'melodic'
+      },
+      bass: {
+        notes: ['C3', 'F3', 'G3', 'C3'],
+        pattern: this.generateBassPattern(patternId, [{ notes: ['C3'] }, { notes: ['F3'] }, { notes: ['G3'] }, { notes: ['C3'] }]),
+        type: 'harmonic'
+      },
+      chords: {
+        progression: [{ notes: ['C4', 'E4', 'G4'] }, { notes: ['F4', 'A4', 'C5'] }, { notes: ['G4', 'B4', 'D5'] }, { notes: ['C4', 'E4', 'G4'] }],
+        pattern: this.generateChordPattern(patternId, [{ notes: ['C4', 'E4', 'G4'] }, { notes: ['F4', 'A4', 'C5'] }, { notes: ['G4', 'B4', 'D5'] }, { notes: ['C4', 'E4', 'G4'] }]),
+        type: 'harmonic'
+      },
+      drums: {
+        notes: ['kick', 'snare', 'hihat'],
+        pattern: this.generateDrumPattern(patternId),
+        type: 'rhythmic'
+      }
+    };
   }
 
   // Pattern switching methods
