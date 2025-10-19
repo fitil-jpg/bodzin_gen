@@ -1,5 +1,6 @@
 import { CONTROL_SCHEMA } from '../utils/constants.js';
 import { formatDb, formatHz, clamp } from '../utils/helpers.js';
+import { KEYS, SCALES, PROGRESSIONS } from './scale-manager.js';
 
 export class UIControls {
   constructor(app) {
@@ -52,6 +53,9 @@ export class UIControls {
     
     // Add pattern chaining controls
     this.setupPatternChainingControls();
+
+    // Add Key & Scale controls
+    this.setupScaleControls();
   }
 
   createControlRow(sectionEl, control) {
@@ -419,5 +423,177 @@ export class UIControls {
       chainPositionSlider.value = status.chainPosition;
       chainPositionValue.textContent = `${status.chainPosition + 1}/${status.chainLength}`;
     }
+  }
+
+  // Key & Scale controls section
+  setupScaleControls() {
+    const container = document.getElementById('controls');
+    if (!container) return;
+
+    const sectionEl = document.createElement('section');
+    sectionEl.className = 'control-section';
+    sectionEl.setAttribute('data-group', 'Key & Scale');
+
+    const heading = document.createElement('h3');
+    heading.textContent = 'Key & Scale';
+    sectionEl.appendChild(heading);
+
+    const description = document.createElement('p');
+    description.className = 'control-description';
+    description.textContent = 'Manage musical key, scale and chord progression.';
+    sectionEl.appendChild(description);
+
+    // Key select
+    const keyRow = document.createElement('label');
+    keyRow.className = 'control-row';
+    keyRow.dataset.controlId = 'musicKey';
+    const keyLabel = document.createElement('span');
+    keyLabel.className = 'label';
+    keyLabel.textContent = 'Key';
+    const keyWrap = document.createElement('div');
+    keyWrap.className = 'control-input';
+    const keySelect = document.createElement('select');
+    keySelect.id = 'musicKey';
+    KEYS.forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k; opt.textContent = k; keySelect.appendChild(opt);
+    });
+    keyWrap.appendChild(keySelect);
+    const keyValue = document.createElement('span');
+    keyValue.className = 'control-value';
+    keyRow.appendChild(keyLabel);
+    keyRow.appendChild(keyWrap);
+    keyRow.appendChild(keyValue);
+    sectionEl.appendChild(keyRow);
+
+    // Scale select
+    const scaleRow = document.createElement('label');
+    scaleRow.className = 'control-row';
+    scaleRow.dataset.controlId = 'musicScale';
+    const scaleLabel = document.createElement('span');
+    scaleLabel.className = 'label';
+    scaleLabel.textContent = 'Scale';
+    const scaleWrap = document.createElement('div');
+    scaleWrap.className = 'control-input';
+    const scaleSelect = document.createElement('select');
+    scaleSelect.id = 'musicScale';
+    Object.keys(SCALES).forEach(id => {
+      const opt = document.createElement('option');
+      opt.value = id; opt.textContent = id.replace(/_/g, ' ');
+      scaleSelect.appendChild(opt);
+    });
+    scaleWrap.appendChild(scaleSelect);
+    const scaleValue = document.createElement('span');
+    scaleValue.className = 'control-value';
+    scaleRow.appendChild(scaleLabel);
+    scaleRow.appendChild(scaleWrap);
+    scaleRow.appendChild(scaleValue);
+    sectionEl.appendChild(scaleRow);
+
+    // Progression template select
+    const progRow = document.createElement('label');
+    progRow.className = 'control-row';
+    progRow.dataset.controlId = 'progressionTemplate';
+    const progLabel = document.createElement('span');
+    progLabel.className = 'label';
+    progLabel.textContent = 'Chord Progression';
+    const progWrap = document.createElement('div');
+    progWrap.className = 'control-input';
+    const progSelect = document.createElement('select');
+    progSelect.id = 'progressionTemplate';
+    Object.keys(PROGRESSIONS).forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      progSelect.appendChild(opt);
+    });
+    progWrap.appendChild(progSelect);
+    const progValue = document.createElement('span');
+    progValue.className = 'control-value';
+    progRow.appendChild(progLabel);
+    progRow.appendChild(progWrap);
+    progRow.appendChild(progValue);
+    sectionEl.appendChild(progRow);
+
+    // Steps per chord slider
+    const spcRow = document.createElement('label');
+    spcRow.className = 'control-row';
+    spcRow.dataset.controlId = 'stepsPerChord';
+    const spcLabel = document.createElement('span');
+    spcLabel.className = 'label';
+    spcLabel.textContent = 'Chord Length (steps)';
+    const spcWrap = document.createElement('div');
+    spcWrap.className = 'control-input';
+    const spcInput = document.createElement('input');
+    spcInput.type = 'range'; spcInput.min = '1'; spcInput.max = '16'; spcInput.step = '1'; spcInput.id = 'stepsPerChord';
+    spcWrap.appendChild(spcInput);
+    const spcValue = document.createElement('span');
+    spcValue.className = 'control-value';
+    spcRow.appendChild(spcLabel);
+    spcRow.appendChild(spcWrap);
+    spcRow.appendChild(spcValue);
+    sectionEl.appendChild(spcRow);
+
+    // Lock to scale checkbox
+    const lockRow = document.createElement('label');
+    lockRow.className = 'control-row';
+    lockRow.dataset.controlId = 'lockToScale';
+    const lockLabel = document.createElement('span');
+    lockLabel.className = 'label';
+    lockLabel.textContent = 'Lock To Scale';
+    const lockWrap = document.createElement('div');
+    lockWrap.className = 'control-input';
+    const lockInput = document.createElement('input');
+    lockInput.type = 'checkbox'; lockInput.id = 'lockToScale';
+    lockWrap.appendChild(lockInput);
+    const lockValue = document.createElement('span');
+    lockValue.className = 'control-value';
+    lockRow.appendChild(lockLabel);
+    lockRow.appendChild(lockWrap);
+    lockRow.appendChild(lockValue);
+    sectionEl.appendChild(lockRow);
+
+    container.appendChild(sectionEl);
+
+    // Initialize values from manager
+    this.updateScaleUI();
+
+    // Wire events
+    keySelect.addEventListener('change', () => {
+      this.app.scaleManager?.setKey(keySelect.value);
+      keyValue.textContent = keySelect.value;
+    });
+    scaleSelect.addEventListener('change', () => {
+      this.app.scaleManager?.setScale(scaleSelect.value);
+      scaleValue.textContent = scaleSelect.value.replace(/_/g, ' ');
+    });
+    progSelect.addEventListener('change', () => {
+      this.app.scaleManager?.setProgressionTemplate(progSelect.value);
+      progValue.textContent = progSelect.value;
+    });
+    spcInput.addEventListener('input', () => {
+      spcValue.textContent = `${spcInput.value} steps`;
+    });
+    spcInput.addEventListener('change', () => {
+      this.app.scaleManager?.setStepsPerChord(parseInt(spcInput.value));
+    });
+    lockInput.addEventListener('change', () => {
+      this.app.scaleManager?.setLockToScale(lockInput.checked);
+      lockValue.textContent = lockInput.checked ? 'ON' : 'OFF';
+    });
+  }
+
+  updateScaleUI() {
+    const sm = this.app.scaleManager;
+    if (!sm) return;
+    const keySelect = document.getElementById('musicKey');
+    const scaleSelect = document.getElementById('musicScale');
+    const progSelect = document.getElementById('progressionTemplate');
+    const spcInput = document.getElementById('stepsPerChord');
+    const lockInput = document.getElementById('lockToScale');
+    if (keySelect) keySelect.value = sm.currentKey;
+    if (scaleSelect) scaleSelect.value = sm.currentScale;
+    if (progSelect) progSelect.value = sm.progressionTemplate;
+    if (spcInput) spcInput.value = String(sm.stepsPerChord);
+    if (lockInput) lockInput.checked = !!sm.lockToScale;
   }
 }

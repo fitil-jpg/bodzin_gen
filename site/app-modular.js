@@ -19,6 +19,8 @@ import { PatternMorphing } from './modules/pattern-morphing.js';
 import { MobileGestures } from './modules/mobile-gestures.js';
 import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
+import { ScaleManager } from './modules/scale-manager.js';
+import { ScaleManager } from './modules/scale-manager.js';
 
 import { 
   STEP_COUNT, 
@@ -71,6 +73,8 @@ function createApp() {
     presetManager: null,
     presetLibraryUI: null,
     patternVariation: null,
+    scaleManager: null,
+    scaleManager: null,
     
     // State
     controlState: {},
@@ -125,6 +129,10 @@ function setupUserInteractionHandler(app) {
         
         // Initialize waveform analyser now that audio context is running
         initializeWaveformAnalyser(app);
+        // Apply scale/key after audio is ready
+        if (app.scaleManager) {
+          app.scaleManager.onAudioReady();
+        }
         
         // Hide permission request and show ready status
         hideAudioPermissionRequest();
@@ -412,6 +420,9 @@ async function attemptAutoStartAudio(app) {
         app.audioContextStarted = true;
         await app.audio.initializeAudio();
         initializeWaveformAnalyser(app);
+        if (app.scaleManager) {
+          app.scaleManager.onAudioReady();
+        }
         app.status.set('Audio ready - click Start to begin');
       }
     }
@@ -440,6 +451,8 @@ async function initializeApp(app) {
   app.mobileGestures = new MobileGestures(app);
   app.presetManager = new PresetManager(app);
   app.presetLibraryUI = new PresetLibraryUI(app);
+  // Initialize scale manager after core modules
+  app.scaleManager = new ScaleManager(app);
   app.presetManager = new PresetManager(app);
   app.presetLibraryUI = new PresetLibraryUI(app);
 
@@ -516,6 +529,14 @@ async function initializeApp(app) {
   syncSectionState(app, 0);
   app.timeline.draw();
   app.status.set('Idle');
+  // Apply initial scale/key once audio engine exists
+  if (app.scaleManager) {
+    app.scaleManager.onAudioReady();
+    // Sync UI dropdowns with manager state
+    if (app.uiControls?.updateScaleUI) {
+      app.uiControls.updateScaleUI();
+    }
+  }
   
   // Initialize pattern variation status
   if (app.patternVariation) {
@@ -713,6 +734,9 @@ async function ensureTransportRunning(app) {
   // Ensure audio engine is initialized
   if (!app.audio.audioInitialized) {
     await app.audio.initializeAudio();
+    if (app.scaleManager) {
+      app.scaleManager.onAudioReady();
+    }
   }
   
   await app.audio.startSequences();
@@ -852,7 +876,8 @@ function buildPresetPayload(app, name) {
     },
     midiMappings: { ...app.midi.mappings },
     probabilitySettings: app.audio.exportProbabilitySettings(),
-    patternVariations: app.patternVariation ? app.patternVariation.getPatternForPreset() : null
+    patternVariations: app.patternVariation ? app.patternVariation.getPatternForPreset() : null,
+    scaleSettings: app.scaleManager ? app.scaleManager.exportState() : null
   };
 }
 
@@ -883,6 +908,10 @@ function applyPreset(app, presetData) {
     }
     if (migratedPreset.name) {
       app.presetName = migratedPreset.name;
+    }
+    // Load scale settings if present
+    if (migratedPreset.scaleSettings && app.scaleManager) {
+      app.scaleManager.importState(migratedPreset.scaleSettings);
     }
     
     // Save the migrated preset
@@ -929,6 +958,9 @@ function applyPreset(app, presetData) {
     }
     if (presetData.name) {
       app.presetName = presetData.name;
+    }
+    if (presetData.scaleSettings && app.scaleManager) {
+      app.scaleManager.importState(presetData.scaleSettings);
     }
   }
 }
