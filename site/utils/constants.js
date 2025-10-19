@@ -354,6 +354,46 @@ export const SECTION_SEQUENCE_ACTIVITY = {
 
 export const CONTROL_SCHEMA = [
   {
+    group: 'Musical Key & Scale',
+    description: 'Set the global key and scale for note generation.',
+    controls: [
+      {
+        id: 'musicalKey',
+        label: 'Key',
+        type: 'select',
+        options: [
+          { value: 'C', label: 'C' }, { value: 'C#', label: 'C#' }, { value: 'D', label: 'D' },
+          { value: 'D#', label: 'D#' }, { value: 'E', label: 'E' }, { value: 'F', label: 'F' },
+          { value: 'F#', label: 'F#' }, { value: 'G', label: 'G' }, { value: 'G#', label: 'G#' },
+          { value: 'A', label: 'A' }, { value: 'A#', label: 'A#' }, { value: 'B', label: 'B' }
+        ],
+        default: 'C',
+        apply: (value, app) => {
+          if (app.audio) app.audio.setMusicalKey(value);
+        }
+      },
+      {
+        id: 'scaleType',
+        label: 'Scale',
+        type: 'select',
+        options: [
+          { value: 'major', label: 'Major' },
+          { value: 'natural_minor', label: 'Natural Minor' },
+          { value: 'dorian', label: 'Dorian' },
+          { value: 'mixolydian', label: 'Mixolydian' },
+          { value: 'harmonic_minor', label: 'Harmonic Minor' },
+          { value: 'melodic_minor', label: 'Melodic Minor' },
+          { value: 'major_pentatonic', label: 'Major Pentatonic' },
+          { value: 'minor_pentatonic', label: 'Minor Pentatonic' }
+        ],
+        default: 'major',
+        apply: (value, app) => {
+          if (app.audio) app.audio.setScaleType(value);
+        }
+      }
+    ]
+  },
+  {
     group: 'Transport',
     description: 'Tempo and groove foundation.',
     controls: [
