@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scale & Key Management Demo - Bodzin Generator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .demo-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .demo-section h2 {
+            margin-top: 0;
+            color: #ffd700;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+        }
+        
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .control-group {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .control-group h3 {
+            margin-top: 0;
+            color: #4ecdc4;
+            font-size: 1.3em;
+        }
+        
+        .control-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .control-row label {
+            min-width: 120px;
+            font-weight: 500;
+            margin-right: 15px;
+        }
+        
+        .control-row select,
+        .control-row input {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .control-row button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: transform 0.2s;
+        }
+        
+        .control-row button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .info-display {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .info-display h4 {
+            margin-top: 0;
+            color: #ffd700;
+        }
+        
+        .scale-notes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .note {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .chord {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .progression-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .progression-chord {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .progression-chord .chord-symbol {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+        
+        .progression-chord .chord-notes {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .feature-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #4ecdc4;
+        }
+        
+        .feature-item h4 {
+            margin-top: 0;
+            color: #4ecdc4;
+        }
+        
+        .feature-item ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .feature-item li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Scale & Key Management Demo</h1>
+            <p>Advanced musical theory tools for intelligent chord progression generation</p>
+        </div>
+        
+        <div class="status" id="status">Initializing...</div>
+        
+        <div class="demo-section">
+            <h2>🎼 Scale Management</h2>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <h3>Scale Configuration</h3>
+                    <div class="control-row">
+                        <label>Scale Type:</label>
+                        <select id="scaleType">
+                            <option value="major">Major</option>
+                            <option value="natural_minor">Natural Minor</option>
+                            <option value="harmonic_minor">Harmonic Minor</option>
+                            <option value="melodic_minor">Melodic Minor</option>
+                            <option value="dorian">Dorian</option>
+                            <option value="phrygian">Phrygian</option>
+                            <option value="lydian">Lydian</option>
+                            <option value="mixolydian">Mixolydian</option>
+                            <option value="locrian">Locrian</option>
+                            <option value="major_pentatonic">Major Pentatonic</option>
+                            <option value="minor_pentatonic">Minor Pentatonic</option>
+                            <option value="blues">Blues</option>
+                            <option value="whole_tone">Whole Tone</option>
+                            <option value="diminished">Diminished</option>
+                            <option value="chromatic">Chromatic</option>
+                        </select>
+                    </div>
+                    <div class="control-row">
+                        <label>Key:</label>
+                        <select id="keySignature">
+                            <option value="C">C</option>
+                            <option value="G">G</option>
+                            <option value="D">D</option>
+                            <option value="A">A</option>
+                            <option value="E">E</option>
+                            <option value="B">B</option>
+                            <option value="F#">F#</option>
+                            <option value="C#">C#</option>
+                            <option value="F">F</option>
+                            <option value="Bb">Bb</option>
+                            <option value="Eb">Eb</option>
+                            <option value="Ab">Ab</option>
+                            <option value="Db">Db</option>
+                            <option value="Gb">Gb</option>
+                            <option value="Cb">Cb</option>
+                        </select>
+                    </div>
+                    <div class="control-row">
+                        <label>Octave:</label>
+                        <input type="range" id="scaleOctave" min="2" max="6" value="4">
+                        <span id="octaveDisplay">4</span>
+                    </div>
+                    <div class="control-row">
+                        <button onclick="updateScale()">Update Scale</button>
+                        <button onclick="generateRandomScale()">Random Scale</button>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Scale Operations</h3>
+                    <div class="control-row">
+                        <button onclick="transposeScale(-1)">Transpose Down</button>
+                        <button onclick="transposeScale(1)">Transpose Up</button>
+                    </div>
+                    <div class="control-row">
+                        <button onclick="switchToRelative()">Switch to Relative</button>
+                        <button onclick="switchToParallel()">Switch to Parallel</button>
+                    </div>
+                    <div class="control-row">
+                        <button onclick="generateMelody()">Generate Melody</button>
+                        <button onclick="generateBassLine()">Generate Bass Line</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-display" id="scaleInfo">
+                <h4>Current Scale Information</h4>
+                <div id="scaleDetails">Loading...</div>
+                <div class="scale-notes" id="scaleNotes"></div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🎹 Chord Progression Tools</h2>
+            <div class="controls-grid">
+                <div class="control-group">
+                    <h3>Progression Generation</h3>
+                    <div class="control-row">
+                        <label>Progression Type:</label>
+                        <select id="progressionType">
+                            <option value="major_1_6_4_5">I-vi-IV-V (Pop)</option>
+                            <option value="major_1_5_6_4">I-V-vi-IV (Modern)</option>
+                            <option value="major_2_5_1">II-V-I (Jazz)</option>
+                            <option value="major_1_4_5">I-IV-V (Basic)</option>
+                            <option value="minor_1_6_4_5">i-vi-IV-V (Minor Pop)</option>
+                            <option value="minor_1_5_6_4">i-V-vi-IV (Minor Modern)</option>
+                            <option value="electronic_1_5_6_4">I-V-vi-IV (Electronic)</option>
+                            <option value="dorian_1_4_1_5">I-IV-I-V (Dorian)</option>
+                        </select>
+                    </div>
+                    <div class="control-row">
+                        <label>Length:</label>
+                        <input type="range" id="progressionLength" min="2" max="8" value="4">
+                        <span id="lengthDisplay">4</span>
+                    </div>
+                    <div class="control-row">
+                        <button onclick="generateProgression()">Generate Progression</button>
+                        <button onclick="generateRandomProgression()">Random Progression</button>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Progression Operations</h3>
+                    <div class="control-row">
+                        <button onclick="transposeProgression(-1)">Transpose Down</button>
+                        <button onclick="transposeProgression(1)">Transpose Up</button>
+                    </div>
+                    <div class="control-row">
+                        <button onclick="analyzeProgression()">Analyze Progression</button>
+                        <button onclick="exportProgression()">Export Progression</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-display" id="progressionInfo">
+                <h4>Current Chord Progression</h4>
+                <div class="progression-display" id="progressionDisplay"></div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>✨ Features Overview</h2>
+            <div class="feature-list">
+                <div class="feature-item">
+                    <h4>🎼 Scale Management</h4>
+                    <ul>
+                        <li>20+ scale types (Major, Minor, Modes, Pentatonic, Blues, etc.)</li>
+                        <li>All 12 keys with proper key signatures</li>
+                        <li>Scale degree analysis and note generation</li>
+                        <li>Melody and bass line generation</li>
+                        <li>Scale transposition and mode switching</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-item">
+                    <h4>🎹 Key Management</h4>
+                    <ul>
+                        <li>Key detection from melodies and chord progressions</li>
+                        <li>Relative and parallel key relationships</li>
+                        <li>Circle of fifths navigation</li>
+                        <li>Key signature analysis with accidentals</li>
+                        <li>Key history and navigation</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-item">
+                    <h4>🎵 Chord Progression Tools</h4>
+                    <ul>
+                        <li>15+ common chord progressions</li>
+                        <li>Intelligent chord generation from melodies</li>
+                        <li>Roman numeral analysis</li>
+                        <li>Voice leading analysis</li>
+                        <li>Harmonic rhythm and tension analysis</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-item">
+                    <h4>🎛️ Integration Features</h4>
+                    <ul>
+                        <li>Seamless integration with existing audio engine</li>
+                        <li>Preset system support for scale/key settings</li>
+                        <li>Real-time pattern generation</li>
+                        <li>MIDI and automation compatibility</li>
+                        <li>Export/import functionality</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the scale and key management modules
+        import { ScaleManager } from './modules/scale-manager.js';
+        import { KeyManager } from './modules/key-manager.js';
+        import { ChordProgressionManager } from './modules/chord-progression-manager.js';
+        
+        // Initialize managers
+        const scaleManager = new ScaleManager();
+        const keyManager = new KeyManager();
+        const chordProgressionManager = new ChordProgressionManager();
+        
+        // Make them globally available for demo functions
+        window.scaleManager = scaleManager;
+        window.keyManager = keyManager;
+        window.chordProgressionManager = chordProgressionManager;
+        
+        // Update status
+        document.getElementById('status').textContent = 'Scale & Key Management Ready!';
+        
+        // Initialize display
+        updateScaleDisplay();
+        updateProgressionDisplay();
+        
+        // Event listeners
+        document.getElementById('scaleType').addEventListener('change', updateScale);
+        document.getElementById('keySignature').addEventListener('change', updateScale);
+        document.getElementById('scaleOctave').addEventListener('input', function() {
+            document.getElementById('octaveDisplay').textContent = this.value;
+            updateScale();
+        });
+        
+        document.getElementById('progressionLength').addEventListener('input', function() {
+            document.getElementById('lengthDisplay').textContent = this.value;
+        });
+        
+        function updateScale() {
+            const scaleType = document.getElementById('scaleType').value;
+            const key = document.getElementById('keySignature').value;
+            const octave = parseInt(document.getElementById('scaleOctave').value);
+            
+            scaleManager.setScaleType(scaleType);
+            scaleManager.setKey(key);
+            scaleManager.setOctave(octave);
+            
+            keyManager.setKey(key);
+            keyManager.setMode(scaleType.includes('minor') ? 'minor' : 'major');
+            
+            updateScaleDisplay();
+        }
+        
+        function updateScaleDisplay() {
+            const scaleInfo = scaleManager.getScaleInfo();
+            const scaleDetails = document.getElementById('scaleDetails');
+            const scaleNotes = document.getElementById('scaleNotes');
+            
+            scaleDetails.innerHTML = `
+                <strong>Scale:</strong> ${scaleInfo.name}<br>
+                <strong>Key:</strong> ${scaleInfo.key}<br>
+                <strong>Type:</strong> ${scaleInfo.name.split(' ')[1] || 'Major'}<br>
+                <strong>Octave:</strong> ${scaleInfo.octave}<br>
+                <strong>Notes:</strong> ${scaleInfo.noteCount}
+            `;
+            
+            scaleNotes.innerHTML = scaleInfo.notes.map(note => 
+                `<span class="note">${note}</span>`
+            ).join('');
+        }
+        
+        function updateProgressionDisplay() {
+            const progression = chordProgressionManager.getCurrentProgression();
+            const progressionDisplay = document.getElementById('progressionDisplay');
+            
+            if (progression.progression.length === 0) {
+                progressionDisplay.innerHTML = '<p>No progression generated yet. Click "Generate Progression" to create one.</p>';
+                return;
+            }
+            
+            progressionDisplay.innerHTML = progression.progression.map(chord => `
+                <div class="progression-chord">
+                    <div class="chord-symbol">${chord.symbol}</div>
+                    <div class="chord-notes">${chord.notes.map(n => n.fullNote).join(', ')}</div>
+                </div>
+            `).join('');
+        }
+        
+        // Demo functions
+        window.generateRandomScale = function() {
+            const scales = Object.keys(scaleManager.getAvailableScales());
+            const keys = scaleManager.getAvailableKeys();
+            const randomScale = scales[Math.floor(Math.random() * scales.length)];
+            const randomKey = keys[Math.floor(Math.random() * keys.length)];
+            
+            document.getElementById('scaleType').value = randomScale;
+            document.getElementById('keySignature').value = randomKey.id;
+            updateScale();
+        };
+        
+        window.transposeScale = function(semitones) {
+            const newKey = scaleManager.transpose(semitones);
+            document.getElementById('keySignature').value = newKey;
+            updateScale();
+        };
+        
+        window.switchToRelative = function() {
+            const relative = scaleManager.getRelativeKey();
+            if (relative) {
+                document.getElementById('keySignature').value = relative.key;
+                document.getElementById('scaleType').value = relative.type;
+                updateScale();
+            }
+        };
+        
+        window.switchToParallel = function() {
+            const parallel = keyManager.getParallelKey();
+            if (parallel) {
+                document.getElementById('scaleType').value = parallel.mode === 'major' ? 'major' : 'natural_minor';
+                updateScale();
+            }
+        };
+        
+        window.generateMelody = function() {
+            const melody = scaleManager.generateMelodyPattern(8);
+            console.log('Generated Melody:', melody);
+            alert('Melody generated! Check console for details.');
+        };
+        
+        window.generateBassLine = function() {
+            const bassLine = scaleManager.generateBassLine(8, 2);
+            console.log('Generated Bass Line:', bassLine);
+            alert('Bass line generated! Check console for details.');
+        };
+        
+        window.generateProgression = function() {
+            const progressionType = document.getElementById('progressionType').value;
+            const length = parseInt(document.getElementById('progressionLength').value);
+            
+            chordProgressionManager.generateProgression(progressionType);
+            updateProgressionDisplay();
+        };
+        
+        window.generateRandomProgression = function() {
+            const length = parseInt(document.getElementById('progressionLength').value);
+            chordProgressionManager.generateRandomProgression(length);
+            updateProgressionDisplay();
+        };
+        
+        window.transposeProgression = function(semitones) {
+            chordProgressionManager.transposeProgression(semitones);
+            updateProgressionDisplay();
+        };
+        
+        window.analyzeProgression = function() {
+            const analysis = chordProgressionManager.analyzeProgression();
+            console.log('Progression Analysis:', analysis);
+            alert('Progression analyzed! Check console for detailed analysis.');
+        };
+        
+        window.exportProgression = function() {
+            const exported = chordProgressionManager.exportProgression();
+            console.log('Exported Progression:', exported);
+            alert('Progression exported! Check console for details.');
+        };
+    </script>
+</body>
+</html>

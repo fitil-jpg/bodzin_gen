@@ -15,9 +15,17 @@ export class PatternVariationManager {
     this.morphingSpeed = 0.1;
     this.randomizationEnabled = false;
     this.randomizationAmount = 0.2;
+    this.harmonicIntegration = null;
     
     // Initialize default patterns
     this.initializeDefaultPatterns();
+  }
+
+  /**
+   * Set harmonic integration module
+   */
+  setHarmonicIntegration(harmonicIntegration) {
+    this.harmonicIntegration = harmonicIntegration;
   }
 
   initializeDefaultPatterns() {
@@ -661,5 +669,213 @@ export class PatternVariationManager {
 
     this.importPatterns(presetData.patterns);
     this.applyPatternToAutomation(this.currentPattern);
+  }
+
+  /**
+   * Set harmonic integration module
+   */
+  setHarmonicIntegration(harmonicIntegration) {
+    this.harmonicIntegration = harmonicIntegration;
+  }
+
+  /**
+   * Generate harmonically aware pattern variation
+   */
+  generateHarmonicVariation(patternId, harmonicContext = null) {
+    if (!this.harmonicIntegration) {
+      console.warn('Harmonic integration not available');
+      return this.generateRandomVariation(patternId);
+    }
+
+    const basePattern = this.variations.get(patternId);
+    if (!basePattern) return null;
+
+    const harmonicVariation = {
+      ...basePattern,
+      id: `${patternId}_harmonic`,
+      name: `Harmonic ${basePattern.name}`,
+      tracks: basePattern.tracks.map(track => ({
+        ...track,
+        values: this.applyHarmonicConstraints(track.values, harmonicContext)
+      })),
+      metadata: {
+        ...basePattern.metadata,
+        harmonicContext: harmonicContext,
+        generatedAt: new Date().toISOString()
+      }
+    };
+
+    return harmonicVariation;
+  }
+
+  /**
+   * Apply harmonic constraints to track values
+   */
+  applyHarmonicConstraints(values, harmonicContext) {
+    if (!this.harmonicIntegration || !harmonicContext) return values;
+
+    const scale = harmonicContext.scale || [];
+    const constrainedValues = values.map(value => {
+      // Apply harmonic scaling based on scale degrees
+      if (scale.length > 0) {
+        const scaleDegree = Math.floor(value * scale.length);
+        const normalizedValue = scaleDegree / scale.length;
+        return Math.min(1, Math.max(0, normalizedValue));
+      }
+      return value;
+    });
+
+    return constrainedValues;
+  }
+
+  /**
+   * Generate pattern based on chord progression
+   */
+  generateChordBasedPattern(patternId, chordProgression) {
+    if (!this.harmonicIntegration) {
+      return this.generateRandomVariation(patternId);
+    }
+
+    const basePattern = this.variations.get(patternId);
+    if (!basePattern) return null;
+
+    const chordPattern = {
+      ...basePattern,
+      id: `${patternId}_chord`,
+      name: `Chord-based ${basePattern.name}`,
+      tracks: basePattern.tracks.map(track => ({
+        ...track,
+        values: this.generateChordBasedValues(track.values, chordProgression)
+      })),
+      metadata: {
+        ...basePattern.metadata,
+        chordProgression: chordProgression,
+        generatedAt: new Date().toISOString()
+      }
+    };
+
+    return chordPattern;
+  }
+
+  /**
+   * Generate values based on chord progression
+   */
+  generateChordBasedValues(baseValues, chordProgression) {
+    if (!chordProgression || chordProgression.length === 0) return baseValues;
+
+    const chordLength = Math.floor(baseValues.length / chordProgression.length);
+    const newValues = [...baseValues];
+
+    chordProgression.forEach((chord, chordIndex) => {
+      if (!chord) return;
+
+      const startIndex = chordIndex * chordLength;
+      const endIndex = Math.min(startIndex + chordLength, baseValues.length);
+
+      // Apply chord-based modulation to values
+      for (let i = startIndex; i < endIndex; i++) {
+        const chordIntensity = this.calculateChordIntensity(chord);
+        const originalValue = baseValues[i];
+        const chordModulation = (chordIntensity - 0.5) * 0.3; // ±15% modulation
+        newValues[i] = Math.min(1, Math.max(0, originalValue + chordModulation));
+      }
+    });
+
+    return newValues;
+  }
+
+  /**
+   * Calculate chord intensity for modulation
+   */
+  calculateChordIntensity(chord) {
+    if (!chord || !chord.notes) return 0.5;
+
+    // Simple intensity based on chord complexity
+    const noteCount = chord.notes.length;
+    const baseIntensity = Math.min(1, noteCount / 4); // Max at 4+ notes
+
+    // Add some harmonic richness
+    const harmonicRichness = chord.type === 'major' ? 0.8 : 
+                            chord.type === 'minor' ? 0.6 : 0.4;
+
+    return (baseIntensity + harmonicRichness) / 2;
+  }
+
+  /**
+   * Analyze pattern for harmonic content
+   */
+  analyzePatternHarmony(patternId) {
+    if (!this.harmonicIntegration) return null;
+
+    const pattern = this.variations.get(patternId);
+    if (!pattern) return null;
+
+    const analysis = {
+      patternId,
+      harmonicComplexity: 0,
+      scaleAdherence: 0,
+      chordToneUsage: 0,
+      suggestions: []
+    };
+
+    // Analyze each track for harmonic content
+    pattern.tracks.forEach(track => {
+      const trackAnalysis = this.analyzeTrackHarmony(track);
+      analysis.harmonicComplexity += trackAnalysis.complexity;
+      analysis.scaleAdherence += trackAnalysis.scaleAdherence;
+      analysis.chordToneUsage += trackAnalysis.chordToneUsage;
+    });
+
+    // Average the analysis
+    const trackCount = pattern.tracks.length;
+    if (trackCount > 0) {
+      analysis.harmonicComplexity /= trackCount;
+      analysis.scaleAdherence /= trackCount;
+      analysis.chordToneUsage /= trackCount;
+    }
+
+    // Generate suggestions
+    if (analysis.scaleAdherence < 0.7) {
+      analysis.suggestions.push('Consider using more scale-consistent values');
+    }
+    if (analysis.harmonicComplexity < 0.5) {
+      analysis.suggestions.push('Try adding more harmonic variation');
+    }
+
+    return analysis;
+  }
+
+  /**
+   * Analyze individual track for harmonic content
+   */
+  analyzeTrackHarmony(track) {
+    const values = track.values;
+    const analysis = {
+      complexity: 0,
+      scaleAdherence: 0,
+      chordToneUsage: 0
+    };
+
+    if (!values || values.length === 0) return analysis;
+
+    // Calculate complexity based on value variation
+    let valueVariance = 0;
+    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+    
+    values.forEach(value => {
+      valueVariance += Math.pow(value - mean, 2);
+    });
+    
+    analysis.complexity = Math.min(1, Math.sqrt(valueVariance / values.length) * 2);
+
+    // Calculate scale adherence (simplified)
+    const scaleNotes = values.filter(val => {
+      const normalized = val * 12; // Convert to 0-12 range
+      return Math.abs(normalized - Math.round(normalized)) < 0.1; // Close to whole numbers
+    }).length;
+    
+    analysis.scaleAdherence = scaleNotes / values.length;
+
+    return analysis;
   }
 }
