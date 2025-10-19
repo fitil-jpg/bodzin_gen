@@ -354,6 +354,66 @@ export const SECTION_SEQUENCE_ACTIVITY = {
 
 export const CONTROL_SCHEMA = [
   {
+    group: 'Scale & Key',
+    description: 'Select musical key, scale, and quantization.',
+    controls: [
+      {
+        id: 'keyRoot',
+        label: 'Key',
+        type: 'select',
+        options: [
+          { value: 'C', label: 'C' },
+          { value: 'C#', label: 'C# / Db' },
+          { value: 'D', label: 'D' },
+          { value: 'D#', label: 'D# / Eb' },
+          { value: 'E', label: 'E' },
+          { value: 'F', label: 'F' },
+          { value: 'F#', label: 'F# / Gb' },
+          { value: 'G', label: 'G' },
+          { value: 'G#', label: 'G# / Ab' },
+          { value: 'A', label: 'A' },
+          { value: 'A#', label: 'A# / Bb' },
+          { value: 'B', label: 'B' }
+        ],
+        default: 'C',
+        apply: (value, app) => {
+          if (app.scaleManager) app.scaleManager.setKey(value);
+        }
+      },
+      {
+        id: 'scaleType',
+        label: 'Scale',
+        type: 'select',
+        options: [
+          { value: 'major', label: 'Major' },
+          { value: 'natural_minor', label: 'Natural Minor' },
+          { value: 'harmonic_minor', label: 'Harmonic Minor' },
+          { value: 'melodic_minor', label: 'Melodic Minor' },
+          { value: 'dorian', label: 'Dorian' },
+          { value: 'phrygian', label: 'Phrygian' },
+          { value: 'lydian', label: 'Lydian' },
+          { value: 'mixolydian', label: 'Mixolydian' },
+          { value: 'pentatonic_major', label: 'Pentatonic Major' },
+          { value: 'pentatonic_minor', label: 'Pentatonic Minor' },
+          { value: 'blues', label: 'Blues' }
+        ],
+        default: 'major',
+        apply: (value, app) => {
+          if (app.scaleManager) app.scaleManager.setScale(value);
+        }
+      },
+      {
+        id: 'scaleQuantize',
+        label: 'Quantize to Scale',
+        type: 'checkbox',
+        default: true,
+        apply: (value, app) => {
+          if (app.scaleManager) app.scaleManager.setQuantizeEnabled(value);
+        }
+      }
+    ]
+  },
+  {
     group: 'Transport',
     description: 'Tempo and groove foundation.',
     controls: [

@@ -276,6 +276,16 @@ export class UIControls {
     return state;
   }
 
+  updateAllControls() {
+    // Ensure UI reflects current app.controlState values
+    this.controls.forEach(({ control }) => {
+      if (Object.prototype.hasOwnProperty.call(this.app.controlState, control.id)) {
+        const value = this.app.controlState[control.id];
+        this.setControlValue(control, value, { silent: true, skipSave: true });
+      }
+    });
+  }
+
   updateMidiLearningState(controlId) {
     this.controls.forEach(entry => {
       if (controlId && entry.control.id === controlId) {

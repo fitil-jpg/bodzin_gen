@@ -25,6 +25,7 @@ export class AudioEngine {
     this.useProbabilityTriggers = false;
     this.currentStep = 0;
     this.currentSection = null;
+    this.scaleManager = null;
   }
 
   initialize() {
@@ -91,6 +92,10 @@ export class AudioEngine {
     this.connectBuses();
     this.audioInitialized = true;
     return this;
+  }
+
+  setScaleManager(scaleManager) {
+    this.scaleManager = scaleManager;
   }
 
   createEffects() {
@@ -510,13 +515,15 @@ export class AudioEngine {
 
     const bassSeq = new Tone.Sequence((time, note) => {
       if (note) {
-        instruments.bass.triggerAttackRelease(note, '8n', time, 0.9);
+        const qNote = this.quantizeNoteIfNeeded(note);
+        instruments.bass.triggerAttackRelease(qNote, '8n', time, 0.9);
       }
     }, bassPattern, '16n');
 
     const leadSeq = new Tone.Sequence((time, notes) => {
       if (notes && notes.length) {
-        notes.forEach(note => instruments.lead.triggerAttackRelease(note, '16n', time, 0.8));
+        const qNotes = this.quantizeNoteIfNeeded(notes);
+        qNotes.forEach(note => instruments.lead.triggerAttackRelease(note, '16n', time, 0.8));
       }
     }, leadPattern, '16n');
 
@@ -547,6 +554,11 @@ export class AudioEngine {
       groups,
       byInstrument: sequencesByInstrument
     };
+  }
+
+  quantizeNoteIfNeeded(noteOrChord) {
+    if (!this.scaleManager) return Array.isArray(noteOrChord) ? [...noteOrChord] : noteOrChord;
+    return this.scaleManager.quantizeNote(noteOrChord);
   }
 
   configureTransport() {
@@ -1090,21 +1102,32 @@ export class AudioEngine {
         
       case 'bass':
         // Use a simple bass pattern for probability triggers
-        const bassNotes = ['C2', 'G1', 'A1', 'D2'];
+        const bassNotes = this.scaleManager
+          ? this.scaleManager.getScaleNotesInOctave(1).concat(this.scaleManager.getScaleNotesInOctave(2))
+          : ['C2', 'G1', 'A1', 'D2'];
         const noteIndex = this.currentStep % bassNotes.length;
         const note = bassNotes[noteIndex];
         if (note) {
-          this.instruments.bass.triggerAttackRelease(note, '8n', time, velocity);
+          const qNote = this.quantizeNoteIfNeeded(note);
+          this.instruments.bass.triggerAttackRelease(qNote, '8n', time, velocity);
         }
         break;
         
       case 'lead':
         // Use a simple lead pattern for probability triggers
-        const leadNotes = [['E4', 'B4'], ['G4'], ['A4'], ['B4', 'D5']];
+        const leadNotes = this.scaleManager
+          ? [
+              [this.scaleManager.quantizeNote('E4'), this.scaleManager.quantizeNote('B4')],
+              [this.scaleManager.quantizeNote('G4')],
+              [this.scaleManager.quantizeNote('A4')],
+              [this.scaleManager.quantizeNote('B4'), this.scaleManager.quantizeNote('D5')]
+            ]
+          : [['E4', 'B4'], ['G4'], ['A4'], ['B4', 'D5']];
         const leadIndex = this.currentStep % leadNotes.length;
         const notes = leadNotes[leadIndex];
         if (notes && notes.length) {
-          notes.forEach(note => {
+          const qNotes = this.quantizeNoteIfNeeded(notes);
+          qNotes.forEach(note => {
             this.instruments.lead.triggerAttackRelease(note, '16n', time, velocity);
           });
         }

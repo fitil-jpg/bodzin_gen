@@ -19,6 +19,7 @@ import { PatternMorphing } from './modules/pattern-morphing.js';
 import { MobileGestures } from './modules/mobile-gestures.js';
 import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
+import { ScaleManager } from './modules/scale-manager.js';
 
 import { 
   STEP_COUNT, 
@@ -68,6 +69,7 @@ function createApp() {
     mobileGestures: null,
     presetManager: null,
     presetLibraryUI: null,
+    scaleManager: null,
     presetManager: null,
     presetLibraryUI: null,
     patternVariation: null,
@@ -426,6 +428,7 @@ async function initializeApp(app) {
   app.storage = new StorageManager();
   app.status = new StatusManager();
   app.audio = new AudioEngine().initialize();
+  app.scaleManager = new ScaleManager();
   app.patternChain = new PatternChainManager(app.audio);
   app.patternVariation = new PatternVariationManager(app);
   app.uiControls = new UIControls(app);
@@ -453,6 +456,10 @@ async function initializeApp(app) {
 
   // Configure transport
   app.audio.configureTransport();
+  // Connect scale manager to audio engine
+  if (app.audio && app.scaleManager && app.audio.setScaleManager) {
+    app.audio.setScaleManager(app.scaleManager);
+  }
 
   // Load stored state
   const storedControls = app.storage.loadControlState();
