@@ -2164,6 +2164,230 @@
       }
     }
 
+    /* Harmonic Analysis Panel Styles */
+    .harmonic-analysis-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 400px;
+      height: 100vh;
+      background: var(--panel-bg);
+      border-left: 1px solid var(--border);
+      z-index: 1000;
+      overflow-y: auto;
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+    }
+
+    .harmonic-analysis-panel[style*="block"] {
+      transform: translateX(0);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(24, 24, 29, 0.9);
+    }
+
+    .panel-header h3 {
+      margin: 0;
+      color: var(--text);
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0.25rem;
+    }
+
+    .close-btn:hover {
+      color: var(--text);
+    }
+
+    .panel-content {
+      padding: 1rem;
+    }
+
+    .section {
+      margin-bottom: 2rem;
+    }
+
+    .section h4 {
+      margin: 0 0 1rem 0;
+      color: var(--text);
+      font-size: 1.1rem;
+    }
+
+    .section h5 {
+      margin: 0.5rem 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .section h6 {
+      margin: 0.5rem 0;
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+
+    .key-selection {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .control-group label {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .control-select, .control-input {
+      padding: 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .scale-notes {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    .scale-note {
+      padding: 0.25rem 0.5rem;
+      background: var(--accent);
+      color: white;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .progression-controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .progression-chords {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .chord-slot {
+      padding: 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .chord-slot.empty {
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--muted);
+    }
+
+    .chord-symbol {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 0.25rem;
+    }
+
+    .chord-notes {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-bottom: 0.25rem;
+    }
+
+    .chord-degree {
+      font-size: 0.7rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .analysis-controls {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .analysis-results {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .analysis-section {
+      padding: 0.75rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .analysis-item {
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .analysis-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .analysis-item strong {
+      color: var(--accent);
+    }
+
+    .scale-visualizer {
+      margin-top: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .scale-visualizer canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #3a8ae6;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
     .led-indicators {
       display: flex;
       gap: 8px;
@@ -3215,6 +3439,7 @@
         </label>
         <button id="curveEditorButton" class="btn">Curve Editor</button>
         <button id="wolframButton" class="btn btn-primary">🧮 Wolfram</button>
+        <button id="harmonicAnalysisButton" class="btn">Harmonic Analysis</button>
         <button id="triggerVariationButton" class="btn">Trigger Variation</button>
         <button id="morphToLiftButton" class="btn">Morph to Lift</button>
         <button id="morphToPeakButton" class="btn">Morph to Peak</button>

@@ -466,6 +466,17 @@ export class PresetManager {
     // Apply Wolfram patterns
     if (preset.wolframPatterns && this.app.wolframPatterns) {
       this.app.wolframPatterns.importPatterns(preset.wolframPatterns);
+    // Apply scale and key management settings
+    if (preset.scaleSettings && this.app.scaleManager) {
+      this.app.scaleManager.importScale(preset.scaleSettings);
+    }
+    
+    if (preset.keySettings && this.app.keyManager) {
+      this.app.keyManager.importKey(preset.keySettings);
+    }
+    
+    if (preset.chordProgressionSettings && this.app.chordProgressionManager) {
+      this.app.chordProgressionManager.importProgression(preset.chordProgressionSettings);
     }
 
     this.currentPreset = preset;
@@ -486,6 +497,9 @@ export class PresetManager {
       controls: { ...this.app.controlState },
       automation: { ...this.app.automation },
       wolframPatterns: this.app.wolframPatterns ? this.app.wolframPatterns.exportPatterns() : {}
+      scaleSettings: this.app.scaleManager ? this.app.scaleManager.exportScale() : null,
+      keySettings: this.app.keyManager ? this.app.keyManager.exportKey() : null,
+      chordProgressionSettings: this.app.chordProgressionManager ? this.app.chordProgressionManager.exportProgression() : null
     };
 
     return this.savePreset(presetData);
