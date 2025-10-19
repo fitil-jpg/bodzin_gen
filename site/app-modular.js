@@ -16,6 +16,7 @@ import { CommunityPresetManager } from './modules/community-preset-manager.js';
 import { PresetVersioning } from './modules/preset-versioning.js';
 import { SearchFilter } from './modules/search-filter.js';
 import { PatternMorphing } from './modules/pattern-morphing.js';
+import { WolframIntegration } from './modules/wolfram-integration.js';
 import { MobileGestures } from './modules/mobile-gestures.js';
 import { PresetManager } from './modules/preset-manager.js';
 import { PresetLibraryUI } from './modules/preset-library-ui.js';
@@ -71,6 +72,7 @@ function createApp() {
     presetManager: null,
     presetLibraryUI: null,
     patternVariation: null,
+    wolfram: null,
     
     // State
     controlState: {},
@@ -442,6 +444,7 @@ async function initializeApp(app) {
   app.presetLibraryUI = new PresetLibraryUI(app);
   app.presetManager = new PresetManager(app);
   app.presetLibraryUI = new PresetLibraryUI(app);
+  app.wolfram = new WolframIntegration(app);
 
   // Initialize timeline
   app.timeline.initialize();
@@ -510,6 +513,7 @@ async function initializeApp(app) {
   app.presetManager.initialize();
   // Setup keyboard shortcuts
   setupKeyboardShortcuts(app);
+  setupWolframShortcuts(app);
   
   // Apply initial state
   applyAutomationForStep(app, 0);
@@ -523,6 +527,26 @@ async function initializeApp(app) {
   }
 }
 
+// Wolfram-inspired generators (keyboard shortcuts)
+function setupWolframShortcuts(app) {
+  document.addEventListener('keydown', (event) => {
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
+    // Ctrl/Cmd + W: Apply CA rhythm to hats using Rule 30
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'w') {
+      const vel = app.wolfram.generateCARhythm({ steps: 16, rule: 30 });
+      app.wolfram.applyRhythmToInstrument('hats', vel);
+      app.status.set('Applied CA Rule 30 to Hats');
+    }
+    // Ctrl/Cmd + Shift + W: Apply logistic curve to kick probability
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'w') {
+      const curve = app.wolfram.generateLogisticCurve({ steps: 16, r: 3.9, x0: 0.41, scale: 1.0 });
+      app.audio.setProbabilityTriggersEnabled(true);
+      app.wolfram.applyProbabilityCurve('kick', curve);
+      app.status.set('Applied Logistic probability to Kick');
+    }
+  });
+}
+
 function setupButtons(app) {
   const startBtn = document.getElementById('startButton');
   const stopBtn = document.getElementById('stopButton');
@@ -533,6 +557,9 @@ function setupButtons(app) {
   const exportStemsBtn = document.getElementById('exportStemsButton');
   const curveEditorBtn = document.getElementById('curveEditorButton');
   const midiToggle = document.getElementById('midiLearnToggle');
+  // Wolfram buttons
+  const wolframCARule30HatsBtn = document.getElementById('wolframCARule30Hats');
+  const wolframLogisticKickBtn = document.getElementById('wolframLogisticKick');
   
   // Morphing buttons
   const morphToLiftBtn = document.getElementById('morphToLiftButton');
@@ -630,6 +657,19 @@ function setupButtons(app) {
     app.audio.randomizeAll();
     app.status.set('All patterns randomized');
     addRandomizeAnimation(randomizeAllBtn);
+  });
+
+  // Wolfram quick actions
+  wolframCARule30HatsBtn?.addEventListener('click', () => {
+    const vel = app.wolfram.generateCARhythm({ steps: 16, rule: 30 });
+    app.wolfram.applyRhythmToInstrument('hats', vel);
+    app.status.set('Applied CA Rule 30 to Hats');
+  });
+  wolframLogisticKickBtn?.addEventListener('click', () => {
+    const curve = app.wolfram.generateLogisticCurve({ steps: 16, r: 3.9, x0: 0.41, scale: 1.0 });
+    app.audio.setProbabilityTriggersEnabled(true);
+    app.wolfram.applyProbabilityCurve('kick', curve);
+    app.status.set('Applied Logistic probability to Kick');
   });
 
   const fileInput = document.createElement('input');
