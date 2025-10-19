@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harmonic Analysis Demo - Bodzin Generator</title>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0f0f12;
+      color: #f1f1f4;
+      margin: 0;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #49a9ff;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    .demo-section {
+      background: #18181d;
+      border: 1px solid #2a2a33;
+      border-radius: 8px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .demo-section h2 {
+      color: #49a9ff;
+      margin-top: 0;
+    }
+    
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    
+    .feature-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid #2a2a33;
+      border-radius: 6px;
+      padding: 1.5rem;
+    }
+    
+    .feature-card h3 {
+      color: #94ff49;
+      margin-top: 0;
+    }
+    
+    .code-example {
+      background: #0f0f12;
+      border: 1px solid #2a2a33;
+      border-radius: 4px;
+      padding: 1rem;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    
+    .btn {
+      background: #49a9ff;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 0.5rem;
+      transition: background 0.3s;
+    }
+    
+    .btn:hover {
+      background: #3a8ae6;
+    }
+    
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    
+    .interactive-demo {
+      background: rgba(73, 169, 255, 0.1);
+      border: 1px solid #49a9ff;
+      border-radius: 6px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+    }
+    
+    .scale-display {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 1rem 0;
+    }
+    
+    .scale-note {
+      background: #49a9ff;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    
+    .chord-display {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .chord-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid #2a2a33;
+      border-radius: 6px;
+      padding: 1rem;
+      text-align: center;
+    }
+    
+    .chord-symbol {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #49a9ff;
+      margin-bottom: 0.5rem;
+    }
+    
+    .chord-notes {
+      font-size: 0.9rem;
+      color: #9a9aac;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Harmonic Analysis & Scale Management Demo</h1>
+    
+    <div class="demo-section">
+      <h2>🎵 Core Features</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <h3>Harmonic Analysis</h3>
+          <p>Real-time chord detection, scale analysis, and key detection from audio input.</p>
+          <ul>
+            <li>Chord recognition with quality detection</li>
+            <li>Key signature analysis</li>
+            <li>Harmonic content analysis</li>
+            <li>Consonance/dissonance calculation</li>
+          </ul>
+        </div>
+        
+        <div class="feature-card">
+          <h3>Scale & Key Management</h3>
+          <p>Comprehensive scale and key management with support for all major modes and scales.</p>
+          <ul>
+            <li>12 major and minor keys</li>
+            <li>7 church modes (Dorian, Phrygian, etc.)</li>
+            <li>Pentatonic and blues scales</li>
+            <li>Circle of fifths navigation</li>
+          </ul>
+        </div>
+        
+        <div class="feature-card">
+          <h3>Chord Progression Engine</h3>
+          <p>Intelligent chord progression generation with voice leading and harmonic analysis.</p>
+          <ul>
+            <li>Multiple progression styles (Jazz, Blues, Classical)</li>
+            <li>Voice leading optimization</li>
+            <li>Cadence detection</li>
+            <li>Harmonic rhythm analysis</li>
+          </ul>
+        </div>
+        
+        <div class="feature-card">
+          <h3>Music Theory Utils</h3>
+          <p>Comprehensive music theory utilities for intervals, frequencies, and note relationships.</p>
+          <ul>
+            <li>Frequency to note conversion</li>
+            <li>Interval calculation</li>
+            <li>Chord construction and analysis</li>
+            <li>Enharmonic equivalents</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <div class="demo-section">
+      <h2>🎹 Interactive Demo</h2>
+      <div class="interactive-demo">
+        <h3>Scale Generator</h3>
+        <p>Select a key and mode to see the generated scale:</p>
+        
+        <div style="margin: 1rem 0;">
+          <label for="demo-key">Key: </label>
+          <select id="demo-key">
+            <option value="C">C</option>
+            <option value="C#">C#</option>
+            <option value="D">D</option>
+            <option value="D#">D#</option>
+            <option value="E">E</option>
+            <option value="F">F</option>
+            <option value="F#">F#</option>
+            <option value="G">G</option>
+            <option value="G#">G#</option>
+            <option value="A">A</option>
+            <option value="A#">A#</option>
+            <option value="B">B</option>
+          </select>
+          
+          <label for="demo-mode" style="margin-left: 1rem;">Mode: </label>
+          <select id="demo-mode">
+            <option value="major">Major</option>
+            <option value="minor">Minor</option>
+            <option value="dorian">Dorian</option>
+            <option value="phrygian">Phrygian</option>
+            <option value="lydian">Lydian</option>
+            <option value="mixolydian">Mixolydian</option>
+            <option value="locrian">Locrian</option>
+            <option value="pentatonic_major">Major Pentatonic</option>
+            <option value="pentatonic_minor">Minor Pentatonic</option>
+            <option value="blues">Blues Scale</option>
+          </select>
+          
+          <button id="generate-scale" class="btn">Generate Scale</button>
+        </div>
+        
+        <div id="scale-result" class="scale-display"></div>
+      </div>
+      
+      <div class="interactive-demo">
+        <h3>Chord Progression Generator</h3>
+        <p>Generate chord progressions in different styles:</p>
+        
+        <div style="margin: 1rem 0;">
+          <label for="progression-style">Style: </label>
+          <select id="progression-style">
+            <option value="common">Common</option>
+            <option value="jazz">Jazz</option>
+            <option value="blues">Blues</option>
+            <option value="classical">Classical</option>
+            <option value="modal">Modal</option>
+          </select>
+          
+          <label for="progression-length" style="margin-left: 1rem;">Length: </label>
+          <select id="progression-length">
+            <option value="4">4 chords</option>
+            <option value="6">6 chords</option>
+            <option value="8">8 chords</option>
+          </select>
+          
+          <button id="generate-progression" class="btn">Generate Progression</button>
+        </div>
+        
+        <div id="progression-result" class="chord-display"></div>
+      </div>
+    </div>
+    
+    <div class="demo-section">
+      <h2>🔧 API Examples</h2>
+      
+      <div class="feature-card">
+        <h3>Basic Usage</h3>
+        <div class="code-example">
+// Initialize harmonic analysis modules
+const musicTheory = new MusicTheoryUtils();
+const scaleManager = new ScaleKeyManager();
+const harmonicAnalysis = new HarmonicAnalysis();
+const chordEngine = new ChordProgressionEngine(scaleManager);
+
+// Set key and mode
+scaleManager.setKey('C', 'major');
+const scale = scaleManager.getScale('C', 'major');
+console.log('C Major scale:', scale); // ['C', 'D', 'E', 'F', 'G', 'A', 'B']
+
+// Generate chord progression
+const progression = chordEngine.generateProgression('C', 'major', 'common', 4);
+console.log('Chord progression:', progression);
+
+// Analyze chord
+const chord = musicTheory.analyzeChord(['C4', 'E4', 'G4']);
+console.log('Chord analysis:', chord); // { root: 'C4', quality: 'major', ... }
+        </div>
+      </div>
+      
+      <div class="feature-card">
+        <h3>Pattern Integration</h3>
+        <div class="code-example">
+// Integrate with pattern generation
+const patternIntegration = new PatternHarmonicIntegration(app);
+
+// Set harmonic context
+patternIntegration.setHarmonicContext('G', 'minor');
+
+// Generate harmonically constrained patterns
+const bassPattern = patternIntegration.generateHarmonicPatterns('bass', 16);
+const leadPattern = patternIntegration.generateHarmonicPatterns('lead', 16);
+
+// Apply harmonic constraints to existing patterns
+const constrainedPatterns = patternIntegration.applyHarmonicConstraints(existingPatterns);
+        </div>
+      </div>
+      
+      <div class="feature-card">
+        <h3>Advanced Analysis</h3>
+        <div class="code-example">
+// Analyze harmonic content
+const audioData = getAudioData(); // Your audio data
+const analysis = harmonicAnalysis.analyzeHarmonicContent(audioData, 44100);
+
+// Get harmonic suggestions
+const suggestions = patternIntegration.getHarmonicSuggestions(pattern);
+
+// Calculate voice leading smoothness
+const smoothness = musicTheory.calculateVoiceLeadingSmoothness(chord1, chord2);
+        </div>
+      </div>
+    </div>
+    
+    <div class="demo-section">
+      <h2>🎯 Integration with Main App</h2>
+      <p>The harmonic analysis system is fully integrated with the main Bodzin Generator application:</p>
+      <ul>
+        <li><strong>Real-time Analysis:</strong> Analyze audio input in real-time</li>
+        <li><strong>Pattern Generation:</strong> Generate harmonically constrained patterns</li>
+        <li><strong>Key Management:</strong> Set and manage musical keys and scales</li>
+        <li><strong>Chord Progressions:</strong> Generate and analyze chord progressions</li>
+        <li><strong>UI Integration:</strong> Access all features through the main interface</li>
+      </ul>
+      
+      <div style="text-align: center; margin-top: 2rem;">
+        <a href="index.html" class="btn">Open Main Application</a>
+        <button onclick="window.open('index.html', '_blank')" class="btn btn-secondary">Open in New Tab</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import modules
+    import { MusicTheoryUtils } from './modules/music-theory-utils.js';
+    import { ScaleKeyManager } from './modules/scale-key-manager.js';
+    import { ChordProgressionEngine } from './modules/chord-progression-engine.js';
+    
+    // Initialize modules
+    const musicTheory = new MusicTheoryUtils();
+    const scaleManager = new ScaleKeyManager();
+    const chordEngine = new ChordProgressionEngine(scaleManager);
+    
+    // Scale generator demo
+    document.getElementById('generate-scale').addEventListener('click', () => {
+      const key = document.getElementById('demo-key').value;
+      const mode = document.getElementById('demo-mode').value;
+      
+      const scale = scaleManager.getScale(key, mode);
+      const scaleDisplay = document.getElementById('scale-result');
+      
+      scaleDisplay.innerHTML = scale.map(note => 
+        `<span class="scale-note">${note}</span>`
+      ).join('');
+    });
+    
+    // Chord progression generator demo
+    document.getElementById('generate-progression').addEventListener('click', () => {
+      const key = document.getElementById('demo-key').value;
+      const mode = document.getElementById('demo-mode').value;
+      const style = document.getElementById('progression-style').value;
+      const length = parseInt(document.getElementById('progression-length').value);
+      
+      const progression = chordEngine.generateProgression(key, mode, style, length);
+      const progressionDisplay = document.getElementById('progression-result');
+      
+      progressionDisplay.innerHTML = progression.map(chord => {
+        if (!chord) return '<div class="chord-card"><div class="chord-symbol">-</div></div>';
+        
+        const symbol = musicTheory.getChordSymbol(chord.root, chord.type);
+        return `
+          <div class="chord-card">
+            <div class="chord-symbol">${symbol}</div>
+            <div class="chord-notes">${chord.notes.join(' ')}</div>
+          </div>
+        `;
+      }).join('');
+    });
+    
+    // Initialize with default values
+    document.getElementById('generate-scale').click();
+  </script>
+</body>
+</html>

@@ -15,9 +15,17 @@ export class PatternVariationManager {
     this.morphingSpeed = 0.1;
     this.randomizationEnabled = false;
     this.randomizationAmount = 0.2;
+    this.harmonicIntegration = null;
     
     // Initialize default patterns
     this.initializeDefaultPatterns();
+  }
+
+  /**
+   * Set harmonic integration module
+   */
+  setHarmonicIntegration(harmonicIntegration) {
+    this.harmonicIntegration = harmonicIntegration;
   }
 
   initializeDefaultPatterns() {
@@ -45,6 +53,8 @@ export class PatternVariationManager {
         breakpoints: definition.breakpoints || []
       })),
       sections: this.generateSectionVariation(patternId),
+      // Add musical patterns if key signature is available
+      musicalPatterns: this.generateMusicalPatterns(patternId),
       metadata: {
         createdAt: new Date().toISOString(),
         intensity: this.variationIntensity,
@@ -146,6 +156,210 @@ export class PatternVariationManager {
       'C': { energy: 0.9, complexity: 0.8, stability: 0.4 }
     };
     return characteristics[patternId] || characteristics['A'];
+  }
+
+  /**
+   * Generate musical patterns based on key signature
+   * @param {string} patternId - Pattern identifier
+   * @returns {Object} Musical patterns for different instruments
+   */
+  generateMusicalPatterns(patternId) {
+    if (!this.app.keySignature || !this.app.keySignature.enabled) {
+      return this.getDefaultMusicalPatterns(patternId);
+    }
+
+    const keySignature = this.app.keySignature;
+    const melodicPattern = keySignature.generateMelodicPattern(
+      keySignature.melodicPatternLength || 8,
+      keySignature.melodicPatternType || 'random'
+    );
+    const harmonicPattern = keySignature.generateHarmonicPattern(4);
+
+    return {
+      lead: {
+        notes: melodicPattern,
+        pattern: this.generateLeadPattern(patternId, melodicPattern),
+        type: 'melodic'
+      },
+      bass: {
+        notes: this.generateBassPattern(patternId, harmonicPattern),
+        pattern: this.generateBassPattern(patternId, harmonicPattern),
+        type: 'harmonic'
+      },
+      chords: {
+        progression: harmonicPattern,
+        pattern: this.generateChordPattern(patternId, harmonicPattern),
+        type: 'harmonic'
+      },
+      drums: {
+        notes: this.generateDrumPattern(patternId),
+        pattern: this.generateDrumPattern(patternId),
+        type: 'rhythmic'
+      }
+    };
+  }
+
+  /**
+   * Generate lead pattern based on melodic notes
+   * @param {string} patternId - Pattern identifier
+   * @param {Array} melodicNotes - Array of note names
+   * @returns {Array} Lead pattern with note triggers
+   */
+  generateLeadPattern(patternId, melodicNotes) {
+    const pattern = new Array(STEP_COUNT).fill(null);
+    
+    switch (patternId) {
+      case 'A':
+        // Sparse, melodic pattern
+        for (let i = 0; i < STEP_COUNT; i += 2) {
+          const noteIndex = Math.floor(i / 2) % melodicNotes.length;
+          pattern[i] = melodicNotes[noteIndex];
+        }
+        break;
+      case 'B':
+        // More active pattern
+        for (let i = 0; i < STEP_COUNT; i++) {
+          if (i % 3 !== 0) { // Skip every 3rd step
+            const noteIndex = i % melodicNotes.length;
+            pattern[i] = melodicNotes[noteIndex];
+          }
+        }
+        break;
+      case 'C':
+        // Dense, complex pattern
+        for (let i = 0; i < STEP_COUNT; i++) {
+          const noteIndex = (i + Math.floor(i / 4)) % melodicNotes.length;
+          pattern[i] = melodicNotes[noteIndex];
+        }
+        break;
+    }
+    
+    return pattern;
+  }
+
+  /**
+   * Generate bass pattern based on harmonic progression
+   * @param {string} patternId - Pattern identifier
+   * @param {Array} harmonicPattern - Array of chord objects
+   * @returns {Array} Bass pattern with root notes
+   */
+  generateBassPattern(patternId, harmonicPattern) {
+    const pattern = new Array(STEP_COUNT).fill(null);
+    const chordsPerStep = Math.ceil(STEP_COUNT / harmonicPattern.length);
+    
+    for (let i = 0; i < STEP_COUNT; i++) {
+      const chordIndex = Math.floor(i / chordsPerStep) % harmonicPattern.length;
+      const chord = harmonicPattern[chordIndex];
+      
+      if (chord && chord.notes && chord.notes.length > 0) {
+        // Use root note for bass
+        pattern[i] = chord.notes[0];
+      }
+    }
+    
+    return pattern;
+  }
+
+  /**
+   * Generate chord pattern based on harmonic progression
+   * @param {string} patternId - Pattern identifier
+   * @param {Array} harmonicPattern - Array of chord objects
+   * @returns {Array} Chord pattern
+   */
+  generateChordPattern(patternId, harmonicPattern) {
+    const pattern = new Array(STEP_COUNT).fill(null);
+    const chordsPerStep = Math.ceil(STEP_COUNT / harmonicPattern.length);
+    
+    for (let i = 0; i < STEP_COUNT; i++) {
+      const chordIndex = Math.floor(i / chordsPerStep) % harmonicPattern.length;
+      const chord = harmonicPattern[chordIndex];
+      
+      if (chord && chord.notes) {
+        pattern[i] = chord.notes;
+      }
+    }
+    
+    return pattern;
+  }
+
+  /**
+   * Generate drum pattern (rhythmic, not melodic)
+   * @param {string} patternId - Pattern identifier
+   * @returns {Array} Drum pattern
+   */
+  generateDrumPattern(patternId) {
+    const pattern = new Array(STEP_COUNT).fill(null);
+    
+    switch (patternId) {
+      case 'A':
+        // Basic 4/4 pattern
+        pattern[0] = 'kick';
+        pattern[4] = 'kick';
+        pattern[8] = 'kick';
+        pattern[12] = 'kick';
+        pattern[2] = 'snare';
+        pattern[6] = 'snare';
+        pattern[10] = 'snare';
+        pattern[14] = 'snare';
+        break;
+      case 'B':
+        // More complex pattern
+        pattern[0] = 'kick';
+        pattern[3] = 'kick';
+        pattern[6] = 'kick';
+        pattern[9] = 'kick';
+        pattern[12] = 'kick';
+        pattern[15] = 'kick';
+        pattern[1] = 'snare';
+        pattern[5] = 'snare';
+        pattern[9] = 'snare';
+        pattern[13] = 'snare';
+        break;
+      case 'C':
+        // Dense, complex pattern
+        for (let i = 0; i < STEP_COUNT; i++) {
+          if (i % 2 === 0) {
+            pattern[i] = 'kick';
+          } else if (i % 4 === 1) {
+            pattern[i] = 'snare';
+          } else if (i % 8 === 3) {
+            pattern[i] = 'hihat';
+          }
+        }
+        break;
+    }
+    
+    return pattern;
+  }
+
+  /**
+   * Get default musical patterns when key signature is disabled
+   * @param {string} patternId - Pattern identifier
+   * @returns {Object} Default musical patterns
+   */
+  getDefaultMusicalPatterns(patternId) {
+    return {
+      lead: {
+        notes: ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'],
+        pattern: this.generateLeadPattern(patternId, ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5']),
+        type: 'melodic'
+      },
+      bass: {
+        notes: ['C3', 'F3', 'G3', 'C3'],
+        pattern: this.generateBassPattern(patternId, [{ notes: ['C3'] }, { notes: ['F3'] }, { notes: ['G3'] }, { notes: ['C3'] }]),
+        type: 'harmonic'
+      },
+      chords: {
+        progression: [{ notes: ['C4', 'E4', 'G4'] }, { notes: ['F4', 'A4', 'C5'] }, { notes: ['G4', 'B4', 'D5'] }, { notes: ['C4', 'E4', 'G4'] }],
+        pattern: this.generateChordPattern(patternId, [{ notes: ['C4', 'E4', 'G4'] }, { notes: ['F4', 'A4', 'C5'] }, { notes: ['G4', 'B4', 'D5'] }, { notes: ['C4', 'E4', 'G4'] }]),
+        type: 'harmonic'
+      },
+      drums: {
+        notes: ['kick', 'snare', 'hihat'],
+        pattern: this.generateDrumPattern(patternId),
+        type: 'rhythmic'
+      }
+    };
   }
 
   // Pattern switching methods
@@ -455,5 +669,213 @@ export class PatternVariationManager {
 
     this.importPatterns(presetData.patterns);
     this.applyPatternToAutomation(this.currentPattern);
+  }
+
+  /**
+   * Set harmonic integration module
+   */
+  setHarmonicIntegration(harmonicIntegration) {
+    this.harmonicIntegration = harmonicIntegration;
+  }
+
+  /**
+   * Generate harmonically aware pattern variation
+   */
+  generateHarmonicVariation(patternId, harmonicContext = null) {
+    if (!this.harmonicIntegration) {
+      console.warn('Harmonic integration not available');
+      return this.generateRandomVariation(patternId);
+    }
+
+    const basePattern = this.variations.get(patternId);
+    if (!basePattern) return null;
+
+    const harmonicVariation = {
+      ...basePattern,
+      id: `${patternId}_harmonic`,
+      name: `Harmonic ${basePattern.name}`,
+      tracks: basePattern.tracks.map(track => ({
+        ...track,
+        values: this.applyHarmonicConstraints(track.values, harmonicContext)
+      })),
+      metadata: {
+        ...basePattern.metadata,
+        harmonicContext: harmonicContext,
+        generatedAt: new Date().toISOString()
+      }
+    };
+
+    return harmonicVariation;
+  }
+
+  /**
+   * Apply harmonic constraints to track values
+   */
+  applyHarmonicConstraints(values, harmonicContext) {
+    if (!this.harmonicIntegration || !harmonicContext) return values;
+
+    const scale = harmonicContext.scale || [];
+    const constrainedValues = values.map(value => {
+      // Apply harmonic scaling based on scale degrees
+      if (scale.length > 0) {
+        const scaleDegree = Math.floor(value * scale.length);
+        const normalizedValue = scaleDegree / scale.length;
+        return Math.min(1, Math.max(0, normalizedValue));
+      }
+      return value;
+    });
+
+    return constrainedValues;
+  }
+
+  /**
+   * Generate pattern based on chord progression
+   */
+  generateChordBasedPattern(patternId, chordProgression) {
+    if (!this.harmonicIntegration) {
+      return this.generateRandomVariation(patternId);
+    }
+
+    const basePattern = this.variations.get(patternId);
+    if (!basePattern) return null;
+
+    const chordPattern = {
+      ...basePattern,
+      id: `${patternId}_chord`,
+      name: `Chord-based ${basePattern.name}`,
+      tracks: basePattern.tracks.map(track => ({
+        ...track,
+        values: this.generateChordBasedValues(track.values, chordProgression)
+      })),
+      metadata: {
+        ...basePattern.metadata,
+        chordProgression: chordProgression,
+        generatedAt: new Date().toISOString()
+      }
+    };
+
+    return chordPattern;
+  }
+
+  /**
+   * Generate values based on chord progression
+   */
+  generateChordBasedValues(baseValues, chordProgression) {
+    if (!chordProgression || chordProgression.length === 0) return baseValues;
+
+    const chordLength = Math.floor(baseValues.length / chordProgression.length);
+    const newValues = [...baseValues];
+
+    chordProgression.forEach((chord, chordIndex) => {
+      if (!chord) return;
+
+      const startIndex = chordIndex * chordLength;
+      const endIndex = Math.min(startIndex + chordLength, baseValues.length);
+
+      // Apply chord-based modulation to values
+      for (let i = startIndex; i < endIndex; i++) {
+        const chordIntensity = this.calculateChordIntensity(chord);
+        const originalValue = baseValues[i];
+        const chordModulation = (chordIntensity - 0.5) * 0.3; // ±15% modulation
+        newValues[i] = Math.min(1, Math.max(0, originalValue + chordModulation));
+      }
+    });
+
+    return newValues;
+  }
+
+  /**
+   * Calculate chord intensity for modulation
+   */
+  calculateChordIntensity(chord) {
+    if (!chord || !chord.notes) return 0.5;
+
+    // Simple intensity based on chord complexity
+    const noteCount = chord.notes.length;
+    const baseIntensity = Math.min(1, noteCount / 4); // Max at 4+ notes
+
+    // Add some harmonic richness
+    const harmonicRichness = chord.type === 'major' ? 0.8 : 
+                            chord.type === 'minor' ? 0.6 : 0.4;
+
+    return (baseIntensity + harmonicRichness) / 2;
+  }
+
+  /**
+   * Analyze pattern for harmonic content
+   */
+  analyzePatternHarmony(patternId) {
+    if (!this.harmonicIntegration) return null;
+
+    const pattern = this.variations.get(patternId);
+    if (!pattern) return null;
+
+    const analysis = {
+      patternId,
+      harmonicComplexity: 0,
+      scaleAdherence: 0,
+      chordToneUsage: 0,
+      suggestions: []
+    };
+
+    // Analyze each track for harmonic content
+    pattern.tracks.forEach(track => {
+      const trackAnalysis = this.analyzeTrackHarmony(track);
+      analysis.harmonicComplexity += trackAnalysis.complexity;
+      analysis.scaleAdherence += trackAnalysis.scaleAdherence;
+      analysis.chordToneUsage += trackAnalysis.chordToneUsage;
+    });
+
+    // Average the analysis
+    const trackCount = pattern.tracks.length;
+    if (trackCount > 0) {
+      analysis.harmonicComplexity /= trackCount;
+      analysis.scaleAdherence /= trackCount;
+      analysis.chordToneUsage /= trackCount;
+    }
+
+    // Generate suggestions
+    if (analysis.scaleAdherence < 0.7) {
+      analysis.suggestions.push('Consider using more scale-consistent values');
+    }
+    if (analysis.harmonicComplexity < 0.5) {
+      analysis.suggestions.push('Try adding more harmonic variation');
+    }
+
+    return analysis;
+  }
+
+  /**
+   * Analyze individual track for harmonic content
+   */
+  analyzeTrackHarmony(track) {
+    const values = track.values;
+    const analysis = {
+      complexity: 0,
+      scaleAdherence: 0,
+      chordToneUsage: 0
+    };
+
+    if (!values || values.length === 0) return analysis;
+
+    // Calculate complexity based on value variation
+    let valueVariance = 0;
+    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+    
+    values.forEach(value => {
+      valueVariance += Math.pow(value - mean, 2);
+    });
+    
+    analysis.complexity = Math.min(1, Math.sqrt(valueVariance / values.length) * 2);
+
+    // Calculate scale adherence (simplified)
+    const scaleNotes = values.filter(val => {
+      const normalized = val * 12; // Convert to 0-12 range
+      return Math.abs(normalized - Math.round(normalized)) < 0.1; // Close to whole numbers
+    }).length;
+    
+    analysis.scaleAdherence = scaleNotes / values.length;
+
+    return analysis;
   }
 }

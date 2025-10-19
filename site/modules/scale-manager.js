@@ -1,125 +1,306 @@
-// Simple musical key and scale manager with quantization helpers
-// Depends on global Tone for note<->midi conversions
+// Scale Manager - Handles scale operations and note generation
+import { 
+  SCALE_TYPES, 
+  NOTES, 
+  getScaleNotes, 
+  getChordNotes, 
+  transposeNote,
+  getScaleChords,
+  detectKey
+} from '../utils/music-theory.js';
 
 export class ScaleManager {
   constructor() {
-    this.root = 'C';
-    this.scale = 'major';
-    this.quantizeEnabled = true;
+    this.currentScale = 'major';
+    this.currentKey = 'C';
+    this.currentOctave = 4;
+    this.scaleNotes = [];
+    this.scaleChords = [];
+    this.updateScale();
   }
 
-  setKey(root) {
-    if (typeof root !== 'string') return;
-    const normalized = this.normalizeRoot(root);
-    if (normalized) this.root = normalized;
-  }
-
-  setScale(scaleType) {
-    if (SCALE_INTERVALS[scaleType]) {
-      this.scale = scaleType;
+  // Set the current scale type
+  setScaleType(scaleType) {
+    if (SCALE_TYPES[scaleType]) {
+      this.currentScale = scaleType;
+      this.updateScale();
+      return true;
     }
+    return false;
   }
 
-  setQuantizeEnabled(enabled) {
-    this.quantizeEnabled = Boolean(enabled);
+  // Set the current key/root note
+  setKey(key) {
+    if (NOTES.includes(key.replace(/b/g, '#').replace(/##/g, '#'))) {
+      this.currentKey = key;
+      this.updateScale();
+      return true;
+    }
+    return false;
   }
 
-  getState() {
-    return { root: this.root, scale: this.scale, quantize: this.quantizeEnabled };
+  // Set the octave for note generation
+  setOctave(octave) {
+    if (octave >= 0 && octave <= 8) {
+      this.currentOctave = octave;
+      this.updateScale();
+      return true;
+    }
+    return false;
   }
 
-  normalizeRoot(root) {
-    const r = root.trim().toUpperCase();
-    // Accept sharps or flats; prefer sharps internally
-    if (PITCH_CLASS_TO_SEMITONE.hasOwnProperty(r)) return r;
-    // Convert flats to sharps
-    const flatMap = { 'DB': 'C#', 'EB': 'D#', 'GB': 'F#', 'AB': 'G#', 'BB': 'A#' };
-    if (flatMap[r]) return flatMap[r];
+  // Update the scale notes and chords
+  updateScale() {
+    this.scaleNotes = getScaleNotes(this.currentKey, this.currentScale, this.currentOctave);
+    this.scaleChords = getScaleChords(this.currentKey, this.currentScale, this.currentOctave);
+  }
+
+  // Get current scale information
+  getCurrentScale() {
+    return {
+      key: this.currentKey,
+      type: this.currentScale,
+      octave: this.currentOctave,
+      name: SCALE_TYPES[this.currentScale]?.name || 'Unknown',
+      notes: this.scaleNotes,
+      chords: this.scaleChords
+    };
+  }
+
+  // Get available scale types
+  getAvailableScales() {
+    return Object.entries(SCALE_TYPES).map(([key, value]) => ({
+      id: key,
+      name: value.name,
+      mode: value.mode
+    }));
+  }
+
+  // Get available keys
+  getAvailableKeys() {
+    return NOTES.map(note => ({
+      id: note,
+      name: note,
+      display: note
+    }));
+  }
+
+  // Check if a note is in the current scale
+  isNoteInScale(note) {
+    const baseNote = note.replace(/\d+/, '');
+    return this.scaleNotes.some(scaleNote => scaleNote.note === baseNote);
+  }
+
+  // Get scale degree of a note
+  getScaleDegree(note) {
+    const baseNote = note.replace(/\d+/, '');
+    const noteIndex = this.scaleNotes.findIndex(scaleNote => scaleNote.note === baseNote);
+    return noteIndex >= 0 ? noteIndex + 1 : null;
+  }
+
+  // Generate a random note from the current scale
+  getRandomScaleNote(octave = null) {
+    const randomIndex = Math.floor(Math.random() * this.scaleNotes.length);
+    const scaleNote = this.scaleNotes[randomIndex];
+    return {
+      note: scaleNote.note,
+      octave: octave !== null ? octave : scaleNote.octave,
+      fullNote: `${scaleNote.note}${octave !== null ? octave : scaleNote.octave}`
+    };
+  }
+
+  // Generate a melody pattern using scale notes
+  generateMelodyPattern(length = 8, octave = null) {
+    const pattern = [];
+    for (let i = 0; i < length; i++) {
+      if (Math.random() < 0.7) { // 70% chance of a note
+        pattern.push(this.getRandomScaleNote(octave));
+      } else {
+        pattern.push(null);
+      }
+    }
+    return pattern;
+  }
+
+  // Generate a chord progression using scale chords
+  generateChordProgression(length = 4, octave = null) {
+    const progression = [];
+    const commonProgressions = [
+      [1, 4, 5, 1], // I-IV-V-I
+      [1, 6, 4, 5], // I-vi-IV-V
+      [1, 5, 6, 4], // I-V-vi-IV
+      [2, 5, 1, 6], // ii-V-I-vi
+      [1, 4, 1, 5]  // I-IV-I-V
+    ];
+    
+    const selectedProgression = commonProgressions[Math.floor(Math.random() * commonProgressions.length)];
+    
+    for (let i = 0; i < length; i++) {
+      const degree = selectedProgression[i % selectedProgression.length];
+      const chord = this.scaleChords[degree - 1];
+      if (chord) {
+        const chordNotes = octave !== null 
+          ? getChordNotes(chord.root, chord.type, octave)
+          : chord.notes;
+        
+        progression.push({
+          ...chord,
+          notes: chordNotes
+        });
+      }
+    }
+    
+    return progression;
+  }
+
+  // Transpose the current scale
+  transpose(semitones) {
+    const transposed = transposeNote(this.currentKey, semitones);
+    this.currentKey = transposed.note;
+    this.updateScale();
+    return this.currentKey;
+  }
+
+  // Get relative minor/major
+  getRelativeKey() {
+    if (this.currentScale === 'major') {
+      // Find relative minor
+      const minorKey = this.getRelativeMinor();
+      return {
+        key: minorKey,
+        type: 'natural_minor',
+        name: 'Natural Minor'
+      };
+    } else if (this.currentScale === 'natural_minor') {
+      // Find relative major
+      const majorKey = this.getRelativeMajor();
+      return {
+        key: majorKey,
+        type: 'major',
+        name: 'Major'
+      };
+    }
     return null;
   }
 
-  getRootSemitone() {
-    return PITCH_CLASS_TO_SEMITONE[this.root] ?? 0;
+  // Get relative minor of major key
+  getRelativeMinor() {
+    const keyIndex = NOTES.indexOf(this.currentKey.replace(/b/g, '#').replace(/##/g, '#'));
+    if (keyIndex === -1) return this.currentKey;
+    
+    const minorIndex = (keyIndex + 9) % 12; // Minor is 9 semitones below major
+    return NOTES[minorIndex];
   }
 
-  getAllowedPitchClasses() {
-    const rootSemi = this.getRootSemitone();
-    const intervals = SCALE_INTERVALS[this.scale] || SCALE_INTERVALS.major;
-    return intervals.map(interval => (rootSemi + interval) % 12);
+  // Get relative major of minor key
+  getRelativeMajor() {
+    const keyIndex = NOTES.indexOf(this.currentKey.replace(/b/g, '#').replace(/##/g, '#'));
+    if (keyIndex === -1) return this.currentKey;
+    
+    const majorIndex = (keyIndex + 3) % 12; // Major is 3 semitones above minor
+    return NOTES[majorIndex];
   }
 
-  quantizeMidi(midi) {
-    if (!this.quantizeEnabled) return midi;
-    const allowed = this.getAllowedPitchClasses();
-    const pc = ((midi % 12) + 12) % 12;
-    if (allowed.includes(pc)) return midi;
-
-    let bestMidi = midi;
-    let bestDistance = Infinity;
-    // Search within +/- 6 semitones for nearest pitch in scale
-    for (let delta = -6; delta <= 6; delta++) {
-      const candidate = midi + delta;
-      const candidatePc = ((candidate % 12) + 12) % 12;
-      if (allowed.includes(candidatePc)) {
-        const dist = Math.abs(delta);
-        if (dist < bestDistance || (dist === bestDistance && delta > 0)) {
-          bestDistance = dist;
-          bestMidi = candidate;
-          if (bestDistance === 0) break;
-        }
-      }
+  // Detect key from a set of notes
+  detectKeyFromNotes(notes) {
+    const detectedKey = detectKey(notes, this.currentScale);
+    if (detectedKey) {
+      this.setKey(detectedKey);
+      return detectedKey;
     }
-    return bestMidi;
+    return null;
   }
 
-  quantizeNote(note) {
-    try {
-      if (Array.isArray(note)) {
-        return note.map(n => this.quantizeNote(n));
-      }
-      const midi = Tone.Frequency(note).toMidi();
-      const qMidi = this.quantizeMidi(midi);
-      return Tone.Frequency(qMidi, 'midi').toNote();
-    } catch (e) {
-      return note;
+  // Get scale notes in a specific octave range
+  getScaleNotesInRange(minOctave = 3, maxOctave = 6) {
+    const notes = [];
+    for (let octave = minOctave; octave <= maxOctave; octave++) {
+      const scaleNotes = getScaleNotes(this.currentKey, this.currentScale, octave);
+      notes.push(...scaleNotes);
     }
+    return notes;
   }
 
-  getScaleNotesInOctave(octave) {
-    const allowed = this.getAllowedPitchClasses();
-    return allowed.map(pc => {
-      const midi = 12 * (octave + 1) + pc; // MIDI octave formula
-      return Tone.Frequency(midi, 'midi').toNote();
+  // Get chord suggestions for a given note
+  getChordSuggestions(note) {
+    const baseNote = note.replace(/\d+/, '');
+    const suggestions = [];
+    
+    // Find chords that contain this note
+    this.scaleChords.forEach(chord => {
+      const hasNote = chord.notes.some(chordNote => chordNote.note === baseNote);
+      if (hasNote) {
+        suggestions.push(chord);
+      }
     });
+    
+    return suggestions;
+  }
+
+  // Generate a bass line using scale notes
+  generateBassLine(length = 8, octave = 2) {
+    const bassLine = [];
+    const rootNote = this.scaleNotes[0]; // Root note
+    const fifthNote = this.scaleNotes[4]; // Fifth note
+    
+    for (let i = 0; i < length; i++) {
+      if (i % 4 === 0) {
+        // Root note on strong beats
+        bassLine.push({
+          note: rootNote.note,
+          octave: octave,
+          fullNote: `${rootNote.note}${octave}`
+        });
+      } else if (i % 2 === 0) {
+        // Fifth note on medium beats
+        bassLine.push({
+          note: fifthNote.note,
+          octave: octave,
+          fullNote: `${fifthNote.note}${octave}`
+        });
+      } else {
+        // Random scale note on weak beats
+        bassLine.push(this.getRandomScaleNote(octave));
+      }
+    }
+    
+    return bassLine;
+  }
+
+  // Get scale information for display
+  getScaleInfo() {
+    return {
+      key: this.currentKey,
+      scale: this.currentScale,
+      name: `${this.currentKey} ${SCALE_TYPES[this.currentScale]?.name || 'Unknown'}`,
+      octave: this.currentOctave,
+      noteCount: this.scaleNotes.length,
+      chordCount: this.scaleChords.length,
+      notes: this.scaleNotes.map(n => n.fullNote),
+      chords: this.scaleChords.map(c => c.symbol)
+    };
+  }
+
+  // Export scale configuration
+  exportScale() {
+    return {
+      key: this.currentKey,
+      scale: this.currentScale,
+      octave: this.currentOctave,
+      timestamp: Date.now()
+    };
+  }
+
+  // Import scale configuration
+  importScale(config) {
+    if (config.key && config.scale) {
+      this.setKey(config.key);
+      this.setScaleType(config.scale);
+      if (config.octave) {
+        this.setOctave(config.octave);
+      }
+      return true;
+    }
+    return false;
   }
 }
-
-const PITCH_CLASS_TO_SEMITONE = {
-  'C': 0,
-  'C#': 1,
-  'D': 2,
-  'D#': 3,
-  'E': 4,
-  'F': 5,
-  'F#': 6,
-  'G': 7,
-  'G#': 8,
-  'A': 9,
-  'A#': 10,
-  'B': 11
-};
-
-// Common scales (intervals within one octave)
-const SCALE_INTERVALS = {
-  major: [0, 2, 4, 5, 7, 9, 11],
-  natural_minor: [0, 2, 3, 5, 7, 8, 10],
-  harmonic_minor: [0, 2, 3, 5, 7, 8, 11],
-  melodic_minor: [0, 2, 3, 5, 7, 9, 11],
-  dorian: [0, 2, 3, 5, 7, 9, 10],
-  phrygian: [0, 1, 3, 5, 7, 8, 10],
-  lydian: [0, 2, 4, 6, 7, 9, 11],
-  mixolydian: [0, 2, 4, 5, 7, 9, 10],
-  pentatonic_major: [0, 2, 4, 7, 9],
-  pentatonic_minor: [0, 3, 5, 7, 10],
-  blues: [0, 3, 5, 6, 7, 10]
-};
