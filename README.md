@@ -1,123 +1,88 @@
-# bodzin_gen
+# Bodzin Generator Toolkit
 
-Static site assets live in `site/`. They are maintained manually and should remain committed to version control. No Wolfram tooling is required.
+A web-based music generator inspired by Stephan Bodzin's style, featuring advanced pattern generation and mathematical integration.
 
----
+## Features
 
-## Гармонічний аналіз — лади та менеджмент тональностей
+### Core Functionality
+- **Real-time Audio Engine**: Built with Web Audio API and Tone.js
+- **Automation System**: 16-step automation tracks with curve editing
+- **Pattern Variations**: A/B/C pattern system with morphing capabilities
+- **Preset Management**: Save, load, and share presets
+- **MIDI Integration**: Full MIDI learn and control support
 
-Швидка практична шпаргалка для визначення тональності, побудови гам, аналізу функцій та зручного менеджменту тональностей у написанні/аранжуванні.
+### Wolfram Integration 🧮
+- **Mathematical Pattern Generation**: Generate patterns using mathematical functions
+- **Fractal Patterns**: Mandelbrot Set, Julia Set, and other fractal-based patterns
+- **Chaos Theory**: Lorenz Attractor, Logistic Map, and chaos-based patterns
+- **Harmonic Analysis**: Fourier Series, Wavelet transforms, and spectral patterns
+- **Sequential Patterns**: Fibonacci, Prime Numbers, Golden Ratio sequences
+- **Cellular Automata**: Rule-based pattern generation
+- **Pattern Morphing**: Blend between different mathematical patterns
+- **Preset Integration**: Save Wolfram patterns as part of your presets
 
-### Як знайти тональність
-- Перевірте ключові знаки; зважте фінальний акорд і каденції (V–I або V–i)
-- Порахуйте, скільки акордів «вписуються» у кожну кандидатну тональність
-- Звертайте увагу на випадкові знаки (підвищена 7 у мінорі → домінанта, можливі модуляції)
+### Pattern Types Available
+- **Sequential**: Fibonacci, Prime Numbers, Golden Ratio
+- **Fractals**: Mandelbrot Set, Julia Set
+- **Chaos Theory**: Lorenz Attractor, Logistic Map, Chaos Maps
+- **Harmonic**: Sine Wave, Cosine Wave, Fourier Series
+- **Mathematical**: Exponential, Logarithmic, Polynomial
+- **Wavelets**: Morlet, Mexican Hat, Gaussian
+- **Cellular**: Cellular Automaton (Rule 30, 110, etc.)
 
-### Формули гам (W = цілий тон, H = півтон)
-- Мажор: W–W–H–W–W–W–H
-- Натуральний мінор: W–H–W–W–H–W–W
-- Гармонічний мінор: підвищена 7 (leading tone)
-- Мелодичний мінор: підвищені 6 і 7 вгору; вниз як натуральний мінор
+## Getting Started
 
-### Діатонічні тризвуки (швидка памʼятка)
-- Мажор: I (maj), ii (min), iii (min), IV (maj), V (maj), vi (min), vii° (dim)
-- Мінор (натурал.): i (min), ii° (dim), III (maj), iv (min), v (min), VI (maj), VII (maj)
-- У мінорі часто використовують V (мажор) і vii° через підвищену 7 для сильнішої домінанти
+1. Open `site/index.html` in a modern web browser
+2. Click "Start" to begin audio playback
+3. Use the automation timeline to create patterns
+4. Click the 🧮 Wolfram button to access mathematical pattern generation
+5. Visit `demo-wolfram.html` for a comprehensive demo of Wolfram features
 
-### Функції
-- Тоніка: I, vi (i, VI)
-- Переддомінанта: ii, IV (ii°, iv)
-- Домінанта: V, vii° (V7, vii°7)
-
-### Римські цифри та позначення
-- Великі = мажор; малі = мінор; ° = зменшений; + = збільшений; 7/9/11/13 — надбудови
-
-### Типові недіатонічні ходи
-- Вторинні домінанти: V/x (напр., V/V, V/ii) і прикладені провідні: vii°/x
-- Модальна суміш (позики з паралельного мінору): bIII, bVI, bVII, iv, ii°7 тощо
-- Неаполітанський: bII (частіше в мінорі, в 1-му оберненні)
-- Підвищені шостки: It+6, Fr+6, Ger+6 (ведуть до V)
-
-### Модуляції (зміни тональності)
-- Півот-акорд: спільний акорд, далі V–I у новій тональності
-- Пряма (фразова): стрибок на межі фрази
-- За спільним тоном або послідовністю: утримуємо спільний тон або секвенція до нової домінанти
-
-### Підбір ладів до акордів (джаз/поп)
-- Imaj7: Ionian; ii7: Dorian; V7: Mixolydian; vi7: Aeolian
-- Мінор: iΔ (контекст мелодичного мінору), V7 у мінорі: Phrygian dominant (5-й мод гармонічного мінору)
-- Тенсії: додавайте 9/11/13, уникаючи півтонів над chord tones
-
-### Менеджмент тональностей у написанні/аранжуванні
-- Коло квінт — для плавних прогресій і модулювань
-- Nashville Numbers — числова система для транспонування без привʼязки до тональності
-- Обирайте зручні для вокаліста тональності; використовуйте каподастр/транспонування для інструментів
-- Для транспонуючих (Bb/Eb) пишіть у їхній ключовій тональності
-
-### DJ-міксинг за гармонією (за потреби)
-- Camelot wheel: мікс у тій самій комірці або ±1 крок; «енергія +2 півтони»
-
-### Типові каденції і прогресії
-- Автентична: V–I (V7–I), півкаденція: будь-що–V, плагальна: IV–I, обман: V–vi
-- Поп: I–V–vi–IV; Джаз: ii–V–I; Мінор поп: i–bVII–bVI–V
-
-### Приклади
-- C–Am–Dm–G7–C → C мажор: I–vi–ii–V7–I (автентична каденція)
-- C–E7–Am–D7–G–C → C мажор із вторинними: I–V/vi–vi–V/V–V–I
-
----
-
-## Кольорові діаграми (ASCII)
-
-Нижче — два варіанти: емоджі (працює скрізь) та ANSI (кольори у терміналі).
-
-### Функціональна мапа (емоджі)
+## File Structure
 
 ```
-🟩 +-----------+    🟦 +-----------------+    🟥 +-----------+
-🟩 |  ТОНІКА   | => 🟦 | ПЕРЕДДОМІНАНТА  | => 🟥 | ДОМІНАНТА |
-🟩 | I, vi     |    🟦 | ii, IV          |    🟥 | V, vii°   |
-🟩 +-----------+    🟦 +-----------------+    🟥 +-----------+
-                       ↘                        ↘
-                        каденції: II–V–I, IV–V–I, V–VI (обман)
+site/
+├── index.html              # Main application
+├── demo-wolfram.html       # Wolfram integration demo
+├── app-modular.js          # Main application logic
+├── modules/
+│   ├── wolfram-integration.js      # Wolfram API and mathematical functions
+│   ├── wolfram-pattern-manager.js  # Pattern management and storage
+│   ├── wolfram-ui.js              # User interface for Wolfram features
+│   └── ...                        # Other modules
+└── utils/
+    ├── constants.js        # Application constants
+    └── helpers.js          # Utility functions
 ```
 
-### Функціональна мапа (ANSI, для терміналу)
+## Wolfram Integration Usage
 
-```ansi
-\x1b[1;32m+-----------+\x1b[0m    \x1b[1;36m+-----------------+\x1b[0m    \x1b[1;31m+-----------+\x1b[0m
-\x1b[1;32m|  ТОНІКА   |\x1b[0m => \x1b[1;36m| ПЕРЕДДОМІНАНТА  |\x1b[0m => \x1b[1;31m| ДОМІНАНТА |\x1b[0m
-\x1b[1;32m| I, vi     |\x1b[0m    \x1b[1;36m| ii, IV          |\x1b[0m    \x1b[1;31m| V, vii°  |\x1b[0m
-\x1b[1;32m+-----------+\x1b[0m    \x1b[1;36m+-----------------+\x1b[0m    \x1b[1;31m+-----------+\x1b[0m
-                          \x1b[2mкаденції: II–V–I, IV–V–I, V–VI (обман)\x1b[0m
+```javascript
+// Generate a Fibonacci pattern
+const wolframManager = new WolframPatternManager(app);
+await wolframManager.createPattern('my-fibonacci', 'My Fibonacci', 'fibonacci', {
+  start: 0.2,
+  end: 0.8,
+  scale: 0.6
+});
+
+// Apply to automation
+wolframManager.applyPatternToAutomation('my-fibonacci');
+
+// Create variations
+const variations = await wolframManager.generatePatternVariations('my-fibonacci', 3);
+
+// Morph between patterns
+const morphed = await wolframManager.morphPatterns('pattern1', 'pattern2', 0.5);
 ```
 
-Підказка: переглядайте у терміналі, що підтримує ANSI, напр. `less -R README.md` або `bat`/`glow`.
+## Browser Compatibility
 
-### Лінійне «коло квінт» (емоджі)
+- Chrome 80+
+- Firefox 75+
+- Safari 13+
+- Edge 80+
 
-```
-🟨 C → G → D → A → E → B → F# → C#
-⚪ Am  Em  Bm  F#m C#m G#m D#m A#m   (відносні мінори)
+## License
 
-🟪 C ← F ← Bb ← Eb ← Ab ← Db ← Gb ← Cb
-⚪ Am  Dm  Gm  Cm  Fm  Bbm Ebm Abm   (відносні мінори)
-```
-
-### Лінійне «коло квінт» (ANSI, для терміналу)
-
-```ansi
-\x1b[33mC\x1b[0m → \x1b[33mG\x1b[0m → \x1b[33mD\x1b[0m → \x1b[33mA\x1b[0m → \x1b[33mE\x1b[0m → \x1b[33mB\x1b[0m → \x1b[33mF#\x1b[0m → \x1b[33mC#\x1b[0m
-\x1b[2mAm  Em  Bm  F#m C#m G#m D#m A#m\x1b[0m   (відносні мінори)
-
-\x1b[35mC\x1b[0m ← \x1b[35mF\x1b[0m ← \x1b[35mBb\x1b[0m ← \x1b[35mEb\x1b[0m ← \x1b[35mAb\x1b[0m ← \x1b[35mDb\x1b[0m ← \x1b[35mGb\x1b[0m ← \x1b[35mCb\x1b[0m
-\x1b[2mAm  Dm  Gm  Cm  Fm  Bbm Ebm Abm\x1b[0m   (відносні мінори)
-```
-
----
-
-Якщо потрібно, можу додати невеликий аналізатор: зчитує акордові послідовності, ставить римські цифри, позначає вторинні/запозичені акорди та підказує можливі місця модуляції.
-
-## TODO / Future Work
-
-- Investigate opportunities to incorporate Wolfram tooling to support procedural music generation workflows while ensuring it does not reintroduce low-level markup generation.
+MIT License - see LICENSE file for details.
